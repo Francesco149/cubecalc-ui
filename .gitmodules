@@ -1,0 +1,3 @@
+[submodule "src/cubecalc"]
+	path = src/cubecalc
+	url = https://github.com/Francesco149/cubecalc

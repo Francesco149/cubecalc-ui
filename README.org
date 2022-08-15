@@ -1,0 +1,17 @@
+a simple GUI to use the [[https://github.com/Francesco149/cubecalc][average cubing chances calculator]] for MapleStory
+
+* usage
+just use the [[https://francesco149.github.io/maple/cube][hosted version here]]
+
+* navigating the code (for developers)
+this is a quite unusual stack. the UI is written in C using [[https://github.com/Immediate-Mode-UI/Nuklear][nuklear]], the cubing calculator is written in python, and it's all running in a browser.
+
+emscripten is used to compile the C ui to wasm. see ~src/build.sh~. python is embedded through [[https://github.com/pyodide/pyodide#what-is-pyodide][pyodide]] and called from C through some js glue code. there's also a python script that generates ~#define~ 's and stuff like that for enums into ~generated.c~
+
+to set up the dev environment, [[https://nix.dev/tutorials/install-nix][install the nix package manager]] and run ~nix develop~, you will be put into a shell with all the dependencies installed.
+
+to build the project, cd into ~src~ and type ~./build.sh~
+
+you should be able to see the result at http://0.0.0.0:6969
+
+for an optimized release build, do ~./build.sh release~

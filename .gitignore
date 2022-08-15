@@ -1,0 +1,6 @@
+cubecalc.zip
+*.js
+*.wasm
+*.data
+/.direnv
+emcc-cache
