@@ -5,3 +5,4 @@ cubecalc.zip
 /.direnv
 emcc-cache
 generated.c
+__pycache__
