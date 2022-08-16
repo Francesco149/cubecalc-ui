@@ -4,3 +4,4 @@ cubecalc.zip
 *.data
 /.direnv
 emcc-cache
+generated.c
