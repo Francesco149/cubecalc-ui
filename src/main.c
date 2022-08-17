@@ -69,14 +69,17 @@ EM_JS(float, pyCalc, (int calcIdx), {
 /* required by glfw backend */
 #define NK_KEYSTATE_BASED_INPUT
 #define NK_INCLUDE_VERTEX_BUFFER_OUTPUT
-#define NK_GLFW_GL2_IMPLEMENTATION
+#define NK_GLFW_ES2_IMPLEMENTATION
 
 #include "thirdparty/nuklear.h"
-#include "thirdparty/nuklear_glfw_gl2.h"
+#include "thirdparty/nuklear_glfw_es2.h"
 #include "utils.c"
 
 #define WINDOW_WIDTH 800
 #define WINDOW_HEIGHT 600
+
+#define MAX_VERTEX_MEMORY 512 * 1024
+#define MAX_ELEMENT_MEMORY 128 * 1024
 
 void errorCallback(int e, const char *d) {
   printf("Error %d: %s\n", e, d);
@@ -233,7 +236,7 @@ void loop() {
 
   glViewport(0, 0, width, height);
   glClear(GL_COLOR_BUFFER_BIT);
-  nk_glfw3_render(NK_ANTI_ALIASING_ON);
+  nk_glfw3_render(NK_ANTI_ALIASING_ON, MAX_VERTEX_MEMORY, MAX_ELEMENT_MEMORY);
   glfwSwapBuffers(win);
 
   updateFPS();
@@ -248,6 +251,7 @@ int main() {
       fprintf(stdout, "[GFLW] failed to init!\n");
       exit(1);
   }
+  glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
   win = glfwCreateWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "MapleStory Average Cubing Cost", 0, 0);
   glfwMakeContextCurrent(win);
   glfwGetWindowSize(win, &width, &height);

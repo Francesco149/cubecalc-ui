@@ -1,8 +1,5 @@
 #!/bin/sh
 
-# NOTE: the use of legacy OpenGL2 is intentional so that if I compile it for desktop it will run
-#       on older machines that don't have GL3 support
-
 # prevent browser from caching by appending timestamp to urls
 ts=$(date +%s)
 
@@ -17,7 +14,7 @@ time emcc \
   -o main.js main.c -lGL \
   -s USE_WEBGL2=1 \
   -s USE_GLFW=3 \
-  -s LEGACY_GL_EMULATION=1 \
+  -s FULL_ES2 \
   -s WASM=1 \
   -s ASYNCIFY \
   --cache ./emcc-cache \
