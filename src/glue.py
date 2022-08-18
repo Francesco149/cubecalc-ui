@@ -67,14 +67,12 @@ def calc_want_clear(i):
   calc_debug_print("want_clear", i)
 
 
-def calc_want(i, wantsIdx, k, v):
+def calc_want(i, k, v):
   calc_ensure(i)
   c = calcs[i]
   if WANTS not in c:
     c[WANTS] = {}
-  if wantsIdx not in c[WANTS]:
-    c[WANTS][wantsIdx] = {}
-  c[WANTS][wantsIdx][k] = v
+  c[WANTS][k] = v
   calc_debug_print("want", i)
 
 
@@ -87,7 +85,7 @@ def calc(i):
   calc_debug_print("calc", i)
   c = calcs[i]
   params = {calc_param_to_key[k]: v for k, v in c.items() if k in calc_param_to_key}
-  params[calc_param_to_key[WANTS]] = list(params[calc_param_to_key[WANTS]].values())
+  params[calc_param_to_key[WANTS]] = [params[calc_param_to_key[WANTS]]]
   params["lines"] = find_lines(c[CUBE], c[CATEGORY])
   console.log(str(params["lines"]))
   res, tier = cube_calc(**params)

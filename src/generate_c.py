@@ -10,6 +10,8 @@ for en in [Cube, Category, Line, CalcParam, Tier]:
   n = en.__name__.lower()
   print(f"char const* {n}Names[] = {{")
   vals = [x for x in en]
+  if en == Line:
+    vals += [x for x in LineMasks]
   if en == Category:
     for x in vals:
       print(f"  \"{category_name(x)}\",")
@@ -23,3 +25,10 @@ for en in [Cube, Category, Line, CalcParam, Tier]:
   print("};")
   for i, x in enumerate(vals):
     print(f"#define {x.name} {i}")
+
+  if en == Cube:
+    print("int tierLimits[] = {")
+    for x in vals:
+      limit = tier_limits[x] if x in tier_limits else LEGENDARY
+      print(f"  {limit},")
+    print("};")

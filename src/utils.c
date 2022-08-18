@@ -1,9 +1,35 @@
 struct BufHdr {
-  size_t len, cap;
+  size_t len, cap, elementSize;
+  char data[0];
 };
 
 #define BufHdr(b) ((struct BufHdr*)(b) - 1)
-#define BufLen(b) BufHdr(b)->len
+
+size_t BufLen(void* b) {
+  return b ? BufHdr(b)->len : 0;
+}
+
+void BufDel(void* b, int i) {
+  struct BufHdr* hdr = BufHdr(b);
+  --hdr->len;
+  memmove(&hdr->data[i * hdr->elementSize],
+          &hdr->data[(i + 1) * hdr->elementSize],
+          hdr->elementSize * hdr->len);
+}
+
+void BufClear(void* b) {
+  if (b) {
+    BufHdr(b)->len = 0;
+  }
+}
+
+void BufFree(void *p) {
+  void** b = p;
+  if (*b) {
+    free(BufHdr(*b));
+    *b = 0;
+  }
+}
 
 void _BufAlloc(void* p, size_t elementSize) {
   size_t cap = 4, len = 0;
@@ -18,6 +44,7 @@ void _BufAlloc(void* p, size_t elementSize) {
     cap *= 2;
     hdr = realloc(hdr, sizeof(struct BufHdr) + elementSize * cap);
     hdr->cap = cap;
+    hdr->elementSize = elementSize;
     *b = hdr + 1;
   }
   hdr->len = len + 1;
