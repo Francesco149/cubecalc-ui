@@ -391,7 +391,7 @@ void loop() {
   nk_end(nk);
 
   if (flags & SHOW_INFO) {
-    if (nk_begin(nk, "Info", nk_rect(700, 50, 150, 100), NODE_WINDOW_FLAGS)) {
+    if (nk_begin(nk, "Info", nk_rect(700, 50, 150, 100), NODE_WINDOW_FLAGS | NK_WINDOW_CLOSABLE)) {
       nk_layout_row_dynamic(nk, 10, 1);
       nk_value_int(nk, "FPS", fps);
       nk_value_int(nk, "Nodes", BufLen(tree));
