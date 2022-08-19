@@ -93,6 +93,7 @@ enum {
   SHOW_GRID = 1<<1,
   LINKING = 1<<2,
   UNLINKING = 1<<3,
+  DIRTY = 1<<4,
 };
 
 GLFWwindow* win;
@@ -386,6 +387,13 @@ void drawLink(struct nk_command_buffer* canvas,
   );
 }
 
+void treeSetValue(NodeData* d, int newValue) {
+  if (newValue != d->value) {
+    flags |= DIRTY;
+    d->value = newValue;
+  }
+}
+
 void loop() {
   int i, j;
 
@@ -435,8 +443,9 @@ void loop() {
   for (i = 0; i < BufLen(data[type]); ++i) { \
     if (uiBeginNode(type, i, 25)) { \
       NodeData* d = &data[type][i]; \
-      d->value = nk_combo(nk, enumName##Names, NK_LEN(enumName##Names), d->value, \
+      int newValue = nk_combo(nk, enumName##Names, NK_LEN(enumName##Names), d->value, \
         25, nk_vec2(nk_widget_width(nk), 100)); \
+      treeSetValue(d, newValue); \
       uiEndNode(type, i); \
     } \
   }
@@ -452,8 +461,9 @@ void loop() {
 #define propNode(type, valueType, text) \
   for (i = 0; i < BufLen(data[type]); ++i) { \
     if (uiBeginNode(type, i, 20)) { \
-      data[type][i].value = \
-        nk_property##valueType(nk, text, 0, data[type][i].value, 120, 1, 0.02); \
+      NodeData* d = &data[type][i]; \
+      int newValue = nk_property##valueType(nk, text, 0, d->value, 120, 1, 0.02); \
+      treeSetValue(d, newValue); \
       uiEndNode(type, i); \
     } \
   }
@@ -516,6 +526,10 @@ void loop() {
     }
   }
   nk_end(nk);
+
+  if (flags & DIRTY) {
+    // TODO: recalc everything
+  }
 
   if (flags & SHOW_INFO) {
     if (nk_begin(nk, "Info", nk_rect(700, 50, 150, 200), NODE_WINDOW_FLAGS | NK_WINDOW_CLOSABLE)) {
