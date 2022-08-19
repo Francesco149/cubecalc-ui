@@ -369,7 +369,7 @@ void drawLink(struct nk_command_buffer* canvas,
     from.x + 200, from.y,
     to.x - 200, to.y,
     to.x, to.y,
-    1, color
+    2, color
   );
 }
 
@@ -387,12 +387,13 @@ void loop() {
     struct nk_rect totalSpace = nk_window_get_content_region(nk);
 
     nk_layout_space_begin(nk, NK_STATIC, totalSpace.h, BufLen(tree));
+    nk_fill_rect(canvas, totalSpace, 0, nk_rgb(10, 10, 10));
 
     if (flags & SHOW_GRID) {
       struct nk_rect bnds = nk_layout_space_bounds(nk);
       float x, y;
       const float gridSize = 32.0f;
-      const struct nk_color gridColor = nk_rgb(60, 60, 60);
+      const struct nk_color gridColor = nk_rgb(30, 30, 30);
       for (x = (float)fmod(-pan.x, gridSize); x < bnds.w; x += gridSize) {
         nk_stroke_line(canvas, x + bnds.x, bnds.y, x + bnds.x, bnds.y + bnds.h, 1.0f, gridColor);
       }
