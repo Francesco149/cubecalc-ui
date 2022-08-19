@@ -363,8 +363,8 @@ void loop() {
     comboNode(NTIER, tier);
     comboNode(NCATEGORY, category);
     comboNode(NSTAT, line);
-    valueNode(NAVERAGE, float, "average one in");
     propNode(NAMOUNT, i, "amount");
+    valueNode(NAVERAGE, float, "average 1 in");
 
     if (nk_contextual_begin(nk, 0, nk_vec2(100, 220), nk_window_get_bounds(nk))) {
       nk_layout_row_dynamic(nk, CONTEXT_HEIGHT, 1);
