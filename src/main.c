@@ -177,7 +177,7 @@ void treeAdd(int type, int x, int y) {
   Node* n;
   int chars;
 
-  d->bounds = nk_rect(x, y, 150, 100);
+  d->bounds = nk_rect(x, y, 150, 80);
 
   switch (type) {
     case NCUBE:
