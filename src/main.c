@@ -350,11 +350,21 @@ void loop() {
     } \
   }
 
+#define propNode(type, valueType, text) \
+  for (i = 0; i < BufLen(data[type]); ++i) { \
+    if (uiBeginNode(type, i, 20)) { \
+      data[type][i].value = \
+        nk_property##valueType(nk, text, 0, data[type][i].value, 120, 1, 0.02); \
+      uiEndNode(type, i); \
+    } \
+  }
+
     comboNode(NCUBE, cube);
     comboNode(NTIER, tier);
     comboNode(NCATEGORY, category);
     comboNode(NSTAT, line);
     valueNode(NAVERAGE, float, "average one in");
+    propNode(NAMOUNT, i, "amount");
 
     if (nk_contextual_begin(nk, 0, nk_vec2(100, 220), nk_window_get_bounds(nk))) {
       nk_layout_row_dynamic(nk, CONTEXT_HEIGHT, 1);
