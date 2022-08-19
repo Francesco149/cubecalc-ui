@@ -33,7 +33,7 @@ void BufFree(void *p) {
   }
 }
 
-void _BufAlloc(void* p, size_t elementSize) {
+void _BufAlloc(void* p, size_t count, size_t elementSize) {
   size_t cap = 4, len = 0;
   struct BufHdr* hdr = 0;
   void **b = p;
@@ -42,18 +42,21 @@ void _BufAlloc(void* p, size_t elementSize) {
     cap = hdr->cap;
     len = hdr->len;
   }
-  if (!hdr || len >= cap) {
+  while (!hdr || len + count > cap) {
     cap *= 2;
     hdr = realloc(hdr, sizeof(struct BufHdr) + elementSize * cap);
     hdr->cap = cap;
     hdr->elementSize = elementSize;
     *b = hdr + 1;
   }
-  hdr->len = len + 1;
+  hdr->len = len + count;
 }
 
+#define BufReserve(b, count) \
+  (_BufAlloc((b), (count), sizeof((*(b))[0])), (&(*(b))[BufLen(*(b)) - (count)]))
+
 #define BufAlloc(b) \
-  (_BufAlloc((b), sizeof((*(b))[0])), (&(*(b))[BufLen(*(b)) - 1]))
+  (_BufAlloc((b), 1, sizeof((*(b))[0])), (&(*(b))[BufLen(*(b)) - 1]))
 
 #define Pack16to32(hi, lo) (((hi) << 16) & 0xFFFF0000 | ((lo) & 0x0000FFFF))
 #define LoWord(dw) ((dw) & 0x0000FFFF)

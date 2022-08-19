@@ -100,7 +100,8 @@ struct nk_input* in;
 int width, height;
 int fps;
 int flags = SHOW_INFO | SHOW_GRID;
-struct nk_vec2 pan, link;
+struct nk_vec2 pan;
+int linkNode;
 
 /* macro to generate things based on the list of node types */
 #define nodeTypes(f) \
@@ -166,8 +167,36 @@ void treeInit() {
   treeInitNodeNames();
 }
 
+typedef struct _NodeLink {
+  int fromType, toType;
+  int from, to;
+} NodeLink;
+
+NodeLink* links;
+
 void treeUpdateConnections() {
-  // todo
+  BufClear(links);
+
+  // TODO: could be a bitmask
+  int* done = 0;
+  BufReserve(&done, BufLen(tree));
+  memset(done, 0, BufLen(done) * sizeof(done[0]));
+
+  for (int i = 0; i < BufLen(tree); ++i) {
+    int* cons = tree[i].connections;
+    done[i] = 1;
+    for (int j = 0; j < BufLen(cons); ++j) {
+      int other = cons[j];
+      if (done[other]) continue;
+      NodeLink* l = BufAlloc(&links);
+      l->fromType = tree[i].type;
+      l->toType = tree[other].type;
+      l->from = tree[i].data;
+      l->to = tree[other].data;
+    }
+  }
+
+  BufFree(&done);
 }
 
 void error(char* s) {
@@ -289,13 +318,19 @@ int uiBeginNode(int type, int i, int h) {
     nk_layout_row_dynamic(nk, h, 1);
     if (nk_contextual_begin(nk, 0, nk_vec2(100, 220), d->panel->bounds)) {
       nk_layout_row_dynamic(nk, CONTEXT_HEIGHT, 1);
-      if (nk_contextual_item_label(nk, "Remove", NK_TEXT_CENTERED)) {
+      if (!(flags & LINKING) && nk_contextual_item_label(nk, "Remove", NK_TEXT_CENTERED)) {
         *BufAlloc(&removeNodes) = d->node;
       }
       if (nk_contextual_item_label(nk, "Link", NK_TEXT_CENTERED)) {
         if (flags & LINKING) {
-          link = in->mouse.pos;
+          // redundant but useful so we can walk up the graph without searching all nodes
+          *BufAlloc(&tree[linkNode].connections) = d->node;
+          *BufAlloc(&tree[d->node].connections) = linkNode;
+          treeUpdateConnections();
+        } else {
+          linkNode = d->node;
         }
+        flags ^= LINKING;
       }
       nk_contextual_end(nk);
     }
@@ -312,6 +347,30 @@ void uiEndNode(int type, int i) {
   d->bounds = nk_layout_space_rect_to_local(nk, d->panel->bounds);
   d->bounds.x += pan.x;
   d->bounds.y += pan.y;
+}
+
+struct nk_vec2 nodeCenter(int type, int i) {
+  struct nk_rect bounds = nk_layout_space_rect_to_screen(nk, data[type][i].bounds);
+  struct nk_vec2 center = nk_rect_pos(bounds);
+  center.x += bounds.w / 2 - pan.x;
+  center.y += bounds.h / 2 - pan.y;
+  return center;
+}
+
+void drawLink(struct nk_command_buffer* canvas,
+              struct nk_vec2 from, struct nk_vec2 to, struct nk_color color) {
+  if (from.x > to.x) {
+    struct nk_vec2 tmp = from;
+    from = to;
+    to = tmp;
+  }
+  nk_stroke_curve(canvas,
+    from.x, from.y,
+    from.x + 200, from.y,
+    to.x - 200, to.y,
+    to.x, to.y,
+    1, color
+  );
 }
 
 void loop() {
@@ -340,6 +399,21 @@ void loop() {
       for (y = (float)fmod(-pan.y, gridSize); y < bnds.h; y += gridSize) {
         nk_stroke_line(canvas, bnds.x, y + bnds.y, bnds.x + bnds.w, y + bnds.y, 1.0f, gridColor);
       }
+    }
+
+    // draw links BEFORE the nodes so they appear below them
+    for (i = 0; i < BufLen(links); ++i) {
+      NodeLink* l = &links[i];
+      struct nk_vec2 from = nodeCenter(l->fromType, l->from);
+      struct nk_vec2 to = nodeCenter(l->toType, l->to);
+      drawLink(canvas, from, to, nk_rgb(100, 100, 100));
+    }
+
+    if (flags & LINKING) {
+      Node* n = &tree[linkNode];
+      struct nk_vec2 from = nodeCenter(n->type, n->data);
+      struct nk_vec2 to = in->mouse.pos;
+      drawLink(canvas, from, to, nk_rgb(200, 200, 255));
     }
 
 #define comboNode(type, enumName) \
