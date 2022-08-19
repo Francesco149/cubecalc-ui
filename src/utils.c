@@ -19,6 +19,19 @@ void BufDel(void* b, int i) {
   }
 }
 
+int BufDelFindInt(int* b, int value) {
+  int i;
+  for (i = 0; i < BufLen(b); ++i) {
+    if (b[i] == value) {
+      break;
+    }
+  }
+  if (i < BufLen(b)) {
+    BufDel(b, i);
+  }
+  return i;
+}
+
 void BufClear(void* b) {
   if (b) {
     BufHdr(b)->len = 0;

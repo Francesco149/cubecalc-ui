@@ -92,6 +92,7 @@ enum {
   SHOW_INFO = 1<<0,
   SHOW_GRID = 1<<1,
   LINKING = 1<<2,
+  UNLINKING = 1<<3,
 };
 
 GLFWwindow* win;
@@ -320,10 +321,10 @@ int uiBeginNode(int type, int i, int h) {
     nk_layout_row_dynamic(nk, h, 1);
     if (nk_contextual_begin(nk, 0, nk_vec2(100, 220), d->panel->bounds)) {
       nk_layout_row_dynamic(nk, CONTEXT_HEIGHT, 1);
-      if (!(flags & LINKING) && nk_contextual_item_label(nk, "Remove", NK_TEXT_CENTERED)) {
+      if (nk_contextual_item_label(nk, "Remove", NK_TEXT_CENTERED)) {
         *BufAlloc(&removeNodes) = d->node;
       }
-      if (nk_contextual_item_label(nk, "Link", NK_TEXT_CENTERED)) {
+      if (!(flags & UNLINKING) && nk_contextual_item_label(nk, "Link", NK_TEXT_CENTERED)) {
         if (flags & LINKING) {
           // redundant but useful so we can walk up the graph without searching all nodes
           *BufAlloc(&tree[linkNode].connections) = d->node;
@@ -333,6 +334,16 @@ int uiBeginNode(int type, int i, int h) {
           linkNode = d->node;
         }
         flags ^= LINKING;
+      }
+      if (!(flags & LINKING) && nk_contextual_item_label(nk, "Un-Link", NK_TEXT_CENTERED)) {
+        if (flags & UNLINKING) {
+          BufDelFindInt(tree[linkNode].connections, d->node);
+          BufDelFindInt(tree[d->node].connections, linkNode);
+          treeUpdateConnections();
+        } else {
+          linkNode = d->node;
+        }
+        flags ^= UNLINKING;
       }
       nk_contextual_end(nk);
     }
@@ -412,11 +423,12 @@ void loop() {
       drawLink(canvas, from, to, nk_rgb(100, 100, 100));
     }
 
-    if (flags & LINKING) {
+    if (flags & (LINKING | UNLINKING)) {
       Node* n = &tree[linkNode];
       struct nk_vec2 from = nodeCenter(n->type, n->data);
       struct nk_vec2 to = in->mouse.pos;
-      drawLink(canvas, from, to, nk_rgb(200, 200, 255));
+      drawLink(canvas, from, to,
+               (flags & LINKING) ? nk_rgb(200, 200, 255) : nk_rgb(255, 200, 200));
     }
 
 #define comboNode(type, enumName) \
@@ -506,10 +518,18 @@ void loop() {
   nk_end(nk);
 
   if (flags & SHOW_INFO) {
-    if (nk_begin(nk, "Info", nk_rect(700, 50, 150, 100), NODE_WINDOW_FLAGS | NK_WINDOW_CLOSABLE)) {
+    if (nk_begin(nk, "Info", nk_rect(700, 50, 150, 200), NODE_WINDOW_FLAGS | NK_WINDOW_CLOSABLE)) {
       nk_layout_row_dynamic(nk, 10, 1);
       nk_value_int(nk, "FPS", fps);
       nk_value_int(nk, "Nodes", BufLen(tree));
+      nk_value_int(nk, "Links", BufLen(links));
+      nk_label(nk, "", NK_TEXT_CENTERED);
+      if (flags & LINKING) {
+        nk_label(nk, "Linking...", NK_TEXT_CENTERED);
+      }
+      if (flags & UNLINKING) {
+        nk_label(nk, "Un-Linking...", NK_TEXT_CENTERED);
+      }
     } else {
       flags &= ~SHOW_INFO;
     }
