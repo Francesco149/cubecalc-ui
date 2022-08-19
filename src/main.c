@@ -91,6 +91,7 @@ void errorCallback(int e, const char *d) {
 enum {
   SHOW_INFO = 1<<0,
   SHOW_GRID = 1<<1,
+  LINKING = 1<<2,
 };
 
 GLFWwindow* win;
@@ -99,7 +100,7 @@ struct nk_input* in;
 int width, height;
 int fps;
 int flags = SHOW_INFO | SHOW_GRID;
-struct nk_vec2 pan;
+struct nk_vec2 pan, link;
 
 /* macro to generate things based on the list of node types */
 #define nodeTypes(f) \
@@ -159,6 +160,7 @@ typedef struct _NodeData {
 Node* tree;
 NodeData* data[NLAST];
 char** errors;
+int* removeNodes;
 
 void treeInit() {
   treeInitNodeNames();
@@ -214,21 +216,23 @@ void treeAdd(int type, int x, int y) {
   d->node = BufLen(tree) - 1;
 }
 
-void treeDel(int type, int index) {
+void treeDel(int nodeIndex) {
+  int type = tree[nodeIndex].type;
+  int index = tree[nodeIndex].data;
   NodeData* d = &data[type][index];
 
   // since we are deleting an element in the packed arrays we have to adjust all indices pointing
   // after it. this means we have slow add/del but fast iteration which is what we want
   for (int i = 0; i < BufLen(tree); ++i) {
-    if (i == d->node) continue;
+    if (i == nodeIndex) continue;
     Node* n = &tree[i];
 
     // adjust connections indices
     int* newConnections = 0;
     for (int j = 0; j < BufLen(n->connections); ++j) {
-      if (n->connections[j] > d->node) {
+      if (n->connections[j] > nodeIndex) {
         *BufAlloc(&newConnections) = n->connections[j] - 1;
-      } else if (n->connections[j] < d->node) {
+      } else if (n->connections[j] < nodeIndex) {
         *BufAlloc(&newConnections) = n->connections[j];
       }
       // if the node is referring to the node we're removing, just remove the connection.
@@ -241,18 +245,15 @@ void treeDel(int type, int index) {
     if (n->data > index) {
       --n->data;
     }
-  }
 
-  // adjust node indices
-  for (int i = 0; i < BufLen(data[type]); ++i) {
-    if (i == index) continue;
-    if (data[type][i].node > d->node) {
-      --data[type][i].node;
+    // adjust node indices
+    if (data[n->type][n->data].node > nodeIndex) {
+      --data[n->type][n->data].node;
     }
   }
 
   // actually delete elements and shift everything after them left by 1
-  BufDel(tree, d->node);
+  BufDel(tree, nodeIndex);
   BufDel(data[type], index);
 
   treeUpdateConnections();
@@ -286,11 +287,15 @@ int uiBeginNode(int type, int i, int h) {
   if (res) {
     d->panel = nk_window_get_panel(nk);
     nk_layout_row_dynamic(nk, h, 1);
-    // TODO: this doesn't work if the parent window is moved. it gets offset by parent pos
     if (nk_contextual_begin(nk, 0, nk_vec2(100, 220), d->panel->bounds)) {
       nk_layout_row_dynamic(nk, CONTEXT_HEIGHT, 1);
       if (nk_contextual_item_label(nk, "Remove", NK_TEXT_CENTERED)) {
-        treeDel(type, i);
+        *BufAlloc(&removeNodes) = d->node;
+      }
+      if (nk_contextual_item_label(nk, "Link", NK_TEXT_CENTERED)) {
+        if (flags & LINKING) {
+          link = in->mouse.pos;
+        }
       }
       nk_contextual_end(nk);
     }
@@ -315,7 +320,7 @@ void loop() {
   glfwPollEvents();
   nk_glfw3_new_frame();
 
-  if (nk_begin(nk, "MapleStory Cubing Calculator", nk_rect(0, 0, 640, 480),
+  if (nk_begin(nk, "MapleStory Cubing Calculator", nk_rect(10, 10, 640, 480),
       NK_WINDOW_BORDER | NK_WINDOW_MOVABLE | NK_WINDOW_NO_SCROLLBAR | NK_WINDOW_TITLE |
       NK_WINDOW_SCALABLE))
   {
@@ -372,6 +377,19 @@ void loop() {
     valueNode(NAVERAGE, float, "average 1 in");
 
     nk_layout_space_end(nk);
+
+    // it really isn't necessary to handle multiple deletions right now, but why not.
+    // maybe eventually I will have a select function and will want to do this
+    for (i = 0; i < BufLen(removeNodes); ++i) {
+      int nodeIndex = removeNodes[i];
+      treeDel(nodeIndex);
+      for (j = i; j < BufLen(removeNodes); ++j) {
+        if (removeNodes[j] > nodeIndex) {
+          --removeNodes[j];
+        }
+      }
+    }
+    BufClear(removeNodes);
 
     if (nk_contextual_begin(nk, 0, nk_vec2(100, 220), totalSpace)) {
       nk_layout_row_dynamic(nk, CONTEXT_HEIGHT, 1);

@@ -224,7 +224,7 @@ nk_glfw3_render(enum nk_anti_aliasing AA, int max_vertex_buffer, int max_element
         /* convert from command queue into draw list and draw to screen */
         const struct nk_draw_command *cmd;
         void *vertices, *elements;
-        const nk_draw_index *offset = NULL;
+        size_t offset = 0;
 
         /* Bind buffers */
         glBindBuffer(GL_ARRAY_BUFFER, dev->vbo);
@@ -287,8 +287,9 @@ nk_glfw3_render(enum nk_anti_aliasing AA, int max_vertex_buffer, int max_element
                 (GLint)((height - (GLint)(cmd->clip_rect.y + cmd->clip_rect.h)) * scale.y),
                 (GLint)(cmd->clip_rect.w * scale.x),
                 (GLint)(cmd->clip_rect.h * scale.y));
-            glDrawElements(GL_TRIANGLES, (GLsizei)cmd->elem_count, GL_UNSIGNED_SHORT, offset);
-            offset += cmd->elem_count;
+            glDrawElements(GL_TRIANGLES, (GLsizei)cmd->elem_count,
+                           GL_UNSIGNED_SHORT, (void*)offset);
+            offset += cmd->elem_count * sizeof(nk_draw_index);
         }
         nk_clear(&glfw.ctx);
         nk_buffer_clear(&dev->cmds);

@@ -10,11 +10,13 @@ size_t BufLen(void* b) {
 }
 
 void BufDel(void* b, int i) {
-  struct BufHdr* hdr = BufHdr(b);
-  --hdr->len;
-  memmove(&hdr->data[i * hdr->elementSize],
-          &hdr->data[(i + 1) * hdr->elementSize],
-          hdr->elementSize * hdr->len);
+  if (b) {
+    struct BufHdr* hdr = BufHdr(b);
+    --hdr->len;
+    memmove(&hdr->data[i * hdr->elementSize],
+            &hdr->data[(i + 1) * hdr->elementSize],
+            hdr->elementSize * (hdr->len - i));
+  }
 }
 
 void BufClear(void* b) {

@@ -3,10 +3,15 @@
 # prevent browser from caching by appending timestamp to urls
 ts=$(date +%s)
 
-flags="-O0 -sWASM_BIGINT" # ~1s build time
-if [ "$1" = "release" ]; then
-  flags="-O3" # ~6s build time
-fi
+flags="-sALLOW_MEMORY_GROWTH"
+fastbuild="-O0 -sWASM_BIGINT" # ~1s build time
+case "$1" in
+  rel*) flags="$flags -O3" ;; # ~6s build time
+  san*) flags="$flags -O3 -g -fsanitize=address,undefined" ;;
+  *) flags="$flags $fastbuild" ;;
+esac
+
+echo "flags: $flags"
 
 ./generate_c.py > generated.c &&
 time emcc \
