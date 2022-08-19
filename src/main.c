@@ -371,13 +371,15 @@ void loop() {
     propNode(NAMOUNT, i, "amount");
     valueNode(NAVERAGE, float, "average 1 in");
 
-    if (nk_contextual_begin(nk, 0, nk_vec2(100, 220), nk_window_get_bounds(nk))) {
+    nk_layout_space_end(nk);
+
+    if (nk_contextual_begin(nk, 0, nk_vec2(100, 220), totalSpace)) {
       nk_layout_row_dynamic(nk, CONTEXT_HEIGHT, 1);
 
       for (int i = 0; i < NK_LEN(nodeNames); ++i) {
         if (nk_contextual_item_label(nk, nodeNames[i], NK_TEXT_CENTERED)) {
-          struct nk_vec2 pos = in->mouse.pos;
-          treeAdd(i + 1, pos.x, pos.y);
+          treeAdd(i + 1, in->mouse.pos.x - totalSpace.x + pan.x,
+                         in->mouse.pos.y - totalSpace.y + pan.y);
         }
       }
 
@@ -388,10 +390,17 @@ void loop() {
       flag(SHOW_INFO, "Info");
       flag(SHOW_GRID, "Grid");
 
+      if (nk_contextual_item_label(nk, "I'm Lost", NK_TEXT_CENTERED)) {
+        if (BufLen(tree)) {
+          NodeData* n = &data[tree[0].type][tree[0].data];
+          pan = nk_rect_pos(n->bounds);
+          pan.x -= totalSpace.w / 2 - n->bounds.w / 2;
+          pan.y -= totalSpace.h / 2 - n->bounds.h / 2;
+        }
+      }
+
       nk_contextual_end(nk);
     }
-
-    nk_layout_space_end(nk);
 
     if (nk_input_is_mouse_hovering_rect(in, nk_window_get_bounds(nk)) &&
         nk_input_is_mouse_down(in, NK_BUTTON_MIDDLE)) {
