@@ -99,6 +99,7 @@ struct nk_input* in;
 int width, height;
 int fps;
 int flags = SHOW_INFO | SHOW_GRID;
+struct nk_vec2 pan;
 
 /* macro to generate things based on the list of node types */
 #define nodeTypes(f) \
@@ -278,7 +279,9 @@ void updateFPS() {
 
 int uiBeginNode(int type, int i, int h) {
   NodeData* d = &data[type][i];
-  nk_layout_space_push(nk, d->bounds);
+  nk_layout_space_push(nk,
+    nk_rect(d->bounds.x - pan.x, d->bounds.y - pan.y, d->bounds.w, d->bounds.h)
+  );
   int res = nk_group_begin(nk, d->name, NODE_WINDOW_FLAGS);
   if (res) {
     d->panel = nk_window_get_panel(nk);
@@ -302,6 +305,8 @@ void uiEndNode(int type, int i) {
   // TODO: handle panning around
   NodeData* d = &data[type][i];
   d->bounds = nk_layout_space_rect_to_local(nk, d->panel->bounds);
+  d->bounds.x += pan.x;
+  d->bounds.y += pan.y;
 }
 
 void loop() {
@@ -324,10 +329,10 @@ void loop() {
       float x, y;
       const float gridSize = 32.0f;
       const struct nk_color gridColor = nk_rgb(60, 60, 60);
-      for (x = (float)fmod(bnds.x, gridSize); x < bnds.w; x += gridSize) {
+      for (x = (float)fmod(-pan.x, gridSize); x < bnds.w; x += gridSize) {
         nk_stroke_line(canvas, x + bnds.x, bnds.y, x + bnds.x, bnds.y + bnds.h, 1.0f, gridColor);
       }
-      for (y = (float)fmod(bnds.y, gridSize); y < bnds.h; y += gridSize) {
+      for (y = (float)fmod(-pan.y, gridSize); y < bnds.h; y += gridSize) {
         nk_stroke_line(canvas, bnds.x, y + bnds.y, bnds.x + bnds.w, y + bnds.y, 1.0f, gridColor);
       }
     }
@@ -387,6 +392,12 @@ void loop() {
     }
 
     nk_layout_space_end(nk);
+
+    if (nk_input_is_mouse_hovering_rect(in, nk_window_get_bounds(nk)) &&
+        nk_input_is_mouse_down(in, NK_BUTTON_MIDDLE)) {
+      pan.x -= in->mouse.delta.x;
+      pan.y -= in->mouse.delta.y;
+    }
   }
   nk_end(nk);
 
