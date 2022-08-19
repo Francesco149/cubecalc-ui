@@ -250,6 +250,8 @@ void treeDel(int nodeIndex) {
   int index = tree[nodeIndex].data;
   NodeData* d = &data[type][index];
 
+  BufFree(&tree[nodeIndex].connections);
+
   // since we are deleting an element in the packed arrays we have to adjust all indices pointing
   // after it. this means we have slow add/del but fast iteration which is what we want
   for (int i = 0; i < BufLen(tree); ++i) {
