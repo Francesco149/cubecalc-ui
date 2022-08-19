@@ -530,6 +530,13 @@ void loop() {
       if (flags & UNLINKING) {
         nk_label(nk, "Un-Linking...", NK_TEXT_CENTERED);
       }
+      nk_layout_row_dynamic(nk, 20, 1);
+      if ((flags & (LINKING | UNLINKING)) && (
+            glfwGetKey(win, GLFW_KEY_ESCAPE) == GLFW_PRESS ||
+            nk_button_label(nk, "cancel")
+          )) {
+        flags &= ~(LINKING | UNLINKING);
+      }
     } else {
       flags &= ~SHOW_INFO;
     }
