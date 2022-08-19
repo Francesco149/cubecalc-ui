@@ -314,10 +314,6 @@ NK_API void
 nk_gflw3_scroll_callback(GLFWwindow *win, double xoff, double yoff)
 {
     (void)win; (void)xoff;
-#ifdef __EMSCRIPTEN__
-    xoff *= -0.01;
-    yoff *= -0.01;
-#endif
     glfw.scroll.x += (float)xoff;
     glfw.scroll.y += (float)yoff;
 }
