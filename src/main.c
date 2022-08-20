@@ -343,7 +343,21 @@ int uiBeginNode(int type, int i, int h) {
   if (res) {
     d->panel = nk_window_get_panel(nk);
     nk_layout_row_dynamic(nk, h, 1);
-    if (nk_contextual_begin(nk, 0, nk_vec2(100, 220), d->panel->bounds)) {
+    struct nk_rect nodeBounds = d->panel->bounds;
+
+    // make context menu click area more lenient for nodes
+    // HACK: there doesn't seem any api to get a panel's full bounds including title etc
+    // NOTE: this assumes the nodes always have a title bar
+    struct nk_style* style = &nk->style;
+    struct nk_user_font const* font = style->font;
+    int headerHeight =
+      font->height + 2.0f * style->window.header.padding.y +
+      2.0f * style->window.header.label_padding.y;
+    nodeBounds.y -= headerHeight;
+    nodeBounds.h += headerHeight + style->window.scrollbar_size.y;
+    nodeBounds.w += style->window.scrollbar_size.x;
+
+    if (nk_contextual_begin(nk, 0, nk_vec2(100, 220), nodeBounds)) {
       nk_layout_row_dynamic(nk, CONTEXT_HEIGHT, 1);
       if (nk_contextual_item_label(nk, "Remove", NK_TEXT_CENTERED)) {
         *BufAlloc(&removeNodes) = d->node;
