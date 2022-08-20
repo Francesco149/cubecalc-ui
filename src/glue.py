@@ -23,9 +23,8 @@ calc_param_to_key = {
 bitenum_to_str = lambda e, v: " | ".join([x.name for x in e if x & v])
 
 calc_param_stringify = {
-  WANTS: lambda x: "[ " + ", ".join(["{ " + ", ".join([f"{bitenum_to_str(Line, k)}: {v}"
-                                                       for k, v in y.items()]) + " }"
-                                    for y in x.values()]) + " ]",
+  WANTS: lambda x: "{ " + ", ".join([f"{bitenum_to_str(Line, k)}: {v}"
+                                     for k, v in x.items()]) + " }",
   CUBE: lambda x: Cube(x).name,
   TIER: lambda x: Tier(x).name,
   CATEGORY: lambda x: Category(x).name,
@@ -57,14 +56,6 @@ def calc_set(i, k, v):
   calc_ensure(i)
   calcs[i][k] = v
   calc_debug_print("set", i)
-
-
-def calc_want_clear(i):
-  calc_ensure(i)
-  c = calcs[i]
-  if WANTS in c:
-    c[WANTS] = {}
-  calc_debug_print("want_clear", i)
 
 
 def calc_want(i, k, v):

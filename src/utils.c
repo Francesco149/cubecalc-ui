@@ -71,6 +71,12 @@ void _BufAlloc(void* p, size_t count, size_t elementSize) {
 #define BufAlloc(b) \
   (_BufAlloc((b), 1, sizeof((*(b))[0])), (&(*(b))[BufLen(*(b)) - 1]))
 
+#define MemZero(p) \
+  memset((p), 0, sizeof(p));
+
+#define BufZero(p) \
+  memset((p), 0, sizeof((p)[0]) * BufLen(p));
+
 #define Pack16to32(hi, lo) (((hi) << 16) & 0xFFFF0000 | ((lo) & 0x0000FFFF))
 #define LoWord(dw) ((dw) & 0x0000FFFF)
 #define HiWord(dw) (((dw) >> 16) & 0x0000FFFF)

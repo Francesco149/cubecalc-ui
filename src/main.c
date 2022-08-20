@@ -45,12 +45,8 @@ EM_JS(void, pyCalcSet, (int calcIdx, int key, int value), {
   return Module.pyFunc("calc_set")(calcIdx, key, value);
 });
 
-EM_JS(void, pyCalcWant, (int calcIdx, int wantsIdx, int key, float value), {
-  return Module.pyFunc("calc_want")(calcIdx, wantsIdx, key, value);
-});
-
-EM_JS(void, pyCalcWantClear, (int calcIdx), {
-  return Module.pyFunc("calc_want_clear")(calcIdx);
+EM_JS(void, pyCalcWant, (int calcIdx, int key, float value), {
+  return Module.pyFunc("calc_want")(calcIdx, key, value);
 });
 
 EM_JS(float, pyCalc, (int calcIdx), {
@@ -149,6 +145,7 @@ enum {
 
 typedef struct _Node {
   int type;
+  int id; // unique
   int data; /* index into the data array of this type. updated on add/remove */
   int* connections; /* index into nodes array, updated on add/remove */
 } Node;
@@ -199,6 +196,7 @@ void treeUpdateConnections() {
   }
 
   BufFree(&done);
+  flags |= DIRTY;
 }
 
 void error(char* s) {
@@ -206,34 +204,54 @@ void error(char* s) {
   fprintf(stderr, "%s\n", s);
 }
 
+int defaultValue(int type, int stat) {
+  switch (type) {
+    case NCUBE: return RED;
+    case NTIER: return LEGENDARY;
+    case NCATEGORY: return WEAPON;
+    case NSTAT: return ATT;
+    case NAMOUNT:
+      if ((stat & COOLDOWN) || stat == INVIN) {
+        return 2;
+      }
+      if (stat & DECENTS) {
+        return 1;
+      }
+      switch (stat) {
+        case CRITDMG: return 8;
+        case MESO:
+        case DROP: return 20;
+        case BOSS:
+        case IED: return 30;
+        case FLAT_ATT: return 10;
+      }
+      return 21;
+  }
+  return 0;
+}
+
+// could use a unique number like time(0) but whatever
+int treeNextId() {
+  int id = 0;
+nextId:
+  for (int i = 0; i < BufLen(tree); ++i) {
+    if (tree[i].id == id) {
+      ++id;
+      goto nextId;
+    }
+  }
+  return id;
+}
+
 void treeAdd(int type, int x, int y) {
+  int id = treeNextId(); // important: do this BEFORE allocating the node
   NodeData* d = BufAlloc(&data[type]);
   Node* n;
   int chars;
 
   d->bounds = nk_rect(x, y, 150, 80);
-
-  switch (type) {
-    case NCUBE:
-      d->value = RED;
-      break;
-    case NTIER:
-      d->value = LEGENDARY;
-      break;
-    case NCATEGORY:
-      d->value = WEAPON;
-      break;
-    case NSTAT:
-      d->value = ATT;
-      break;
-    case NAMOUNT:
-      d->value = 21;
-      break;
-    default:
-      d->value = 0;
-  }
-
-  chars = snprintf(d->name, sizeof(d->name), "%s %zu", nodeNames[type - 1], BufLen(data[type]));
+  d->value = defaultValue(type, ATT);
+  chars = snprintf(d->name, sizeof(d->name), "%s %d", nodeNames[type - 1], id);
   if (chars >= sizeof(d->name)) {
     error("too many nodes, can't format node name");
     BufDel(data[type], BufLen(data[type]) - 1);
@@ -241,10 +259,17 @@ void treeAdd(int type, int x, int y) {
   }
 
   n = BufAlloc(&tree);
+  n->id = id;
   n->data = BufLen(data[type]) - 1;
   n->type = type;
   n->connections = 0;
   d->node = BufLen(tree) - 1;
+
+  switch (type) {
+    case NAVERAGE:
+      flags |= DIRTY;
+      break;
+  }
 }
 
 void treeDel(int nodeIndex) {
@@ -325,7 +350,9 @@ int uiBeginNode(int type, int i, int h) {
       if (nk_contextual_item_label(nk, "Remove", NK_TEXT_CENTERED)) {
         *BufAlloc(&removeNodes) = d->node;
       }
-      if (!(flags & UNLINKING) && nk_contextual_item_label(nk, "Link", NK_TEXT_CENTERED)) {
+      if (!(flags & UNLINKING) &&
+          !((flags & LINKING) && linkNode == d->node) && // not linking to same node
+          nk_contextual_item_label(nk, "Link", NK_TEXT_CENTERED)) {
         if (flags & LINKING) {
           // redundant but useful so we can walk up the graph without searching all nodes
           *BufAlloc(&tree[linkNode].connections) = d->node;
@@ -389,8 +416,191 @@ void drawLink(struct nk_command_buffer* canvas,
 
 void treeSetValue(NodeData* d, int newValue) {
   if (newValue != d->value) {
+    // TODO: we could flag individual nodes as dirty instead of recalculating everything
+    // for every value change even on unlinked nodes. however that would be a bit slower
+    // since we would have to look up the node for every single value change.
+    // also, it would create the complexity of having to propagate the dirty flag to all its
+    // dependent nodes
     flags |= DIRTY;
     d->value = newValue;
+  }
+}
+
+#define ASSUMED_KEY 1
+#define ASSUMED_VALUE 2
+typedef struct _Pair { int assumed, key, value; } Pair;
+
+void treeCalcAppendWants(int* values, Pair** wants) {
+  Pair* want = BufAlloc(wants);
+  // TODO: DRY
+  if (values[NSTAT] == -1) {
+    want->key = defaultValue(NSTAT, 0);
+    want->assumed |= ASSUMED_KEY;
+  } else {
+    want->key = values[NSTAT];
+  }
+  if (values[NAMOUNT] == -1) {
+    want->value = defaultValue(NAMOUNT, want->key);
+    want->assumed |= ASSUMED_VALUE;
+  } else {
+    want->value = values[NAMOUNT];
+  }
+  values[NSTAT] = -1;
+  values[NAMOUNT] = -1;
+}
+
+void treeCalcBranch(int* values, Pair** wants, int node, int* seen) {
+  if (seen[node]) {
+    // it's important to not visit the same node twice so we don't get into a loop
+    return;
+  }
+
+  seen[node] = 1;
+
+  Node* n = &tree[node];
+  for (int i = 0; i < BufLen(n->connections); ++i) {
+    // TODO: flatten this so we don't use recursion
+    treeCalcBranch(values, wants, n->connections[i], seen);
+  }
+
+  NodeData* d = &data[n->type][n->data];
+  switch (n->type) {
+    case NCUBE:
+    case NTIER:
+    case NCATEGORY:
+    case NAMOUNT:
+      values[n->type] = d->value;
+    // TODO: more advanced logic (AND, OR, etc)
+    case NSTAT:
+    case NAVERAGE:
+      // ignore
+      break;
+    default:
+      fprintf(stderr, "error visiting node %d, unknown type %d\n", node, n->type);
+  }
+
+  // every time we counter either stat or amount:
+  // - if it's amount, the desired stat pair is complete and we append either the default line
+  //   or the upstream line to the wants array
+  // - if it's a line, we save it but we don't do anything until either an amount is found
+  //   downstream, another line is found or we're done visiting the graph
+
+  if (n->type == NAMOUNT || (n->type == NSTAT && values[NSTAT] != -1)) {
+    treeCalcAppendWants(values, wants); // add either default line or upstream line
+  }
+
+  if (n->type == NSTAT) {
+    // save this line for later
+    values[NSTAT] = d->value;
+  }
+}
+
+char const* valueName(int type, int value) {
+  switch (type) {
+    case NCUBE: return cubeNames[value];
+    case NTIER: return tierNames[value];
+    case NCATEGORY: return categoryNames[value];
+    case NSTAT: return lineNames[value];
+  }
+  return 0;
+}
+
+int valueToCalc(int type, int value) {
+  switch (type) {
+    case NCUBE: return cubeValues[value];
+    case NTIER: return tierValues[value];
+    case NCATEGORY: return categoryValues[value];
+    case NSTAT: return lineValues[value];
+  }
+  return value;
+}
+
+int treeTypeToCalcParam(int type) {
+  switch (type) {
+    case NCUBE: return calcparamValues[CUBE];
+    case NTIER: return calcparamValues[TIER];
+    case NCATEGORY: return calcparamValues[CATEGORY];
+  }
+  return 0;
+}
+
+void treeCalc() {
+  for (int i = 0; i < BufLen(tree); ++i) {
+    Node* n = &tree[i];
+    // TODO: more type of result nodes (median, 75%, 85%, etc)
+    if (n->type == NAVERAGE) {
+      NodeData* d = &data[n->type][n->data];
+      printf("treeCalc %s\n", d->name);
+      pyCalcFree(n->id);
+
+      int values[NLAST];
+      for (int j = 0; j < NLAST; ++j) {
+        values[j] = -1;
+      }
+
+      int* seen = 0;
+      Pair* wants = 0;
+      BufReserve(&seen, BufLen(tree));
+      BufZero(seen);
+      treeCalcBranch(values, &wants, i, seen);
+      BufFree(&seen);
+
+      for (int j = NINVALID + 1; j < NLAST; ++j) {
+        switch (j) {
+          case NSTAT:
+          case NAMOUNT:
+          case NAVERAGE:
+            // these are handled separately
+            continue;
+        }
+        if (values[j] == -1) {
+          values[j] = defaultValue(j, values[CATEGORY]);
+          printf("(assumed) ");
+        }
+        char const* svalue = valueName(j, values[j]);
+        char* fmt = svalue ? "%s = %s\n" : "%s = %d\n";
+        char* valueName = nodeNames[j - 1];
+        if (svalue) {
+          printf(fmt, valueName, svalue);
+        } else {
+          printf(fmt, valueName, values[j]);
+        }
+        int param = treeTypeToCalcParam(j);
+        int value = valueToCalc(j, values[j]);
+        if (param) {
+          pyCalcSet(n->id, param, value);
+        } else {
+          fprintf(stderr, "unknown calc param %d = %d\n", j, values[j]);
+        }
+      }
+
+      // append complete any pending line to wants, or just the default line
+      if (!BufLen(wants) || values[NSTAT] != -1 || values[NAMOUNT] != -1) {
+        treeCalcAppendWants(values, &wants);
+      }
+
+      for (int j = 0; j < BufLen(wants); ++j) {
+        if (wants[j].assumed & ASSUMED_KEY) {
+          printf("(assumed) ");
+        }
+        printf("%s = ", lineNames[wants[j].key]);
+        if (wants[j].assumed & ASSUMED_VALUE) {
+          printf("(assumed) ");
+        }
+        printf("%d\n", wants[j].value);
+
+        pyCalcWant(n->id, lineValues[wants[j].key], wants[j].value);
+      }
+
+      BufFree(&wants);
+
+      float chance = pyCalc(n->id);
+      if (chance > 0) {
+        d->value = (int)(1 / chance + 0.5);
+      } else {
+        d->value = 0;
+      }
+    }
   }
 }
 
@@ -473,7 +683,7 @@ void loop() {
     comboNode(NCATEGORY, category);
     comboNode(NSTAT, line);
     propNode(NAMOUNT, i, "amount");
-    valueNode(NAVERAGE, float, "average 1 in");
+    valueNode(NAVERAGE, int, "average 1 in");
 
     nk_layout_space_end(nk);
 
@@ -528,7 +738,8 @@ void loop() {
   nk_end(nk);
 
   if (flags & DIRTY) {
-    // TODO: recalc everything
+    treeCalc();
+    flags &= ~DIRTY;
   }
 
   if (flags & SHOW_INFO) {
