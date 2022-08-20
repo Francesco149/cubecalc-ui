@@ -668,11 +668,11 @@ void loop() {
     } \
   }
 
-#define propNode(type, valueType, text) \
+#define propNode(type, valueType) \
   for (i = 0; i < BufLen(data[type]); ++i) { \
     if (uiBeginNode(type, i, 20)) { \
       NodeData* d = &data[type][i]; \
-      int newValue = nk_property##valueType(nk, text, 0, d->value, 120, 1, 0.02); \
+      int newValue = nk_property##valueType(nk, d->name, 0, d->value, 120, 1, 0.02); \
       treeSetValue(d, newValue); \
       uiEndNode(type, i); \
     } \
@@ -682,7 +682,7 @@ void loop() {
     comboNode(NTIER, tier);
     comboNode(NCATEGORY, category);
     comboNode(NSTAT, line);
-    propNode(NAMOUNT, i, "amount");
+    propNode(NAMOUNT, i);
     valueNode(NAVERAGE, int, "average 1 in");
 
     nk_layout_space_end(nk);
