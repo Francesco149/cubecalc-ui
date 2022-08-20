@@ -1,7 +1,8 @@
 a simple GUI to use the [[https://github.com/Francesco149/cubecalc][average cubing chances calculator]] for MapleStory
 
 * usage
-just use the [[https://francesco149.github.io/maple/cube][hosted version here]]
+just use the [[https://francesco149.github.io/maple/cube][hosted version here]] .
+the idea is that through the graph you can configure it for any complicated stat combination you're looking for as well as have multiple calculations for different combinations on screen. right now it's only ANDing all the stats you link, but I am planning to add a node that OR's groups of lines
 
 * navigating the code (for developers)
 this is a quite unusual stack. the UI is written in C using [[https://github.com/Immediate-Mode-UI/Nuklear][nuklear]], the cubing calculator is written in python, and it's all running in a browser.

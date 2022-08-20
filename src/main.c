@@ -2,8 +2,8 @@
 
 #include <stdio.h>
 
-/* TODO: figure out a way to embed numpy + python for non-browser version?
- * ... or just port the calculator to C */
+// TODO: figure out a way to embed numpy + python for non-browser version?
+// ... or just port the calculator to C
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
 
@@ -57,12 +57,12 @@ EM_JS(float, pyCalc, (int calcIdx), {
 #define NK_IMPLEMENTATION
 #define NK_INCLUDE_FONT_BAKING
 #define NK_INCLUDE_DEFAULT_FONT
-/*#define NK_INCLUDE_FIXED_TYPES*/
+//#define NK_INCLUDE_FIXED_TYPES
 #define NK_INCLUDE_STANDARD_IO
 #define NK_INCLUDE_STANDARD_VARARGS
 #define NK_INCLUDE_DEFAULT_ALLOCATOR
 
-/* required by glfw backend */
+// required by glfw backend
 #define NK_KEYSTATE_BASED_INPUT
 #define NK_INCLUDE_VERTEX_BUFFER_OUTPUT
 #define NK_GLFW_ES2_IMPLEMENTATION
@@ -101,7 +101,7 @@ int flags = SHOW_INFO | SHOW_GRID;
 struct nk_vec2 pan;
 int linkNode;
 
-/* macro to generate things based on the list of node types */
+// macro to generate things based on the list of node types
 #define nodeTypes(f) \
   f(NCUBE) \
   f(NTIER) \
@@ -136,18 +136,16 @@ enum {
   NLAST
 };
 
-/*
- * we need the data to be nicely packed in memory so that we don't have to traverse a tree
- * when we draw the nodes since that would be slow.
- * but we also need a tree that represents relationships between nodes which is only traversed
- * when we calculate or when we change a connection
- */
+// we need the data to be nicely packed in memory so that we don't have to traverse a tree
+// when we draw the nodes since that would be slow.
+// but we also need a tree that represents relationships between nodes which is only traversed
+// when we calculate or when we change a connection
 
 typedef struct _Node {
   int type;
   int id; // unique
-  int data; /* index into the data array of this type. updated on add/remove */
-  int* connections; /* index into nodes array, updated on add/remove */
+  int data; // index into the data array of this type. updated on add/remove
+  int* connections; // index into nodes array, updated on add/remove
 } Node;
 
 typedef struct _NodeData {
@@ -821,7 +819,7 @@ int main() {
   nk = nk_glfw3_init(win, NK_GLFW3_INSTALL_CALLBACKS);
   in = &nk->input;
 
-  /* this is required even if empty */
+  // this is required even if empty
   {
     struct nk_font_atlas *atlas;
     nk_glfw3_font_stash_begin(&atlas);
