@@ -253,6 +253,9 @@ void treeAdd(int type, int x, int y) {
     case NCATEGORY:
       d->bounds = nk_rect(x, y, 300, 80);
       break;
+    case NSTAT:
+      d->bounds = nk_rect(x, y, 200, 80);
+      break;
     default:
       d->bounds = nk_rect(x, y, 170, 80);
   }

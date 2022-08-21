@@ -11,13 +11,17 @@ for en in [Cube, Category, Line, CalcParam, Tier]:
   print(f"char const* {n}Names[] = {{")
   vals = [x for x in en]
   if en == Line:
-    vals += [x for x in LineMasks]
+    vals = [x for x in LineMasks] + vals
+    exclude = {MAINSTAT, BOSS_30, BOSS_35, BOSS_40, IED_15, IED_30, IED_35, IED_40, ANY,
+               COOLDOWN_1, COOLDOWN_2}
+    vals = [x for x in vals if x not in exclude]
   if en == Category:
     for x in vals:
       print(f"  \"{category_name(x)}\",")
   else:
     for x in vals:
-      print(f"  \"{x.name.lower()}\",")
+      vn = x.name.lower().replace("_", " ")
+      print(f"  \"{vn}\",")
   print("};")
   print(f"int {n}Values[] = {{")
   for x in vals:
