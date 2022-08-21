@@ -91,6 +91,7 @@ enum {
   UNLINKING = 1<<3,
   DIRTY = 1<<4,
   RESIZING = 1<<5,
+  SHOW_DISCLAIMER = 1<<6,
 };
 
 GLFWwindow* win;
@@ -98,7 +99,7 @@ struct nk_context* nk;
 struct nk_input* in;
 int width, height;
 int fps;
-int flags = SHOW_INFO | SHOW_GRID;
+int flags = SHOW_INFO | SHOW_GRID | SHOW_DISCLAIMER;
 struct nk_vec2 pan;
 int linkNode;
 int resizeNode;
@@ -248,7 +249,13 @@ void treeAdd(int type, int x, int y) {
   Node* n;
   int chars;
 
-  d->bounds = nk_rect(x, y, 150, 80);
+  switch (type) {
+    case NCATEGORY:
+      d->bounds = nk_rect(x, y, 300, 80);
+      break;
+    default:
+      d->bounds = nk_rect(x, y, 170, 80);
+  }
   d->value = defaultValue(type, ATT);
   chars = snprintf(d->name, sizeof(d->name), "%s %d", nodeNames[type - 1], id);
   if (chars >= sizeof(d->name)) {
@@ -768,8 +775,7 @@ void loop() {
       } else {
         for (int i = 0; i < NK_LEN(nodeNames); ++i) {
           if (nk_contextual_item_label(nk, nodeNames[i], NK_TEXT_CENTERED)) {
-            treeAdd(i + 1, mouse.x - pan.x,
-                           mouse.y - pan.y);
+            treeAdd(i + 1, mouse.x - pan.x, mouse.y - pan.y);
           }
         }
       }
@@ -780,6 +786,7 @@ void loop() {
 
       flag(SHOW_INFO, "Info");
       flag(SHOW_GRID, "Grid");
+      flag(SHOW_DISCLAIMER, "Disclaimer");
 
       if (nk_contextual_item_label(nk, "I'm Lost", NK_TEXT_CENTERED)) {
         if (BufLen(tree)) {
@@ -806,8 +813,14 @@ void loop() {
     flags &= ~DIRTY;
   }
 
+#define UNMANAGEDWND \
+  NK_WINDOW_CLOSABLE | \
+  NK_WINDOW_MOVABLE | \
+  NK_WINDOW_SCALABLE | \
+  NODE_WINDOW_FLAGS
+
   if (flags & SHOW_INFO) {
-    if (nk_begin(nk, "Info", nk_rect(700, 50, 150, 200), NODE_WINDOW_FLAGS | NK_WINDOW_CLOSABLE)) {
+    if (nk_begin(nk, "Info", nk_rect(680, 10, 150, 200), UNMANAGEDWND)) {
       nk_layout_row_dynamic(nk, 10, 1);
       nk_value_int(nk, "FPS", fps);
       nk_value_int(nk, "Nodes", BufLen(tree));
@@ -837,6 +850,18 @@ void loop() {
       }
     } else {
       flags &= ~SHOW_INFO;
+    }
+    nk_end(nk);
+  }
+
+  if (flags & SHOW_DISCLAIMER) {
+    if (nk_begin(nk, "Disclaimer", nk_rect(680, 250, 610, 340), UNMANAGEDWND)) {
+      nk_layout_row_dynamic(nk, 10, 1);
+      for (i = 0; i < NK_LEN(disclaimer); ++i) {
+        nk_label(nk, disclaimer[i], NK_TEXT_LEFT);
+      }
+    } else {
+      flags &= ~SHOW_DISCLAIMER;
     }
     nk_end(nk);
   }

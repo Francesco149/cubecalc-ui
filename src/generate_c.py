@@ -32,3 +32,14 @@ for en in [Cube, Category, Line, CalcParam, Tier]:
       limit = tier_limits[x] if x in tier_limits else LEGENDARY
       print(f"  {limit},")
     print("};")
+
+print("char const* const disclaimer[] = {")
+with open("./cubecalc/cubechances.txt") as f:
+  f.readline()
+  f.readline()
+  for line in f:
+    if line.startswith("="):
+      break
+    s = line.strip()
+    print(f"\"{s}\",")
+print("};")
