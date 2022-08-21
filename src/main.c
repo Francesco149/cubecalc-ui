@@ -432,10 +432,9 @@ int uiBeginNode(int type, int i, int h) {
     // hover over them during dragging
     static int draggingId = -1;
 
+    int draggingThisNode = draggingId == tree[d->node].id;
     if (inParent && leftMouseDown && leftMouseClickInCursor && !leftMouseClicked) {
-      // don't drag if we're clicking the scaler and we're not already dragging
-
-      if (draggingId == -1 || draggingId == tree[d->node].id) {
+      if (draggingId == -1 || draggingThisNode) {
         draggingId = tree[d->node].id;
         d->bounds.x += in->mouse.delta.x;
         d->bounds.y += in->mouse.delta.y;
@@ -443,7 +442,7 @@ int uiBeginNode(int type, int i, int h) {
         in->mouse.buttons[NK_BUTTON_LEFT].clicked_pos.y += in->mouse.delta.y;
         nk->style.cursor_active = nk->style.cursors[NK_CURSOR_MOVE];
       }
-    } else {
+    } else if (draggingThisNode) {
       draggingId = -1;
     }
 
