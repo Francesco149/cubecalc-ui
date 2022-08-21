@@ -90,6 +90,7 @@ enum {
   LINKING = 1<<2,
   UNLINKING = 1<<3,
   DIRTY = 1<<4,
+  RESIZING = 1<<5,
 };
 
 GLFWwindow* win;
@@ -100,6 +101,7 @@ int fps;
 int flags = SHOW_INFO | SHOW_GRID;
 struct nk_vec2 pan;
 int linkNode;
+int resizeNode;
 
 // macro to generate things based on the list of node types
 #define nodeTypes(f) \
@@ -152,7 +154,6 @@ typedef struct _NodeData {
   struct nk_rect bounds;
   int value, node;
   char name[16];
-  struct nk_panel* panel;
 } NodeData;
 
 Node* tree;
@@ -329,40 +330,76 @@ void updateFPS() {
 
 #define NODE_WINDOW_FLAGS \
   NK_WINDOW_BORDER | \
-  NK_WINDOW_MOVABLE | \
-  NK_WINDOW_SCALABLE | \
   NK_WINDOW_TITLE | \
   0
 
 int uiBeginNode(int type, int i, int h) {
   NodeData* d = &data[type][i];
+  struct nk_panel* parentPanel = nk_window_get_panel(nk);
   nk_layout_space_push(nk,
     nk_rect(d->bounds.x - pan.x, d->bounds.y - pan.y, d->bounds.w, d->bounds.h)
   );
   int res = nk_group_begin(nk, d->name, NODE_WINDOW_FLAGS);
   if (res) {
-    d->panel = nk_window_get_panel(nk);
+    struct nk_panel* panel = nk_window_get_panel(nk);
+    struct nk_rect nodeBounds = panel->bounds;
+
     nk_layout_row_dynamic(nk, h, 1);
-    struct nk_rect nodeBounds = d->panel->bounds;
 
     // make context menu click area more lenient for nodes
     // HACK: there doesn't seem any api to get a panel's full bounds including title etc
     // NOTE: this assumes the nodes always have a title bar
+    // TODO: find a way to get rid of all this jank
     struct nk_style* style = &nk->style;
+    struct nk_vec2 panelPadding = nk_panel_get_padding(style, panel->type);
     struct nk_user_font const* font = style->font;
     int headerHeight =
-      font->height + 2.0f * style->window.header.padding.y +
-      2.0f * style->window.header.label_padding.y;
+      font->height + 2 * style->window.header.padding.y + 2 * style->window.header.label_padding.y;
+    struct nk_vec2 scrollbarSize = style->window.scrollbar_size;
     nodeBounds.y -= headerHeight;
-    nodeBounds.h += headerHeight + style->window.scrollbar_size.y;
-    nodeBounds.w += style->window.scrollbar_size.x;
+    nodeBounds.x -= panelPadding.x;
+    nodeBounds.h += headerHeight + panelPadding.y;
+    nodeBounds.w += scrollbarSize.x + panelPadding.x * 2 + style->window.header.padding.x;
+
+    struct nk_rect dragBounds = nodeBounds;
+    dragBounds.h = headerHeight + panelPadding.y;
+
+    // HACK: nuklear's built in drag movement is janky when multiple windows overlap because of
+    // the stateless nature of it so I make my own slight adjustments
+    int leftMouseDown = in->mouse.buttons[NK_BUTTON_LEFT].down;
+    int leftMouseClicked = in->mouse.buttons[NK_BUTTON_LEFT].clicked;
+    int leftMouseClickInCursor = nk_input_has_mouse_click_down_in_rect(in,
+        NK_BUTTON_LEFT, dragBounds, nk_true);
+
+    // prevent dragging when the window overlaps with the parent window title
+    int inParent = nk_input_is_mouse_hovering_rect(in, parentPanel->bounds);
+
+    // lock dragging to the window we started dragging so we don't drag other windows when we
+    // hover over them during dragging
+    static int draggingId = -1;
+
+    if (inParent && leftMouseDown && leftMouseClickInCursor && !leftMouseClicked) {
+      // don't drag if we're clicking the scaler and we're not already dragging
+
+      if (draggingId == -1 || draggingId == tree[d->node].id) {
+        draggingId = tree[d->node].id;
+        d->bounds.x += in->mouse.delta.x;
+        d->bounds.y += in->mouse.delta.y;
+        in->mouse.buttons[NK_BUTTON_LEFT].clicked_pos.x += in->mouse.delta.x;
+        in->mouse.buttons[NK_BUTTON_LEFT].clicked_pos.y += in->mouse.delta.y;
+        nk->style.cursor_active = nk->style.cursors[NK_CURSOR_MOVE];
+      }
+    } else {
+      draggingId = -1;
+    }
 
     if (nk_contextual_begin(nk, 0, nk_vec2(100, 220), nodeBounds)) {
       nk_layout_row_dynamic(nk, CONTEXT_HEIGHT, 1);
-      if (nk_contextual_item_label(nk, "Remove", NK_TEXT_CENTERED)) {
+      if (!(flags & RESIZING) &&
+          nk_contextual_item_label(nk, "Remove", NK_TEXT_CENTERED)) {
         *BufAlloc(&removeNodes) = d->node;
       }
-      if (!(flags & UNLINKING) &&
+      if (!(flags & (UNLINKING | RESIZING)) &&
           !((flags & LINKING) && linkNode == d->node) && // not linking to same node
           nk_contextual_item_label(nk, "Link", NK_TEXT_CENTERED)) {
         if (flags & LINKING) {
@@ -375,7 +412,8 @@ int uiBeginNode(int type, int i, int h) {
         }
         flags ^= LINKING;
       }
-      if (!(flags & LINKING) && nk_contextual_item_label(nk, "Un-Link", NK_TEXT_CENTERED)) {
+      if (!(flags & (LINKING | RESIZING)) &&
+           nk_contextual_item_label(nk, "Un-Link", NK_TEXT_CENTERED)) {
         if (flags & UNLINKING) {
           BufDelFindInt(tree[linkNode].connections, d->node);
           BufDelFindInt(tree[d->node].connections, linkNode);
@@ -385,6 +423,11 @@ int uiBeginNode(int type, int i, int h) {
         }
         flags ^= UNLINKING;
       }
+      if (nk_contextual_item_label(nk, (flags & RESIZING) ? "Stop Resizing" : "Resize",
+                                   NK_TEXT_CENTERED)) {
+        flags ^= RESIZING;
+        resizeNode = d->node;
+      }
       nk_contextual_end(nk);
     }
   }
@@ -393,13 +436,6 @@ int uiBeginNode(int type, int i, int h) {
 
 void uiEndNode(int type, int i) {
   nk_group_end(nk);
-
-  // get node position after dragging it (if dragged) and update the draw position for next frame
-  // TODO: handle panning around
-  NodeData* d = &data[type][i];
-  d->bounds = nk_layout_space_rect_to_local(nk, d->panel->bounds);
-  d->bounds.x += pan.x;
-  d->bounds.y += pan.y;
 }
 
 struct nk_vec2 nodeCenter(int type, int i) {
@@ -661,6 +697,15 @@ void loop() {
                (flags & LINKING) ? nk_rgb(200, 200, 255) : nk_rgb(255, 200, 200));
     }
 
+    if (flags & RESIZING) {
+      flags |= RESIZING;
+      Node* n = &tree[resizeNode];
+      NodeData* d = &data[n->type][n->data];
+      struct nk_vec2 m = nk_layout_space_to_local(nk, in->mouse.pos);
+      d->bounds.w = NK_MAX(100, m.x - d->bounds.x + pan.x);
+      d->bounds.h = NK_MAX(50, m.y - d->bounds.y + pan.y);
+    }
+
 #define comboNode(type, enumName) \
   for (i = 0; i < BufLen(data[type]); ++i) { \
     if (uiBeginNode(type, i, 25)) { \
@@ -697,6 +742,7 @@ void loop() {
     propNode(NAMOUNT, i);
     valueNode(NAVERAGE, int, "average 1 in");
 
+    struct nk_vec2 mouse = nk_layout_space_to_local(nk, in->mouse.pos);
     nk_layout_space_end(nk);
 
     // it really isn't necessary to handle multiple deletions right now, but why not.
@@ -715,10 +761,16 @@ void loop() {
     if (nk_contextual_begin(nk, 0, nk_vec2(100, 220), totalSpace)) {
       nk_layout_row_dynamic(nk, CONTEXT_HEIGHT, 1);
 
-      for (int i = 0; i < NK_LEN(nodeNames); ++i) {
-        if (nk_contextual_item_label(nk, nodeNames[i], NK_TEXT_CENTERED)) {
-          treeAdd(i + 1, in->mouse.pos.x - totalSpace.x + pan.x,
-                         in->mouse.pos.y - totalSpace.y + pan.y);
+      if ((flags & RESIZING)) {
+        if (nk_contextual_item_label(nk, "Stop Resizing", NK_TEXT_CENTERED)) {
+          flags &= ~RESIZING;
+        }
+      } else {
+        for (int i = 0; i < NK_LEN(nodeNames); ++i) {
+          if (nk_contextual_item_label(nk, nodeNames[i], NK_TEXT_CENTERED)) {
+            treeAdd(i + 1, mouse.x - pan.x,
+                           mouse.y - pan.y);
+          }
         }
       }
 
@@ -761,18 +813,27 @@ void loop() {
       nk_value_int(nk, "Nodes", BufLen(tree));
       nk_value_int(nk, "Links", BufLen(links));
       nk_label(nk, "", NK_TEXT_CENTERED);
-      if (flags & LINKING) {
-        nk_label(nk, "Linking...", NK_TEXT_CENTERED);
+
+#define showFlag(x) \
+      if (flags & x) { \
+        nk_label(nk, #x "...", NK_TEXT_CENTERED); \
       }
-      if (flags & UNLINKING) {
-        nk_label(nk, "Un-Linking...", NK_TEXT_CENTERED);
-      }
+
+      showFlag(LINKING)
+      showFlag(UNLINKING)
+      showFlag(RESIZING)
+
       nk_layout_row_dynamic(nk, 20, 1);
-      if ((flags & (LINKING | UNLINKING)) && (
+      if ((flags & (LINKING | UNLINKING | RESIZING)) && (
             glfwGetKey(win, GLFW_KEY_ESCAPE) == GLFW_PRESS ||
             nk_button_label(nk, "cancel")
           )) {
-        flags &= ~(LINKING | UNLINKING);
+        flags &= ~(
+          LINKING |
+          UNLINKING |
+          RESIZING |
+          0
+        );
       }
     } else {
       flags &= ~SHOW_INFO;
