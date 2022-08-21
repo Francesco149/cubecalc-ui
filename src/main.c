@@ -94,6 +94,8 @@ enum {
   SHOW_DISCLAIMER = 1<<6,
 };
 
+const struct nk_vec2 contextualSize = { .x = 100, .y = 220 };
+
 GLFWwindow* win;
 struct nk_context* nk;
 struct nk_input* in;
@@ -103,9 +105,11 @@ int flags = SHOW_INFO | SHOW_GRID | SHOW_DISCLAIMER;
 struct nk_vec2 pan;
 int linkNode;
 int resizeNode;
+int selectedNode = -1;
 
 // macro to generate things based on the list of node types
 #define nodeTypes(f) \
+  f(NCOMMENT) \
   f(NCUBE) \
   f(NTIER) \
   f(NCATEGORY) \
@@ -157,8 +161,17 @@ typedef struct _NodeData {
   char name[16];
 } NodeData;
 
+#define COMMENT_MAX 255
+#define COMMENT_ROUND 10
+#define COMMENT_THICK 1
+typedef struct _Comment {
+  char buf[COMMENT_MAX];
+  int len;
+} Comment;
+
 Node* tree;
 NodeData* data[NLAST];
+Comment* commentData;
 char** errors;
 int* removeNodes;
 
@@ -244,7 +257,7 @@ nextId:
   return id;
 }
 
-void treeAdd(int type, int x, int y) {
+int treeAdd(int type, int x, int y) {
   int id = treeNextId(); // important: do this BEFORE allocating the node
   NodeData* d = BufAlloc(&data[type]);
   Node* n;
@@ -265,7 +278,7 @@ void treeAdd(int type, int x, int y) {
   if (chars >= sizeof(d->name)) {
     error("too many nodes, can't format node name");
     BufDel(data[type], BufLen(data[type]) - 1);
-    return;
+    return -1;
   }
 
   n = BufAlloc(&tree);
@@ -279,7 +292,12 @@ void treeAdd(int type, int x, int y) {
     case NAVERAGE:
       flags |= DIRTY;
       break;
+    case NCOMMENT:
+      BufAllocZero(&commentData);
+      break;
   }
+
+  return d->node;
 }
 
 void treeDel(int nodeIndex) {
@@ -324,6 +342,19 @@ void treeDel(int nodeIndex) {
   BufDel(tree, nodeIndex);
   BufDel(data[type], index);
 
+  switch (type) {
+    case NCOMMENT:
+      BufDel(commentData, index);
+      break;
+  }
+
+  treeUpdateConnections();
+}
+
+void treeLink(int from, int to) {
+  // redundant but useful so we can walk up the graph without searching all nodes
+  *BufAlloc(&tree[from].connections) = to;
+  *BufAlloc(&tree[to].connections) = from;
   treeUpdateConnections();
 }
 
@@ -346,34 +377,46 @@ void updateFPS() {
 
 int uiBeginNode(int type, int i, int h) {
   NodeData* d = &data[type][i];
+  struct nk_rect bounds = d->bounds;
   struct nk_panel* parentPanel = nk_window_get_panel(nk);
+  int winFlags = NODE_WINDOW_FLAGS;
+  struct nk_style* style = &nk->style;
+  struct nk_user_font const* font = style->font;
+  // TODO: avoid branching, make a separate func for comments
+  if (type == NCOMMENT) {
+    bounds.h = h + 20;
+    winFlags &= ~NK_WINDOW_TITLE;
+  }
   nk_layout_space_push(nk,
-    nk_rect(d->bounds.x - pan.x, d->bounds.y - pan.y, d->bounds.w, d->bounds.h)
+    nk_rect(bounds.x - pan.x, bounds.y - pan.y, bounds.w, bounds.h)
   );
-  int res = nk_group_begin(nk, d->name, NODE_WINDOW_FLAGS);
+  int res = nk_group_begin(nk, d->name, winFlags);
   if (res) {
     struct nk_panel* panel = nk_window_get_panel(nk);
     struct nk_rect nodeBounds = panel->bounds;
 
     nk_layout_row_dynamic(nk, h, 1);
 
-    // make context menu click area more lenient for nodes
-    // HACK: there doesn't seem any api to get a panel's full bounds including title etc
-    // NOTE: this assumes the nodes always have a title bar
-    // TODO: find a way to get rid of all this jank
-    struct nk_style* style = &nk->style;
-    struct nk_vec2 panelPadding = nk_panel_get_padding(style, panel->type);
-    struct nk_user_font const* font = style->font;
-    int headerHeight =
-      font->height + 2 * style->window.header.padding.y + 2 * style->window.header.label_padding.y;
-    struct nk_vec2 scrollbarSize = style->window.scrollbar_size;
-    nodeBounds.y -= headerHeight;
-    nodeBounds.x -= panelPadding.x;
-    nodeBounds.h += headerHeight + panelPadding.y;
-    nodeBounds.w += scrollbarSize.x + panelPadding.x * 2 + style->window.header.padding.x;
-
     struct nk_rect dragBounds = nodeBounds;
-    dragBounds.h = headerHeight + panelPadding.y;
+
+    if (type != NCOMMENT) {
+      // make context menu click area more lenient for nodes
+      // HACK: there doesn't seem any api to get a panel's full bounds including title etc
+      // NOTE: this assumes the nodes always have a title bar
+      // TODO: find a way to get rid of all this jank
+      struct nk_vec2 panelPadding = nk_panel_get_padding(style, panel->type);
+      int headerHeight = font->height +
+        2 * style->window.header.padding.y +
+        2 * style->window.header.label_padding.y;
+      struct nk_vec2 scrollbarSize = style->window.scrollbar_size;
+      nodeBounds.y -= headerHeight;
+      nodeBounds.x -= panelPadding.x;
+      nodeBounds.h += headerHeight + panelPadding.y;
+      nodeBounds.w += scrollbarSize.x + panelPadding.x * 2 + style->window.header.padding.x;
+
+      dragBounds = nodeBounds;
+      dragBounds.h = headerHeight + panelPadding.y;
+    }
 
     // HACK: nuklear's built in drag movement is janky when multiple windows overlap because of
     // the stateless nature of it so I make my own slight adjustments
@@ -404,35 +447,56 @@ int uiBeginNode(int type, int i, int h) {
       draggingId = -1;
     }
 
-    if (nk_contextual_begin(nk, 0, nk_vec2(100, 220), nodeBounds)) {
+    int showContextual = nk_contextual_begin(nk, 0, contextualSize, nodeBounds);
+
+    if (type == NCOMMENT) {
+      const int off = COMMENT_ROUND + COMMENT_THICK * 3;
+      struct nk_rect left, right, top, bottom;
+      left = right = top = bottom = d->bounds;
+      left.x = nodeBounds.x - off;
+      left.w = off;
+      right.x = nodeBounds.x + right.w;
+      right.w = off;
+      top.y = nodeBounds.y - off;
+      top.h = off;
+      bottom.y = nodeBounds.y + bottom.h;
+      bottom.h = off;
+      showContextual = showContextual || nk_contextual_begin(nk, 0, contextualSize, left);
+      showContextual = showContextual || nk_contextual_begin(nk, 0, contextualSize, right);
+      showContextual = showContextual || nk_contextual_begin(nk, 0, contextualSize, top);
+      showContextual = showContextual || nk_contextual_begin(nk, 0, contextualSize, bottom);
+    }
+
+    if (showContextual) {
+      selectedNode = d->node;
       nk_layout_row_dynamic(nk, CONTEXT_HEIGHT, 1);
       if (!(flags & RESIZING) &&
           nk_contextual_item_label(nk, "Remove", NK_TEXT_CENTERED)) {
         *BufAlloc(&removeNodes) = d->node;
       }
-      if (!(flags & (UNLINKING | RESIZING)) &&
-          !((flags & LINKING) && linkNode == d->node) && // not linking to same node
-          nk_contextual_item_label(nk, "Link", NK_TEXT_CENTERED)) {
-        if (flags & LINKING) {
-          // redundant but useful so we can walk up the graph without searching all nodes
-          *BufAlloc(&tree[linkNode].connections) = d->node;
-          *BufAlloc(&tree[d->node].connections) = linkNode;
-          treeUpdateConnections();
-        } else {
-          linkNode = d->node;
+      if (!(flags & RESIZING) && type != NCOMMENT) {
+        // not all nodes make sense to link
+
+        if (!(flags & UNLINKING) &&
+            !((flags & LINKING) && linkNode == d->node) && // not linking to same node
+            nk_contextual_item_label(nk, "Link", NK_TEXT_CENTERED)) {
+          if (flags & LINKING) {
+            treeLink(d->node, linkNode);
+          } else {
+            linkNode = d->node;
+          }
+          flags ^= LINKING;
         }
-        flags ^= LINKING;
-      }
-      if (!(flags & (LINKING | RESIZING)) &&
-           nk_contextual_item_label(nk, "Un-Link", NK_TEXT_CENTERED)) {
-        if (flags & UNLINKING) {
-          BufDelFindInt(tree[linkNode].connections, d->node);
-          BufDelFindInt(tree[d->node].connections, linkNode);
-          treeUpdateConnections();
-        } else {
-          linkNode = d->node;
+        if (!(flags & LINKING) && nk_contextual_item_label(nk, "Un-Link", NK_TEXT_CENTERED)) {
+          if (flags & UNLINKING) {
+            BufDelFindInt(tree[linkNode].connections, d->node);
+            BufDelFindInt(tree[d->node].connections, linkNode);
+            treeUpdateConnections();
+          } else {
+            linkNode = d->node;
+          }
+          flags ^= UNLINKING;
         }
-        flags ^= UNLINKING;
       }
       if (nk_contextual_item_label(nk, (flags & RESIZING) ? "Stop Resizing" : "Resize",
                                    NK_TEXT_CENTERED)) {
@@ -440,6 +504,8 @@ int uiBeginNode(int type, int i, int h) {
         resizeNode = d->node;
       }
       nk_contextual_end(nk);
+    } else if (selectedNode == d->node) {
+      selectedNode = -1;
     }
   }
   return res;
@@ -663,6 +729,16 @@ void treeCalc() {
   }
 }
 
+struct nk_rect commentBounds(struct nk_rect bounds) {
+  bounds.x -= COMMENT_ROUND;
+  bounds.y -= COMMENT_ROUND;
+  bounds.w += COMMENT_ROUND * 2;
+  bounds.h += COMMENT_ROUND * 2;
+  bounds.x -= pan.x;
+  bounds.y -= pan.y;
+  return bounds;
+}
+
 void loop() {
   int i, j;
 
@@ -746,12 +822,38 @@ void loop() {
     } \
   }
 
+    for (i = 0; i < BufLen(data[NCOMMENT]); ++i) {
+      NodeData* d = &data[NCOMMENT][i];
+      struct nk_rect bounds = commentBounds(d->bounds);
+      const struct nk_color color = nk_rgb(255, 255, 128);
+      nk_stroke_rect(canvas, nk_layout_space_rect_to_screen(nk, bounds),
+                     COMMENT_ROUND, COMMENT_THICK, color);
+      if (uiBeginNode(NCOMMENT, i, 20)) {
+        bounds.x -= pan.x;
+        bounds.y -= pan.y;
+
+        Comment* com = &commentData[i];
+        nk_edit_string(nk, NK_EDIT_FIELD, com->buf, &com->len, COMMENT_MAX, 0);
+        uiEndNode(NCOMMENT, i);
+      }
+    }
+
     comboNode(NCUBE, cube);
     comboNode(NTIER, tier);
     comboNode(NCATEGORY, category);
     comboNode(NSTAT, line);
     propNode(NAMOUNT, i);
     valueNode(NAVERAGE, int, "average 1 in");
+
+    // draw rounded border around selected node
+    if (selectedNode >= 0) {
+      const struct nk_color selColor = nk_rgb(128, 255, 128);
+      Node* sn = &tree[selectedNode];
+      NodeData* sd = &data[sn->type][sn->data];
+      struct nk_rect sbounds = commentBounds(sd->bounds);
+      nk_stroke_rect(canvas, nk_layout_space_rect_to_screen(nk, sbounds),
+                       COMMENT_ROUND, COMMENT_THICK, selColor);
+    }
 
     struct nk_vec2 mouse = nk_layout_space_to_local(nk, in->mouse.pos);
     nk_layout_space_end(nk);
@@ -906,9 +1008,33 @@ void loop() {
   updateFPS();
 }
 
+int treeAddChk(int type, int x, int y, int* succ) {
+  int res = treeAdd(type, x, y);
+  *succ = *succ && res >= 0;
+  return res;
+}
+
 int main() {
   pyInit(TS);
   treeInit();
+
+  int succ = 1;
+  int ncomment = treeAddChk(NCOMMENT, 20, 20, &succ);
+  data[NCOMMENT][tree[ncomment].data].bounds.w = 460;
+  data[NCOMMENT][tree[ncomment].data].bounds.h = 360;
+  snprintf(commentData[tree[ncomment].data].buf, COMMENT_MAX - 1, "example: 21+ att");
+  commentData[tree[ncomment].data].len = strlen(commentData[tree[ncomment].data].buf);
+  int ncube = treeAddChk(NCUBE, 20, 110, &succ);
+  int ntier = treeAddChk(NTIER, 20, 200, &succ);
+  int nstat = treeAddChk(NSTAT, 200, 110, &succ);
+  int namt = treeAddChk(NAMOUNT, 200, 200, &succ);
+  int navg = treeAddChk(NAVERAGE, 200, 290, &succ);
+  if (succ) {
+    treeLink(ncube, ntier);
+    treeLink(ntier, navg);
+    treeLink(nstat, namt);
+    treeLink(namt, navg);
+  }
 
   glfwSetErrorCallback(errorCallback);
   if (!glfwInit()) {

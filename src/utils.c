@@ -71,6 +71,9 @@ void _BufAlloc(void* p, size_t count, size_t elementSize) {
 #define BufAlloc(b) \
   (_BufAlloc((b), 1, sizeof((*(b))[0])), (&(*(b))[BufLen(*(b)) - 1]))
 
+#define BufAllocZero(b) \
+  memset(BufAlloc(b), 0, sizeof((*b)[0]))
+
 #define MemZero(p) \
   memset((p), 0, sizeof(p));
 
