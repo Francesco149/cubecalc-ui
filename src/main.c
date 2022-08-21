@@ -211,6 +211,7 @@ int defaultValue(int type, int stat) {
     case NCATEGORY: return WEAPON;
     case NSTAT: return ATT;
     case NAMOUNT:
+      stat = lineValues[stat];
       if ((stat & COOLDOWN) || stat == INVIN) {
         return 2;
       }
