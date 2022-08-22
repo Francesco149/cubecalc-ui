@@ -373,6 +373,14 @@ void treeDel(int nodeIndex) {
     if (data[n->type][n->data].node > nodeIndex) {
       --data[n->type][n->data].node;
     }
+
+    if (n->type == NSPLIT) {
+      if (data[n->type][n->data].value > nodeIndex) {
+        --data[n->type][n->data].value;
+      } else if (data[n->type][n->data].value == nodeIndex) {
+        data[n->type][n->data].value = -1;
+      }
+    }
   }
 
   // actually delete elements and shift everything after them left by 1
