@@ -364,22 +364,25 @@ void treeDel(int nodeIndex) {
     BufFree(&n->connections);
     n->connections = newConnections;
 
-    // adjust data indices
-    if (n->type == type && n->data > index) {
-      --n->data;
-    }
-
-    // adjust node indices
-    if (i > nodeIndex) {
-      --data[n->type][n->data].node;
-    }
-
     if (n->type == NSPLIT) {
       if (data[n->type][n->data].value > nodeIndex) {
         --data[n->type][n->data].value;
       } else if (data[n->type][n->data].value == nodeIndex) {
         data[n->type][n->data].value = -1;
       }
+    }
+
+    // NOTE: we are USING n->data so it needs to be modified after we use it
+    // dangerous code
+
+    // adjust node indices
+    if (i > nodeIndex) {
+      --data[n->type][n->data].node;
+    }
+
+    // adjust data indices
+    if (n->type == type && n->data > index) {
+      --n->data;
     }
   }
 
