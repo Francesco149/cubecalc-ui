@@ -365,13 +365,13 @@ void treeDel(int nodeIndex) {
     n->connections = newConnections;
 
     // adjust data indices
-    if (n->data > index) {
+    if (n->type == type && n->data > index) {
       --n->data;
     }
 
     // adjust node indices
-    if (data[n->type][n->data].node > nodeIndex) {
-      --data[n->type][n->data].node;
+    if (i > nodeIndex) {
+      data[n->type][n->data].node = i - 1;
     }
 
     if (n->type == NSPLIT) {
