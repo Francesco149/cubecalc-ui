@@ -101,6 +101,7 @@ struct nk_context* nk;
 struct nk_input* in;
 int width, height;
 int fps;
+int calcWidth = 800, calcHeight = 600;
 int flags = SHOW_INFO | SHOW_GRID | SHOW_DISCLAIMER;
 struct nk_vec2 pan;
 int linkNode;
@@ -754,7 +755,7 @@ void loop() {
   glfwPollEvents();
   nk_glfw3_new_frame();
 
-  if (nk_begin(nk, "MapleStory Cubing Calculator", nk_rect(10, 10, 640, 480),
+  if (nk_begin(nk, "MapleStory Cubing Calculator", nk_rect(10, 10, calcWidth, calcHeight),
       NK_WINDOW_BORDER | NK_WINDOW_MOVABLE | NK_WINDOW_NO_SCROLLBAR | NK_WINDOW_TITLE |
       NK_WINDOW_SCALABLE))
   {
@@ -935,7 +936,7 @@ void loop() {
   NODE_WINDOW_FLAGS
 
   if (flags & SHOW_INFO) {
-    if (nk_begin(nk, "Info", nk_rect(680, 10, 150, 200), UNMANAGEDWND)) {
+    if (nk_begin(nk, "Info", nk_rect(calcWidth + 20, 10, 150, 200), UNMANAGEDWND)) {
       nk_layout_row_dynamic(nk, 10, 1);
       nk_value_int(nk, "FPS", fps);
       nk_value_int(nk, "Nodes", BufLen(tree));
@@ -970,7 +971,7 @@ void loop() {
   }
 
   if (flags & SHOW_DISCLAIMER) {
-    if (nk_begin(nk, "Disclaimer", nk_rect(680, 250, 610, 340), UNMANAGEDWND)) {
+    if (nk_begin(nk, "Disclaimer", nk_rect(10, calcHeight + 20, 610, 340), UNMANAGEDWND)) {
       nk_layout_row_dynamic(nk, 10, 1);
       for (i = 0; i < NK_LEN(disclaimer); ++i) {
         nk_label(nk, disclaimer[i], NK_TEXT_LEFT);
@@ -1029,16 +1030,20 @@ int main() {
 
   int succ = 1;
   int ncomment = treeAddChk(NCOMMENT, 20, 20, &succ);
-  data[NCOMMENT][tree[ncomment].data].bounds.w = 460;
-  data[NCOMMENT][tree[ncomment].data].bounds.h = 360;
-  snprintf(commentData[tree[ncomment].data].buf, COMMENT_MAX - 1, "example: 21+ att");
+  data[NCOMMENT][tree[ncomment].data].bounds.w = 380;
+  data[NCOMMENT][tree[ncomment].data].bounds.h = 400;
+  snprintf(commentData[tree[ncomment].data].buf, COMMENT_MAX - 1,
+           "example: 21+ att on secondary");
   commentData[tree[ncomment].data].len = strlen(commentData[tree[ncomment].data].buf);
-  int ncube = treeAddChk(NCUBE, 20, 110, &succ);
-  int ntier = treeAddChk(NTIER, 20, 200, &succ);
-  int nstat = treeAddChk(NSTAT, 200, 110, &succ);
-  int namt = treeAddChk(NAMOUNT, 200, 200, &succ);
-  int navg = treeAddChk(NAVERAGE, 200, 290, &succ);
+  int ncategory = treeAddChk(NCATEGORY, 20, 70, &succ);
+  int ncube = treeAddChk(NCUBE, 20, 160, &succ);
+  int ntier = treeAddChk(NTIER, 20, 250, &succ);
+  int nstat = treeAddChk(NSTAT, 200, 160, &succ);
+  int namt = treeAddChk(NAMOUNT, 200, 250, &succ);
+  int navg = treeAddChk(NAVERAGE, 200, 340, &succ);
   if (succ) {
+    data[NCATEGORY][tree[ncategory].data].value = SECONDARY;
+    treeLink(ncategory, ncube);
     treeLink(ncube, ntier);
     treeLink(ntier, navg);
     treeLink(nstat, namt);
@@ -1067,6 +1072,8 @@ int main() {
 
 #ifdef __EMSCRIPTEN__
   resizeCanvas();
+  calcWidth = NK_MAX(width - 200, 800);
+  calcHeight = NK_MAX(height - 380, 600);
   emscripten_set_main_loop(loop, 0, 1);
 #else
   while (!glfwWindowShouldClose(win)) {
