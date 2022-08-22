@@ -13,7 +13,7 @@ for en in [Cube, Category, Line, CalcParam, Tier]:
   if en == Line:
     vals = [x for x in LineMasks] + vals
     exclude = {MAINSTAT, BOSS_30, BOSS_35, BOSS_40, IED_15, IED_30, IED_35, IED_40, ANY,
-               COOLDOWN_1, COOLDOWN_2}
+               COOLDOWN_1, COOLDOWN_2, FLAT_MAINSTAT, FLAT_ALLSTAT, FLAT_HP}
     vals = [x for x in vals if x not in exclude]
   if en == Category:
     for x in vals:
