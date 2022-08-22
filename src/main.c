@@ -873,6 +873,7 @@ void loop() {
     for (i = 0; i < BufLen(removeNodes); ++i) {
       int nodeIndex = removeNodes[i];
       treeDel(nodeIndex);
+      selectedNode = -1;
       for (j = i; j < BufLen(removeNodes); ++j) {
         if (removeNodes[j] > nodeIndex) {
           --removeNodes[j];
