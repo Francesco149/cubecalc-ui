@@ -371,7 +371,7 @@ void treeDel(int nodeIndex) {
 
     // adjust node indices
     if (i > nodeIndex) {
-      data[n->type][n->data].node = i - 1;
+      --data[n->type][n->data].node;
     }
 
     if (n->type == NSPLIT) {
