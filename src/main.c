@@ -375,9 +375,20 @@ void updateFPS() {
   NK_WINDOW_TITLE | \
   0
 
+struct nk_rect commentBounds(struct nk_rect bounds) {
+  bounds.x -= COMMENT_ROUND;
+  bounds.y -= COMMENT_ROUND;
+  bounds.w += COMMENT_ROUND * 2;
+  bounds.h += COMMENT_ROUND * 2;
+  bounds.x -= pan.x;
+  bounds.y -= pan.y;
+  return bounds;
+}
+
 int uiBeginNode(int type, int i, int h) {
   NodeData* d = &data[type][i];
   struct nk_rect bounds = d->bounds;
+  struct nk_rect screenBounds = nk_layout_space_rect_to_screen(nk, d->bounds);
   struct nk_panel* parentPanel = nk_window_get_panel(nk);
   int winFlags = NODE_WINDOW_FLAGS;
   struct nk_style* style = &nk->style;
@@ -390,6 +401,7 @@ int uiBeginNode(int type, int i, int h) {
   nk_layout_space_push(nk,
     nk_rect(bounds.x - pan.x, bounds.y - pan.y, bounds.w, bounds.h)
   );
+  int showContextual = 0;
   int res = nk_group_begin(nk, d->name, winFlags);
   if (res) {
     struct nk_panel* panel = nk_window_get_panel(nk);
@@ -446,67 +458,74 @@ int uiBeginNode(int type, int i, int h) {
       draggingId = -1;
     }
 
-    int showContextual = nk_contextual_begin(nk, 0, contextualSize, nodeBounds);
-
-    if (type == NCOMMENT) {
-      const int off = COMMENT_ROUND + COMMENT_THICK * 3;
-      struct nk_rect left, right, top, bottom;
-      left = right = top = bottom = d->bounds;
-      left.x = nodeBounds.x - off;
-      left.w = off;
-      right.x = nodeBounds.x + right.w;
-      right.w = off;
-      top.y = nodeBounds.y - off;
-      top.h = off;
-      bottom.y = nodeBounds.y + bottom.h;
-      bottom.h = off;
-      showContextual = showContextual || nk_contextual_begin(nk, 0, contextualSize, left);
-      showContextual = showContextual || nk_contextual_begin(nk, 0, contextualSize, right);
-      showContextual = showContextual || nk_contextual_begin(nk, 0, contextualSize, top);
-      showContextual = showContextual || nk_contextual_begin(nk, 0, contextualSize, bottom);
-    }
-
-    if (showContextual) {
-      selectedNode = d->node;
-      nk_layout_row_dynamic(nk, CONTEXT_HEIGHT, 1);
-      if (!(flags & RESIZING) &&
-          nk_contextual_item_label(nk, "Remove", NK_TEXT_CENTERED)) {
-        *BufAlloc(&removeNodes) = d->node;
-      }
-      if (!(flags & RESIZING) && type != NCOMMENT) {
-        // not all nodes make sense to link
-
-        if (!(flags & UNLINKING) &&
-            !((flags & LINKING) && linkNode == d->node) && // not linking to same node
-            nk_contextual_item_label(nk, "Link", NK_TEXT_CENTERED)) {
-          if (flags & LINKING) {
-            treeLink(d->node, linkNode);
-          } else {
-            linkNode = d->node;
-          }
-          flags ^= LINKING;
-        }
-        if (!(flags & LINKING) && nk_contextual_item_label(nk, "Un-Link", NK_TEXT_CENTERED)) {
-          if (flags & UNLINKING) {
-            BufDelFindInt(tree[linkNode].connections, d->node);
-            BufDelFindInt(tree[d->node].connections, linkNode);
-            treeUpdateConnections();
-          } else {
-            linkNode = d->node;
-          }
-          flags ^= UNLINKING;
-        }
-      }
-      if (nk_contextual_item_label(nk, (flags & RESIZING) ? "Stop Resizing" : "Resize",
-                                   NK_TEXT_CENTERED)) {
-        flags ^= RESIZING;
-        resizeNode = d->node;
-      }
-      nk_contextual_end(nk);
-    } else if (selectedNode == d->node) {
-      selectedNode = -1;
-    }
+    showContextual = showContextual || nk_contextual_begin(nk, 0, contextualSize, nodeBounds);
   }
+
+  // the contextual menu logic should be outside of the window logic because for things like
+  // comments, we could trigger the contextual menu when the node's main window is not visible
+  // by clicking on the border for example
+
+  if (type == NCOMMENT) {
+    const int loff = COMMENT_ROUND + COMMENT_THICK * 3;
+    const int roff = COMMENT_ROUND;
+    struct nk_rect left, right, top, bottom;
+    struct nk_rect b = screenBounds;
+    left = right = top = bottom = commentBounds(b);
+    left.x -= roff / 2;
+    left.w = loff;
+    right.x += right.w - roff / 2;
+    right.w = loff;
+    top.y -= roff / 2;
+    top.h = loff;
+    bottom.y += bottom.h - roff / 2;
+    bottom.h = loff;
+    showContextual = showContextual || nk_contextual_begin(nk, 0, contextualSize, left);
+    showContextual = showContextual || nk_contextual_begin(nk, 0, contextualSize, right);
+    showContextual = showContextual || nk_contextual_begin(nk, 0, contextualSize, top);
+    showContextual = showContextual || nk_contextual_begin(nk, 0, contextualSize, bottom);
+  }
+
+  if (showContextual) {
+    selectedNode = d->node;
+    nk_layout_row_dynamic(nk, CONTEXT_HEIGHT, 1);
+    if (!(flags & RESIZING) &&
+        nk_contextual_item_label(nk, "Remove", NK_TEXT_CENTERED)) {
+      *BufAlloc(&removeNodes) = d->node;
+    }
+    if (!(flags & RESIZING) && type != NCOMMENT) {
+      // not all nodes make sense to link
+
+      if (!(flags & UNLINKING) &&
+          !((flags & LINKING) && linkNode == d->node) && // not linking to same node
+          nk_contextual_item_label(nk, "Link", NK_TEXT_CENTERED)) {
+        if (flags & LINKING) {
+          treeLink(d->node, linkNode);
+        } else {
+          linkNode = d->node;
+        }
+        flags ^= LINKING;
+      }
+      if (!(flags & LINKING) && nk_contextual_item_label(nk, "Un-Link", NK_TEXT_CENTERED)) {
+        if (flags & UNLINKING) {
+          BufDelFindInt(tree[linkNode].connections, d->node);
+          BufDelFindInt(tree[d->node].connections, linkNode);
+          treeUpdateConnections();
+        } else {
+          linkNode = d->node;
+        }
+        flags ^= UNLINKING;
+      }
+    }
+    if (nk_contextual_item_label(nk, (flags & RESIZING) ? "Stop Resizing" : "Resize",
+                                 NK_TEXT_CENTERED)) {
+      flags ^= RESIZING;
+      resizeNode = d->node;
+    }
+    nk_contextual_end(nk);
+  } else if (selectedNode == d->node) {
+    selectedNode = -1;
+  }
+
   return res;
 }
 
@@ -726,16 +745,6 @@ void treeCalc() {
       }
     }
   }
-}
-
-struct nk_rect commentBounds(struct nk_rect bounds) {
-  bounds.x -= COMMENT_ROUND;
-  bounds.y -= COMMENT_ROUND;
-  bounds.w += COMMENT_ROUND * 2;
-  bounds.h += COMMENT_ROUND * 2;
-  bounds.x -= pan.x;
-  bounds.y -= pan.y;
-  return bounds;
 }
 
 void loop() {
