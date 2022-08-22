@@ -92,6 +92,8 @@ enum {
   DIRTY = 1<<4,
   RESIZING = 1<<5,
   SHOW_DISCLAIMER = 1<<6,
+  UPDATE_CONNECTIONS = 1<<7,
+  LINKING_SPLIT = 1<<8,
 };
 
 const struct nk_vec2 contextualSize = { .x = 100, .y = 220 };
@@ -117,6 +119,7 @@ int selectedNode = -1;
   f(NSTAT) \
   f(NAMOUNT) \
   f(NAVERAGE) \
+  f(NSPLIT) \
 
 #define stringifyComma(x) #x,
 char* nodeNames[] = { nodeTypes(stringifyComma) };
@@ -181,11 +184,30 @@ void treeInit() {
 }
 
 typedef struct _NodeLink {
-  int fromType, toType;
-  int from, to;
+  int from, to; // node index
+  struct nk_color color;
+  float thick;
 } NodeLink;
 
 NodeLink* links;
+
+struct nk_vec2 nodeSpaceToScreen(struct nk_vec2 v) {
+  v = nk_layout_space_to_screen(nk, v);
+  v.x -= pan.x;
+  v.y -= pan.y;
+  return v;
+}
+
+struct nk_vec2 nodeCenter(int node) {
+  Node* n = &tree[node];
+  int i = n->data;
+  int type = n->type;
+  struct nk_rect bounds = data[type][i].bounds;
+  struct nk_vec2 center = nk_rect_pos(bounds);
+  center.x += bounds.w / 2;
+  center.y += bounds.h / 2;
+  return center;
+}
 
 void treeUpdateConnections() {
   BufClear(links);
@@ -201,11 +223,24 @@ void treeUpdateConnections() {
     for (int j = 0; j < BufLen(cons); ++j) {
       int other = cons[j];
       if (done[other]) continue;
-      NodeLink* l = BufAlloc(&links);
-      l->fromType = tree[i].type;
-      l->toType = tree[other].type;
-      l->from = tree[i].data;
-      l->to = tree[other].data;
+      // TODO: could cache pre computed positions and update them when nodes are moved
+      *BufAlloc(&links) = (NodeLink){
+        .from = i,
+        .to = other,
+        .color = nk_rgb(100, 100, 100),
+        .thick = 2,
+      };
+    }
+    if (tree[i].type == NSPLIT) {
+      NodeData* d = &data[NSPLIT][tree[i].data];
+      if (d->value >= 0) {
+        *BufAlloc(&links) = (NodeLink){
+          .from = i,
+          .to = d->value,
+          .color = nk_rgb(200, 100, 200),
+          .thick = 8,
+        };
+      }
     }
   }
 
@@ -241,6 +276,7 @@ int defaultValue(int type, int stat) {
         case FLAT_ATT: return 10;
       }
       return 21;
+    case NSPLIT: return -1;
   }
   return 0;
 }
@@ -265,14 +301,14 @@ int treeAdd(int type, int x, int y) {
   int chars;
 
   switch (type) {
+    case NSPLIT:
+      d->bounds = nk_rect(x, y, 80, 30);
+      break;
     case NCATEGORY:
       d->bounds = nk_rect(x, y, 300, 80);
       break;
-    case NSTAT:
-      d->bounds = nk_rect(x, y, 200, 80);
-      break;
     default:
-      d->bounds = nk_rect(x, y, 170, 80);
+      d->bounds = nk_rect(x, y, 200, 80);
   }
   d->value = defaultValue(type, ATT);
   chars = snprintf(d->name, sizeof(d->name), "%s %d", nodeNames[type - 1], id);
@@ -349,14 +385,19 @@ void treeDel(int nodeIndex) {
       break;
   }
 
-  treeUpdateConnections();
+  flags |= UPDATE_CONNECTIONS;
 }
 
 void treeLink(int from, int to) {
   // redundant but useful so we can walk up the graph without searching all nodes
   *BufAlloc(&tree[from].connections) = to;
   *BufAlloc(&tree[to].connections) = from;
-  treeUpdateConnections();
+  flags |= UPDATE_CONNECTIONS;
+}
+
+void treeUnlink(int from, int to) {
+  BufDelFindInt(tree[from].connections, to);
+  BufDelFindInt(tree[to].connections, from);
 }
 
 void updateFPS() {
@@ -489,39 +530,92 @@ int uiBeginNode(int type, int i, int h) {
   if (showContextual) {
     selectedNode = d->node;
     nk_layout_row_dynamic(nk, CONTEXT_HEIGHT, 1);
-    if (!(flags & RESIZING) &&
-        nk_contextual_item_label(nk, "Remove", NK_TEXT_CENTERED)) {
-      *BufAlloc(&removeNodes) = d->node;
-    }
-    if (!(flags & RESIZING) && type != NCOMMENT) {
-      // not all nodes make sense to link
 
-      if (!(flags & UNLINKING) &&
-          !((flags & LINKING) && linkNode == d->node) && // not linking to same node
-          nk_contextual_item_label(nk, "Link", NK_TEXT_CENTERED)) {
-        if (flags & LINKING) {
-          treeLink(d->node, linkNode);
-        } else {
-          linkNode = d->node;
-        }
-        flags ^= LINKING;
-      }
-      if (!(flags & LINKING) && nk_contextual_item_label(nk, "Un-Link", NK_TEXT_CENTERED)) {
-        if (flags & UNLINKING) {
-          BufDelFindInt(tree[linkNode].connections, d->node);
-          BufDelFindInt(tree[d->node].connections, linkNode);
-          treeUpdateConnections();
-        } else {
-          linkNode = d->node;
-        }
-        flags ^= UNLINKING;
-      }
-    }
     if (nk_contextual_item_label(nk, (flags & RESIZING) ? "Stop Resizing" : "Resize",
                                  NK_TEXT_CENTERED)) {
       flags ^= RESIZING;
       resizeNode = d->node;
     }
+
+    if (flags & RESIZING) {
+      goto contextualEnd;
+    }
+
+    if (nk_contextual_item_label(nk, "Remove", NK_TEXT_CENTERED)) {
+      *BufAlloc(&removeNodes) = d->node;
+    }
+
+    if (type == NCOMMENT) {
+      // not all nodes make sense to link
+      goto contextualEnd;
+    }
+
+    // not unlinking and not linking to same node
+    if (!(flags & UNLINKING) && !((flags & LINKING) && linkNode == d->node)) {
+      int isSplit =
+        type == NSPLIT &&
+        nk_contextual_item_label(nk, "Link Split", NK_TEXT_CENTERED);
+
+      int isNode = nk_contextual_item_label(nk, "Link", NK_TEXT_CENTERED);
+
+      if (isSplit || isNode) {
+        if (flags & LINKING) {
+          if (isSplit) {
+            // finish linking split->split or node->split
+            d->value = linkNode;
+          } else if (flags & LINKING_SPLIT) {
+            // finish linking split->node
+            data[NSPLIT][tree[linkNode].data].value = d->node;
+          } else {
+            // finish linking node->node
+            treeLink(d->node, linkNode);
+          }
+
+          flags |= UPDATE_CONNECTIONS;
+
+          if (!isSplit && !(flags & LINKING_SPLIT)) {
+            int otherType = tree[linkNode].type;
+            if ((type == NSPLIT && d->value == linkNode) ||
+                (otherType == NSPLIT && data[NSPLIT][tree[linkNode].data].value == d->node)
+            ) {
+              error("the node is already linked as a split branch");
+              treeUnlink(d->node, linkNode);
+            }
+          }
+        } else {
+          linkNode = d->node;
+          if (isSplit) {
+            // start linking split
+            flags |= LINKING_SPLIT;
+          } else {
+            // start linking node
+            flags &= ~LINKING_SPLIT;
+          }
+        }
+        flags ^= LINKING;
+      }
+    }
+
+    if (!(flags & LINKING) && nk_contextual_item_label(nk, "Un-Link", NK_TEXT_CENTERED)) {
+      if (flags & UNLINKING) {
+        treeUnlink(linkNode, d->node);
+
+        // unlink split
+        int otherType = tree[linkNode].type;
+        if (type == NSPLIT) {
+          d->value = -1;
+        } else if (otherType == NSPLIT) {
+          data[NSPLIT][tree[linkNode].data].value = -1;
+        }
+
+        flags |= UPDATE_CONNECTIONS;
+      } else {
+        linkNode = d->node;
+      }
+      flags ^= UNLINKING;
+    }
+
+contextualEnd:
     nk_contextual_end(nk);
   } else if (selectedNode == d->node) {
     selectedNode = -1;
@@ -534,16 +628,8 @@ void uiEndNode(int type, int i) {
   nk_group_end(nk);
 }
 
-struct nk_vec2 nodeCenter(int type, int i) {
-  struct nk_rect bounds = nk_layout_space_rect_to_screen(nk, data[type][i].bounds);
-  struct nk_vec2 center = nk_rect_pos(bounds);
-  center.x += bounds.w / 2 - pan.x;
-  center.y += bounds.h / 2 - pan.y;
-  return center;
-}
-
 void drawLink(struct nk_command_buffer* canvas,
-              struct nk_vec2 from, struct nk_vec2 to, struct nk_color color) {
+              struct nk_vec2 from, struct nk_vec2 to, struct nk_color color, float thick) {
   if (from.x > to.x) {
     struct nk_vec2 tmp = from;
     from = to;
@@ -555,7 +641,7 @@ void drawLink(struct nk_command_buffer* canvas,
     from.x + offs, from.y,
     to.x - offs, to.y,
     to.x, to.y,
-    2, color
+    thick, color
   );
 }
 
@@ -603,12 +689,21 @@ void treeCalcBranch(int* values, Pair** wants, int node, int* seen) {
   seen[node] = 1;
 
   Node* n = &tree[node];
-  for (int i = 0; i < BufLen(n->connections); ++i) {
-    // TODO: flatten this so we don't use recursion
-    treeCalcBranch(values, wants, n->connections[i], seen);
+  NodeData* d = &data[n->type][n->data];
+
+  // TODO: flatten this so we don't use recursion
+  if (n->type == NSPLIT) {
+    if (d->value >= 0) {
+      // in the case of a split, we only take the parent so that we don't traverse the other
+      // branches. that's the whole point of this node. to allow reusing common nodes
+      treeCalcBranch(values, wants, d->value, seen);
+    }
+  } else {
+    for (int i = 0; i < BufLen(n->connections); ++i) {
+      treeCalcBranch(values, wants, n->connections[i], seen);
+    }
   }
 
-  NodeData* d = &data[n->type][n->data];
   switch (n->type) {
     case NCUBE:
     case NTIER:
@@ -616,9 +711,8 @@ void treeCalcBranch(int* values, Pair** wants, int node, int* seen) {
     case NAMOUNT:
       values[n->type] = d->value;
     // TODO: more advanced logic (AND, OR, etc)
-    case NSTAT:
-    case NAVERAGE:
-      // ignore
+    case NSPLIT: // handled above
+    case NSTAT: // handled below
       break;
     default:
       fprintf(stderr, "error visiting node %d, unknown type %d\n", node, n->type);
@@ -781,17 +875,16 @@ void loop() {
     // draw links BEFORE the nodes so they appear below them
     for (i = 0; i < BufLen(links); ++i) {
       NodeLink* l = &links[i];
-      struct nk_vec2 from = nodeCenter(l->fromType, l->from);
-      struct nk_vec2 to = nodeCenter(l->toType, l->to);
-      drawLink(canvas, from, to, nk_rgb(100, 100, 100));
+      struct nk_vec2 from = nodeSpaceToScreen(nodeCenter(l->from));
+      struct nk_vec2 to = nodeSpaceToScreen(nodeCenter(l->to));
+      drawLink(canvas, from, to, l->color, l->thick);
     }
 
     if (flags & (LINKING | UNLINKING)) {
-      Node* n = &tree[linkNode];
-      struct nk_vec2 from = nodeCenter(n->type, n->data);
+      struct nk_vec2 from = nodeSpaceToScreen(nodeCenter(linkNode));
       struct nk_vec2 to = in->mouse.pos;
       drawLink(canvas, from, to,
-               (flags & LINKING) ? nk_rgb(200, 200, 255) : nk_rgb(255, 200, 200));
+               (flags & LINKING) ? nk_rgb(200, 200, 255) : nk_rgb(255, 200, 200), 2);
     }
 
     if (flags & RESIZING) {
@@ -845,6 +938,12 @@ void loop() {
         Comment* com = &commentData[i];
         nk_edit_string(nk, NK_EDIT_FIELD, com->buf, &com->len, COMMENT_MAX, 0);
         uiEndNode(NCOMMENT, i);
+      }
+    }
+
+    for (i = 0; i < BufLen(data[NSPLIT]); ++i) {
+      if (uiBeginNode(NSPLIT, i, 20)) {
+        uiEndNode(NSPLIT, i);
       }
     }
 
@@ -930,6 +1029,11 @@ void loop() {
     flags &= ~DIRTY;
   }
 
+  if (flags & UPDATE_CONNECTIONS) {
+    treeUpdateConnections();
+    flags &= ~UPDATE_CONNECTIONS;
+  }
+
 #define UNMANAGEDWND \
   NK_WINDOW_CLOSABLE | \
   NK_WINDOW_MOVABLE | \
@@ -984,8 +1088,7 @@ void loop() {
   }
 
   if (BufLen(errors)) {
-    if (nk_begin(nk, "Error", nk_rect(width / 2 - 200, height / 2 - 100, 400, 200),
-                 NODE_WINDOW_FLAGS)) {
+    if (nk_begin(nk, "Error", nk_rect(width / 2 - 200, height / 2 - 100, 400, 200), UNMANAGEDWND)){
       nk_layout_row_dynamic(nk, 10, 1);
       for (i = 0; i < BufLen(errors); ++i) {
         nk_label(nk, errors[i], NK_TEXT_LEFT);
@@ -1025,30 +1128,66 @@ int treeAddChk(int type, int x, int y, int* succ) {
   return res;
 }
 
+int treeAddComment(int x, int y, int w, int h, char* text, int* succ) {
+  int ncomment = treeAddChk(NCOMMENT, x, y, succ);
+  int i = tree[ncomment].data;
+  NodeData* d = &data[NCOMMENT][i];
+  Comment* cd = &commentData[i];
+  d->bounds.w = w;
+  d->bounds.h = h;
+  snprintf(cd->buf, COMMENT_MAX - 1, "%s", text);
+  cd->len = strlen(cd->buf);
+  return ncomment;
+}
+
 int main() {
   pyInit(TS);
   treeInit();
 
   int succ = 1;
-  int ncomment = treeAddChk(NCOMMENT, 20, 20, &succ);
-  data[NCOMMENT][tree[ncomment].data].bounds.w = 380;
-  data[NCOMMENT][tree[ncomment].data].bounds.h = 400;
-  snprintf(commentData[tree[ncomment].data].buf, COMMENT_MAX - 1,
-           "example: 21+ att on secondary");
-  commentData[tree[ncomment].data].len = strlen(commentData[tree[ncomment].data].buf);
-  int ncategory = treeAddChk(NCATEGORY, 20, 70, &succ);
-  int ncube = treeAddChk(NCUBE, 20, 160, &succ);
-  int ntier = treeAddChk(NTIER, 20, 250, &succ);
-  int nstat = treeAddChk(NSTAT, 200, 160, &succ);
-  int namt = treeAddChk(NAMOUNT, 200, 250, &succ);
-  int navg = treeAddChk(NAVERAGE, 200, 340, &succ);
+
+  int ncategory = treeAddChk(NCATEGORY, 20, 20, &succ);
+  int ncube = treeAddChk(NCUBE, 340, 20, &succ);
+  int ntier = treeAddChk(NTIER, 560, 20, &succ);
+  int nsplit = treeAddChk(NSPLIT, 690, 110, &succ);
   if (succ) {
     data[NCATEGORY][tree[ncategory].data].value = SECONDARY;
+    data[NSPLIT][tree[nsplit].data].value = ntier;
     treeLink(ncategory, ncube);
     treeLink(ncube, ntier);
-    treeLink(ntier, navg);
-    treeLink(nstat, namt);
-    treeLink(namt, navg);
+  }
+
+  {
+    int ncomment = treeAddComment(20, 130, 200, 310, "example: 21+ %att", &succ);
+    int nstat = treeAddChk(NSTAT, 20, 180, &succ);
+    int namt = treeAddChk(NAMOUNT, 20, 270, &succ);
+    int navg = treeAddChk(NAVERAGE, 20, 360, &succ);
+
+    if (succ) {
+      treeLink(nsplit, nstat);
+      treeLink(nstat, namt);
+      treeLink(namt, navg);
+    }
+  }
+
+  {
+    int ncomment = treeAddComment(260, 130, 410, 310, "example: 18+ %att and 30+ %boss", &succ);
+    int nstat2 = treeAddChk(NSTAT, 260, 180, &succ);
+    int namt2 = treeAddChk(NAMOUNT, 260, 270, &succ);
+    int nstat = treeAddChk(NSTAT, 470, 180, &succ);
+    int namt = treeAddChk(NAMOUNT, 470, 270, &succ);
+    int navg = treeAddChk(NAVERAGE, 470, 360, &succ);
+
+    if (succ) {
+      data[NSTAT][tree[nstat2].data].value = BOSS;
+      data[NAMOUNT][tree[namt2].data].value = defaultValue(NAMOUNT, BOSS);
+      data[NAMOUNT][tree[namt].data].value = 18;
+      treeLink(nsplit, nstat);
+      treeLink(nstat, namt);
+      treeLink(nstat2, namt2);
+      treeLink(namt, navg);
+      treeLink(namt2, navg);
+    }
   }
 
   glfwSetErrorCallback(errorCallback);
