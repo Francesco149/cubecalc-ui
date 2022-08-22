@@ -548,10 +548,11 @@ void drawLink(struct nk_command_buffer* canvas,
     from = to;
     to = tmp;
   }
+  int offs = NK_MIN(200, to.x - from.x);
   nk_stroke_curve(canvas,
     from.x, from.y,
-    from.x + 200, from.y,
-    to.x - 200, to.y,
+    from.x + offs, from.y,
+    to.x - offs, to.y,
     to.x, to.y,
     2, color
   );
