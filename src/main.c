@@ -226,10 +226,10 @@ int defaultValue(int type, int stat) {
     case NSTAT: return ATT;
     case NAMOUNT:
       stat = lineValues[stat];
-      if ((stat & COOLDOWN) || stat == INVIN) {
+      if ((stat & lineValues[COOLDOWN]) || stat == lineValues[INVIN]) {
         return 2;
       }
-      if (stat & DECENTS) {
+      if (stat & lineValues[DECENTS]) {
         return 1;
       }
       switch (stat) {
