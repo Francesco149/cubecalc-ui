@@ -1002,7 +1002,7 @@ void loop() {
       } else {
         for (int i = 0; i < NK_LEN(nodeNames); ++i) {
           if (nk_contextual_item_label(nk, nodeNames[i], NK_TEXT_CENTERED)) {
-            treeAdd(i + 1, mouse.x - pan.x, mouse.y - pan.y);
+            treeAdd(i + 1, mouse.x + pan.x, mouse.y + pan.y);
           }
         }
       }
