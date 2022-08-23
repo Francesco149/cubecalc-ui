@@ -16,6 +16,8 @@ for en in [Cube, Category, Line, CalcParam, Tier]:
                COOLDOWN_1, COOLDOWN_2, FLAT_MAINSTAT, FLAT_ALLSTAT, FLAT_HP}
     vals = [x for x in vals if x not in exclude]
   if en == Category:
+    exclude = {LINE_CACHE, NAME, DEFAULT_CUBE}
+    vals = [x for x in vals if x not in exclude]
     for x in vals:
       print(f"  \"{category_name(x)}\",")
   else:
