@@ -94,6 +94,7 @@ enum {
   SHOW_DISCLAIMER = 1<<6,
   UPDATE_CONNECTIONS = 1<<7,
   LINKING_SPLIT = 1<<8,
+  SAVED_MOUSE_POS = 1<<9,
 };
 
 const struct nk_vec2 contextualSize = { .x = 100, .y = 220 };
@@ -109,6 +110,7 @@ struct nk_vec2 pan;
 int linkNode;
 int resizeNode;
 int selectedNode = -1;
+struct nk_vec2 savedMousePos; // in node space, not screen space
 
 // macro to generate things based on the list of node types
 #define nodeTypes(f) \
@@ -975,7 +977,10 @@ void loop() {
                        COMMENT_ROUND, COMMENT_THICK, selColor);
     }
 
+    // we can't do this from the contextual menu code because it will be in a different local
+    // space and it won't convert properly
     struct nk_vec2 mouse = nk_layout_space_to_local(nk, in->mouse.pos);
+
     nk_layout_space_end(nk);
 
     // it really isn't necessary to handle multiple deletions right now, but why not.
@@ -993,6 +998,13 @@ void loop() {
     BufClear(removeNodes);
 
     if (nk_contextual_begin(nk, 0, nk_vec2(100, 220), totalSpace)) {
+      if (!(flags & SAVED_MOUSE_POS)) {
+        flags |= SAVED_MOUSE_POS;
+        savedMousePos = mouse;
+        savedMousePos.x += pan.x;
+        savedMousePos.y += pan.y;
+      }
+
       nk_layout_row_dynamic(nk, CONTEXT_HEIGHT, 1);
 
       if ((flags & RESIZING)) {
@@ -1002,7 +1014,7 @@ void loop() {
       } else {
         for (int i = 0; i < NK_LEN(nodeNames); ++i) {
           if (nk_contextual_item_label(nk, nodeNames[i], NK_TEXT_CENTERED)) {
-            treeAdd(i + 1, mouse.x + pan.x, mouse.y + pan.y);
+            treeAdd(i + 1, savedMousePos.x, savedMousePos.y);
           }
         }
       }
@@ -1025,7 +1037,11 @@ void loop() {
       }
 
       nk_contextual_end(nk);
+    } else {
+      flags &= ~SAVED_MOUSE_POS;
     }
+
+    nk_layout_space_end(nk);
 
     if (nk_input_is_mouse_hovering_rect(in, nk_window_get_bounds(nk)) &&
         nk_input_is_mouse_down(in, NK_BUTTON_MIDDLE)) {
