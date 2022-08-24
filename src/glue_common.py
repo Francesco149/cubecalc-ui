@@ -6,3 +6,5 @@ class CalcParam(IntEnum):
   CUBE = auto()
   TIER = auto()
   CATEGORY = auto()
+  LEVEL = auto()
+  REGION = auto()

@@ -18,6 +18,9 @@ calc_param_to_key = {
   WANTS: "wants",
   CUBE: "type",
   TIER: "tier",
+  CATEGORY: "category",
+  LEVEL: "level",
+  REGION: "region",
 }
 
 bitenum_to_str = lambda e, v: " | ".join([x.name for x in e if x & v])
@@ -28,6 +31,8 @@ calc_param_stringify = {
   CUBE: lambda x: Cube(x).name,
   TIER: lambda x: Tier(x).name,
   CATEGORY: lambda x: Category(x).name,
+  REGION: lambda x: Region(x).name,
+  LEVEL: lambda x: f"{x}",
 }
 
 calcs = {}

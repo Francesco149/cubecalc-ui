@@ -846,6 +846,10 @@ void treeCalc() {
 
       BufFree(&wants);
 
+      // TODO: add nodes to select this
+      pyCalcSet(n->id, calcparamValues[LEVEL], 150);
+      pyCalcSet(n->id, calcparamValues[REGION], regionValues[GMS]);
+
       float chance = pyCalc(n->id);
       if (chance > 0) {
         d->value = (int)(1 / chance + 0.5);
