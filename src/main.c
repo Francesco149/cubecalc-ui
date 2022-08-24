@@ -309,7 +309,7 @@ int treeAdd(int type, int x, int y) {
 
   switch (type) {
     case NSPLIT:
-      d->bounds = nk_rect(x, y, 80, 30);
+      d->bounds = nk_rect(x, y, 70, 30);
       break;
     case NCATEGORY:
       d->bounds = nk_rect(x, y, 300, 80);
