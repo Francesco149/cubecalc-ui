@@ -261,12 +261,12 @@ int defaultValue(int type, int stat) {
     case NTIER: return LEGENDARY;
     case NCATEGORY: return WEAPON;
     case NSTAT: return ATT;
-    case NAMOUNT:
-      stat = lineValues[stat];
-      if ((stat & lineValues[COOLDOWN]) || stat == lineValues[INVIN]) {
+    case NAMOUNT: {
+      int val = lineValues[stat];
+      if ((val & lineValues[COOLDOWN]) || val == lineValues[INVIN]) {
         return 2;
       }
-      if (stat & lineValues[DECENTS]) {
+      if (val & lineValues[DECENTS]) {
         return 1;
       }
       switch (stat) {
