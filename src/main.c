@@ -866,6 +866,19 @@ void treeCalc() {
   }
 }
 
+#ifdef __EMSCRIPTEN__
+void updateWindowSize() {
+  int w, h;
+  w = canvas_get_width();
+  h = canvas_get_height();
+  if (w != width || h != height) {
+    width = w;
+    height = h;
+    glfwSetWindowSize(win, width, height);
+  }
+}
+#endif
+
 void loop() {
   int i, j;
 
@@ -1139,16 +1152,7 @@ void loop() {
   }
 
 #ifdef __EMSCRIPTEN__
-  {
-    int w, h;
-    w = canvas_get_width();
-    h = canvas_get_height();
-    if (w != width || h != height) {
-      width = w;
-      height = h;
-      glfwSetWindowSize(win, width, height);
-    }
-  }
+  updateWindowSize();
 #else
   glfwGetWindowSize(win, &width, &height);
 #endif
@@ -1256,6 +1260,7 @@ int main() {
 
 #ifdef __EMSCRIPTEN__
   resizeCanvas();
+  updateWindowSize();
   calcWidth = NK_MAX(width - 200, 800);
   calcHeight = NK_MAX(height - 380, 600);
   emscripten_set_main_loop(loop, 0, 1);
