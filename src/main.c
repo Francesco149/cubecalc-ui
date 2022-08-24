@@ -122,6 +122,8 @@ struct nk_vec2 savedMousePos; // in node space, not screen space
   f(NAMOUNT) \
   f(NAVERAGE) \
   f(NSPLIT) \
+  f(NLEVEL) \
+  f(NREGION) \
 
 #define stringifyComma(x) #x,
 char* nodeNames[] = { nodeTypes(stringifyComma) };
@@ -278,7 +280,10 @@ int defaultValue(int type, int stat) {
         case FLAT_ATT: return 10;
       }
       return 21;
+    }
     case NSPLIT: return -1;
+    case NLEVEL: return 150;
+    case NREGION: return GMS;
   }
   return 0;
 }
@@ -722,6 +727,8 @@ void treeCalcBranch(int* values, Pair** wants, int node, int* seen) {
     case NTIER:
     case NCATEGORY:
     case NAMOUNT:
+    case NLEVEL:
+    case NREGION:
       values[n->type] = d->value;
     // TODO: more advanced logic (AND, OR, etc)
     case NSPLIT: // handled above
@@ -763,6 +770,7 @@ int valueToCalc(int type, int value) {
     case NTIER: return tierValues[value];
     case NCATEGORY: return categoryValues[value];
     case NSTAT: return lineValues[value];
+    case NREGION: return regionValues[value];
   }
   return value;
 }
@@ -772,6 +780,8 @@ int treeTypeToCalcParam(int type) {
     case NCUBE: return calcparamValues[CUBE];
     case NTIER: return calcparamValues[TIER];
     case NCATEGORY: return calcparamValues[CATEGORY];
+    case NLEVEL: return calcparamValues[LEVEL];
+    case NREGION: return calcparamValues[REGION];
   }
   return 0;
 }
@@ -845,10 +855,6 @@ void treeCalc() {
       }
 
       BufFree(&wants);
-
-      // TODO: add nodes to select this
-      pyCalcSet(n->id, calcparamValues[LEVEL], 150);
-      pyCalcSet(n->id, calcparamValues[REGION], regionValues[GMS]);
 
       float chance = pyCalc(n->id);
       if (chance > 0) {
@@ -936,7 +942,7 @@ void loop() {
   for (i = 0; i < BufLen(data[type]); ++i) { \
     if (uiBeginNode(type, i, 20)) { \
       NodeData* d = &data[type][i]; \
-      int newValue = nk_property##valueType(nk, d->name, 0, d->value, 120, 1, 0.02); \
+      int newValue = nk_property##valueType(nk, d->name, 0, d->value, 300, 1, 0.02); \
       treeSetValue(d, newValue); \
       uiEndNode(type, i); \
     } \
@@ -968,7 +974,9 @@ void loop() {
     comboNode(NTIER, tier);
     comboNode(NCATEGORY, category);
     comboNode(NSTAT, line);
+    comboNode(NREGION, region);
     propNode(NAMOUNT, i);
+    propNode(NLEVEL, i);
     valueNode(NAVERAGE, int, "average 1 in");
 
     // draw rounded border around selected node
@@ -1180,21 +1188,26 @@ int main() {
   int ncategory = treeAddChk(NCATEGORY, 20, 20, &succ);
   int ncube = treeAddChk(NCUBE, 340, 20, &succ);
   int ntier = treeAddChk(NTIER, 560, 20, &succ);
+  int nlevel = treeAddChk(NLEVEL, 770, 20, &succ);
+  int nregion = treeAddChk(NREGION, 770, 110, &succ);
   int nsplit = treeAddChk(NSPLIT, 690, 110, &succ);
   if (succ) {
-    data[NCATEGORY][tree[ncategory].data].value = SECONDARY;
     data[NSPLIT][tree[nsplit].data].value = ntier;
+    data[NLEVEL][tree[nlevel].data].value = 200;
     treeLink(ncategory, ncube);
     treeLink(ncube, ntier);
+    treeLink(nlevel, ntier);
+    treeLink(nlevel, nregion);
   }
 
   {
-    int ncomment = treeAddComment(20, 130, 200, 310, "example: 21+ %att", &succ);
+    int ncomment = treeAddComment(20, 130, 200, 310, "example: 23+ %att", &succ);
     int nstat = treeAddChk(NSTAT, 20, 180, &succ);
     int namt = treeAddChk(NAMOUNT, 20, 270, &succ);
     int navg = treeAddChk(NAVERAGE, 20, 360, &succ);
 
     if (succ) {
+      data[NAMOUNT][tree[namt].data].value = 23;
       treeLink(nsplit, nstat);
       treeLink(nstat, namt);
       treeLink(namt, navg);
@@ -1202,7 +1215,7 @@ int main() {
   }
 
   {
-    int ncomment = treeAddComment(260, 130, 410, 310, "example: 18+ %att and 30+ %boss", &succ);
+    int ncomment = treeAddComment(260, 130, 410, 310, "example: 20+ %att and 30+ %boss", &succ);
     int nstat2 = treeAddChk(NSTAT, 260, 180, &succ);
     int namt2 = treeAddChk(NAMOUNT, 260, 270, &succ);
     int nstat = treeAddChk(NSTAT, 470, 180, &succ);
@@ -1212,7 +1225,7 @@ int main() {
     if (succ) {
       data[NSTAT][tree[nstat2].data].value = BOSS;
       data[NAMOUNT][tree[namt2].data].value = defaultValue(NAMOUNT, BOSS);
-      data[NAMOUNT][tree[namt].data].value = 18;
+      data[NAMOUNT][tree[namt].data].value = 20;
       treeLink(nsplit, nstat);
       treeLink(nstat, namt);
       treeLink(nstat2, namt2);
