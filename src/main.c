@@ -117,6 +117,18 @@ int linkNode;
 int resizeNode;
 int selectedNode = -1;
 struct nk_vec2 savedMousePos; // in node space, not screen space
+int tool;
+
+#define tools(f) \
+  f(MOVE) \
+  f(PAN) \
+  f(CONTEXTUAL) \
+
+int toolToMouseButton[] = {
+  NK_BUTTON_LEFT,
+  NK_BUTTON_MIDDLE,
+  NK_BUTTON_RIGHT,
+};
 
 // macro to generate things based on the list of node types
 #define nodeTypes(f) \
@@ -133,6 +145,7 @@ struct nk_vec2 savedMousePos; // in node space, not screen space
 
 #define stringifyComma(x) #x,
 char* nodeNames[] = { nodeTypes(stringifyComma) };
+char const* toolNames[] = { tools(stringifyComma) };
 
 // NSOME_NODE_NAME -> Some Node Name
 void treeInitNodeNames() {
@@ -156,6 +169,8 @@ enum {
   nodeTypes(appendComma)
   NLAST
 };
+
+enum { tools(appendComma) };
 
 // we need the data to be nicely packed in memory so that we don't have to traverse a tree
 // when we draw the nodes since that would be slow.
@@ -511,7 +526,7 @@ int uiBeginNode(int type, int i, int h) {
     static int draggingId = -1;
 
     int draggingThisNode = draggingId == tree[d->node].id;
-    if (inParent && leftMouseDown && leftMouseClickInCursor && !leftMouseClicked) {
+    if (inParent && leftMouseDown && leftMouseClickInCursor && !leftMouseClicked && tool == MOVE) {
       if (draggingId == -1 || draggingThisNode) {
         draggingId = tree[d->node].id;
         d->bounds.x += in->mouse.delta.x;
@@ -889,7 +904,7 @@ void updateWindowSize() {
 #define CALC_NAME "MapleStory Cubing Calculator"
 #define CALC_BOUNDS nk_rect(0, 0, calcWidth, calcHeight)
 #define INFO_NAME "Info"
-#define INFO_BOUNDS nk_rect(0, 0, 150, 200)
+#define INFO_BOUNDS nk_rect(0, 0, 200, 400)
 #define DISCLAIMER_NAME "Disclaimer"
 #define DISCLAIMER_BOUNDS nk_rect(0, 0, 610, 340)
 #define ERROR_NAME "Error"
@@ -1110,18 +1125,39 @@ void loop() {
 
   if (flags & SHOW_INFO) {
     if (nk_begin(nk, INFO_NAME, INFO_BOUNDS, UNMANAGEDWND)) {
-      nk_layout_row_dynamic(nk, 10, 1);
-      nk_value_int(nk, "FPS", fps);
-      nk_value_int(nk, "Nodes", BufLen(tree));
-      nk_value_int(nk, "Links", BufLen(links));
       nk_layout_row_dynamic(nk, 20, 1);
-      float sf = nk_propertyf(nk, "Scale", 1, glfw.scale_factor, 2, 0.1, 0.02); \
+      float sf = nk_propertyf(nk, "Scale", 1, glfw.scale_factor, 2, 0.1, 0.02);
       if (sf != glfw.scale_factor) {
         glfw.scale_factor = sf;
         flags |= UPDATE_SIZE;
       }
       nk_layout_row_dynamic(nk, 10, 1);
-      nk_label(nk, "", NK_TEXT_CENTERED);
+      nk_spacer(nk);
+      nk_value_int(nk, "FPS", fps);
+      nk_value_int(nk, "Nodes", BufLen(tree));
+      nk_value_int(nk, "Links", BufLen(links));
+      nk_spacer(nk);
+      nk_label(nk, "pan: middle drag", NK_TEXT_LEFT);
+      nk_label(nk, "move nodes: left drag", NK_TEXT_LEFT);
+      nk_label(nk, "node actions: rclick", NK_TEXT_LEFT);
+      nk_label(nk, "add nodes: rclick space", NK_TEXT_LEFT);
+      nk_spacer(nk);
+      nk_label(nk, "tool", NK_TEXT_LEFT);
+      nk_label(nk, "(override lclick for devs", NK_TEXT_LEFT);
+      nk_label(nk, "w/ limited mouse support)", NK_TEXT_LEFT);
+      nk_layout_row_dynamic(nk, 20, 1);
+
+      int newTool = nk_combo(nk, toolNames, NK_LEN(toolNames), tool, 25,
+                      nk_vec2(nk_widget_width(nk), 100));
+
+      if (newTool != tool) {
+        tool = newTool;
+        glfw.left_button = toolToMouseButton[tool];
+      }
+
+      nk_spacer(nk);
+      nk_layout_row_dynamic(nk, 10, 1);
+      nk_spacer(nk);
 
 #define showFlag(x) \
       if (flags & x) { \
@@ -1181,7 +1217,7 @@ void loop() {
 #endif
 
   if (flags & UPDATE_SIZE) {
-    calcWidth = NK_MAX(width - 200 * glfw.scale_factor, 50) / glfw.scale_factor;
+    calcWidth = NK_MAX(width - 250 * glfw.scale_factor, 50) / glfw.scale_factor;
     calcHeight = NK_MAX(height - 380 * glfw.scale_factor, 50) / glfw.scale_factor;
     struct nk_rect calcBounds = CALC_BOUNDS;
     struct nk_rect disclaimerBounds = DISCLAIMER_BOUNDS;

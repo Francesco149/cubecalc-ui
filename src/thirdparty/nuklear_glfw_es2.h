@@ -95,6 +95,7 @@ static struct nk_glfw {
     int is_double_click_down;
     struct nk_vec2 double_click_pos;
     float scale_factor;
+    int left_button;
 } glfw;
 
 #define NK_SHADER_VERSION "#version 100\n"
@@ -380,6 +381,7 @@ nk_glfw3_init(GLFWwindow *win, enum nk_glfw_init_state init_state)
 
     glfw.is_double_click_down = nk_false;
     glfw.double_click_pos = nk_vec2(0, 0);
+    glfw.left_button = NK_BUTTON_LEFT;
 
     return &glfw.ctx;
 }
@@ -474,6 +476,7 @@ nk_glfw3_new_frame(void)
     nk_input_button(ctx, NK_BUTTON_LEFT, (int)x, (int)y, glfwGetMouseButton(win, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS);
     nk_input_button(ctx, NK_BUTTON_MIDDLE, (int)x, (int)y, glfwGetMouseButton(win, GLFW_MOUSE_BUTTON_MIDDLE) == GLFW_PRESS);
     nk_input_button(ctx, NK_BUTTON_RIGHT, (int)x, (int)y, glfwGetMouseButton(win, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS);
+    nk_input_button(ctx, glfw.left_button, (int)x, (int)y, glfwGetMouseButton(win, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS);
     nk_input_button(ctx, NK_BUTTON_DOUBLE, (int)glfw.double_click_pos.x, (int)glfw.double_click_pos.y, glfw.is_double_click_down);
     nk_input_scroll(ctx, glfw.scroll);
     nk_input_end(&glfw.ctx);
