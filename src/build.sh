@@ -30,7 +30,7 @@ time emcc \
 rm ./cubecalc.zip
 mkdir -p ./archive/cubecalc/
 cd ./archive
-cp ../{glue{,_common},init,cubecalc/src/{cubecalc,common,datautils,kms,tms}}.py ./cubecalc/
+cp ../{glue{,_common},cubecalc/src/{cubecalc,common,datautils,kms,tms}}.py ./cubecalc/
 zip -r ../cubecalc.zip ./cubecalc
 cd ..
 rm -rf ./archive/

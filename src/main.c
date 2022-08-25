@@ -26,7 +26,7 @@ EM_JS(float, deviceScaleFactor, (), {
 
 EM_ASYNC_JS(void, pyInit, (int ts), {
   py = await loadPyodide();
-  await py.loadPackage("micropip");
+  await py.loadPackage("numpy");
 
   // the easiest way to install my cubecalc into pyodide is to zip it and extract it in the
   // virtual file system
@@ -35,11 +35,10 @@ EM_ASYNC_JS(void, pyInit, (int ts), {
   py.unpackArchive(zipBinary, "zip");
 
   // install pip packages, init glue code etc
-  pa = `import sys; sys.path.append("cubecalc/"); `;
-  init = py.runPython(`${pa} from init import init; init`);
-  await init();
-
-  Module.pyFunc = (x) => py.runPython(`${pa} from glue import ${x}; ${x}`);
+  Module.pyFunc = (x) => py.runPython(`
+      import sys; sys.path.append("cubecalc/");
+      from glue import ${x}; ${x}
+  `);
 });
 
 EM_JS(void, pyCalcFree, (int calcIdx), {
