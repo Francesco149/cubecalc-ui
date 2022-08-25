@@ -753,6 +753,7 @@ void treeCalcBranch(int* values, Pair** wants, int node, int* seen) {
     // TODO: more advanced logic (AND, OR, etc)
     case NSPLIT: // handled above
     case NSTAT: // handled below
+    case NAVERAGE:
       break;
     default:
       fprintf(stderr, "error visiting node %d, unknown type %d\n", node, n->type);
@@ -832,7 +833,9 @@ void treeCalc() {
           case NSTAT:
           case NAMOUNT:
           case NAVERAGE:
-            // these are handled separately
+          case NCOMMENT:
+          case NSPLIT:
+            // these are handled separately, or are not relevant
             continue;
         }
         if (values[j] == -1) {
