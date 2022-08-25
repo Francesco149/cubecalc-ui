@@ -39,7 +39,7 @@ for en in [Cube, Category, Line, CalcParam, Tier, Region]:
       print(f"  {limit},")
     print("};")
 
-print("char const* const disclaimer[] = {")
+print("char* disclaimer = ")
 with open("./cubecalc/cubechances.txt") as f:
   f.readline()
   f.readline()
@@ -47,5 +47,5 @@ with open("./cubecalc/cubechances.txt") as f:
     if line.startswith("="):
       break
     s = line.strip()
-    print(f"\"{s}\",")
-print("};")
+    print(f"\"{s}\\n\"")
+print(";")

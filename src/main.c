@@ -118,6 +118,20 @@ int selectedNode = -1;
 struct nk_vec2 savedMousePos; // in node space, not screen space
 int tool;
 
+#define CALC_NAME "MapleStory Cubing Calculator"
+#define CALC_BOUNDS nk_rect(0, 0, calcWidth, calcHeight)
+#define INFO_NAME "Info"
+#define INFO_BOUNDS nk_rect(0, 0, 200, 400)
+#define DISCLAIMER_NAME "Disclaimer"
+#define DISCLAIMER_BOUNDS nk_rect(0, 0, 610, 340)
+#define ERROR_NAME "Error"
+#define ERROR_BOUNDS nk_rect(0, 0, 400, 200)
+
+struct nk_rect calcBounds;
+struct nk_rect disclaimerBounds;
+struct nk_rect errorBounds;
+struct nk_rect infoBounds;
+
 #define tools(f) \
   f(MOVE) \
   f(PAN) \
@@ -527,7 +541,13 @@ int uiBeginNode(int type, int i, int h) {
         NK_BUTTON_LEFT, dragBounds, nk_true);
 
     // prevent dragging when the window overlaps with the parent window title
-    int inParent = nk_input_is_mouse_hovering_rect(in, parentPanel->bounds);
+    if (nk_input_is_mouse_hovering_rect(in, infoBounds)) {
+      puts("hovering info");
+    }
+    int inParent = nk_input_is_mouse_hovering_rect(in, parentPanel->bounds) &&
+      !nk_input_is_mouse_hovering_rect(in, infoBounds) &&
+      !nk_input_is_mouse_hovering_rect(in, disclaimerBounds) &&
+      !nk_input_is_mouse_hovering_rect(in, errorBounds);
 
     // lock dragging to the window we started dragging so we don't drag other windows when we
     // hover over them during dragging
@@ -918,15 +938,6 @@ void updateWindowSize() {
 }
 #endif
 
-#define CALC_NAME "MapleStory Cubing Calculator"
-#define CALC_BOUNDS nk_rect(0, 0, calcWidth, calcHeight)
-#define INFO_NAME "Info"
-#define INFO_BOUNDS nk_rect(0, 0, 200, 400)
-#define DISCLAIMER_NAME "Disclaimer"
-#define DISCLAIMER_BOUNDS nk_rect(0, 0, 610, 340)
-#define ERROR_NAME "Error"
-#define ERROR_BOUNDS nk_rect(0, 0, 400, 200)
-
 void loop() {
   int i, j;
 
@@ -937,6 +948,7 @@ void loop() {
       NK_WINDOW_BORDER | NK_WINDOW_MOVABLE | NK_WINDOW_NO_SCROLLBAR | NK_WINDOW_TITLE |
       NK_WINDOW_SCALABLE))
   {
+    calcBounds = nk_window_get_bounds(nk);
     struct nk_command_buffer* canvas = nk_window_get_canvas(nk);
     struct nk_rect totalSpace = nk_window_get_content_region(nk);
 
@@ -1144,6 +1156,7 @@ void loop() {
 
   if (flags & SHOW_INFO) {
     if (nk_begin(nk, INFO_NAME, INFO_BOUNDS, UNMANAGEDWND)) {
+      infoBounds = nk_window_get_bounds(nk);
       nk_layout_row_dynamic(nk, 20, 1);
       float sf = nk_propertyf(nk, "Scale", 1, glfw.scale_factor, 2, 0.1, 0.02);
       if (sf != glfw.scale_factor) {
@@ -1207,10 +1220,18 @@ void loop() {
 
   if (flags & SHOW_DISCLAIMER) {
     if (nk_begin(nk, DISCLAIMER_NAME, DISCLAIMER_BOUNDS, UNMANAGEDWND)) {
-      nk_layout_row_dynamic(nk, 10, 1);
-      for (i = 0; i < NK_LEN(disclaimer); ++i) {
-        nk_label(nk, disclaimer[i], NK_TEXT_LEFT);
+      disclaimerBounds = nk_window_get_bounds(nk);
+      nk_layout_row_dynamic(nk, 20, 1);
+      if (nk_button_label(nk, "I understand")) {
+        flags &= ~SHOW_DISCLAIMER;
       }
+      nk_layout_row_static(nk, 300, 580, 1);
+      static int disclaimerLen = -1;
+      if (disclaimerLen < 0) {
+        disclaimerLen = strlen(disclaimer);
+      }
+      nk_edit_string(nk, NK_EDIT_BOX | NK_EDIT_READ_ONLY,
+                     disclaimer, &disclaimerLen, disclaimerLen + 1, 0);
     } else {
       flags &= ~SHOW_DISCLAIMER;
     }
@@ -1219,6 +1240,7 @@ void loop() {
 
   if (BufLen(errors)) {
     if (nk_begin(nk, ERROR_NAME, ERROR_BOUNDS, UNMANAGEDWND)){
+      errorBounds = nk_window_get_bounds(nk);
       nk_layout_row_dynamic(nk, 10, 1);
       for (i = 0; i < BufLen(errors); ++i) {
         nk_label(nk, errors[i], NK_TEXT_LEFT);
@@ -1237,13 +1259,15 @@ void loop() {
 
   if (flags & UPDATE_SIZE) {
     calcWidth = NK_MAX(width - 250 * glfw.scale_factor, 50) / glfw.scale_factor;
-    calcHeight = NK_MAX(height - 380 * glfw.scale_factor, 50) / glfw.scale_factor;
-    struct nk_rect calcBounds = CALC_BOUNDS;
-    struct nk_rect disclaimerBounds = DISCLAIMER_BOUNDS;
-    struct nk_rect errorBounds = ERROR_BOUNDS;
-    struct nk_rect infoBounds = INFO_BOUNDS;
-    calcBounds.x = calcBounds.y = disclaimerBounds.x = infoBounds.y = 10;
-    disclaimerBounds.y = calcHeight + 20;
+    calcHeight = NK_MAX(height - 20, 50) / glfw.scale_factor;
+    calcBounds = CALC_BOUNDS;
+    disclaimerBounds = DISCLAIMER_BOUNDS;
+    disclaimerBounds.w = NK_MIN(width, disclaimerBounds.w);
+    errorBounds = ERROR_BOUNDS;
+    infoBounds = INFO_BOUNDS;
+    calcBounds.x = calcBounds.y = infoBounds.y = 10;
+    disclaimerBounds.x = width / 2 - disclaimerBounds.w / 2;
+    disclaimerBounds.y = height / 2 - disclaimerBounds.h / 2;
     errorBounds.x = width / 2 - 200;
     errorBounds.y = height / 2 - 100;
     infoBounds.x = calcWidth + 20;
@@ -1251,6 +1275,7 @@ void loop() {
     nk_window_set_bounds(nk, DISCLAIMER_NAME, disclaimerBounds);
     nk_window_set_bounds(nk, ERROR_NAME, errorBounds);
     nk_window_set_bounds(nk, INFO_NAME, infoBounds);
+    nk_window_set_focus(nk, DISCLAIMER_NAME);
     flags &= ~UPDATE_SIZE;
   }
 
