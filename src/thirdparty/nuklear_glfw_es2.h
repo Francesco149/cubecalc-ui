@@ -94,6 +94,7 @@ static struct nk_glfw {
     double last_button_click;
     int is_double_click_down;
     struct nk_vec2 double_click_pos;
+    float scale_factor;
 } glfw;
 
 #define NK_SHADER_VERSION "#version 100\n"
@@ -198,6 +199,8 @@ nk_glfw3_render(enum nk_anti_aliasing AA, int max_vertex_buffer, int max_element
         {-1.0f,1.0f, 0.0f, 1.0f},
     };
     glfwGetWindowSize(glfw.win, &width, &height);
+    width /= glfw.scale_factor;
+    height /= glfw.scale_factor;
     glfwGetFramebufferSize(glfw.win, &display_width, &display_height);
     ortho[0][0] /= (GLfloat)width;
     ortho[1][1] /= (GLfloat)height;
@@ -326,6 +329,8 @@ nk_glfw3_mouse_button_callback(GLFWwindow* window, int button, int action, int m
     NK_UNUSED(mods);
     if (button != GLFW_MOUSE_BUTTON_LEFT) return;
     glfwGetCursorPos(window, &x, &y);
+    x /= glfw.scale_factor;
+    y /= glfw.scale_factor;
     if (action == GLFW_PRESS)  {
         double dt = glfwGetTime() - glfw.last_button_click;
         if (dt > NK_GLFW_DOUBLE_CLICK_LO && dt < NK_GLFW_DOUBLE_CLICK_HI) {
@@ -457,6 +462,8 @@ nk_glfw3_new_frame(void)
     }
 
     glfwGetCursorPos(win, &x, &y);
+    x /= glfw.scale_factor;
+    y /= glfw.scale_factor;
     nk_input_motion(ctx, (int)x, (int)y);
     if (ctx->input.mouse.grabbed) {
         glfwSetCursorPos(glfw.win, (double)ctx->input.mouse.prev.x, (double)ctx->input.mouse.prev.y);

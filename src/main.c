@@ -1,6 +1,7 @@
 #include "generated.c"
 
 #include <stdio.h>
+#include <float.h>
 
 // TODO: figure out a way to embed numpy + python for non-browser version?
 // ... or just port the calculator to C
@@ -17,6 +18,10 @@ EM_JS(int, canvas_get_height, (), {
 
 EM_JS(void, resizeCanvas, (), {
   js_resizeCanvas();
+});
+
+EM_JS(float, deviceScaleFactor, (), {
+  return js_deviceScaleFactor();
 });
 
 EM_ASYNC_JS(void, pyInit, (int ts), {
@@ -95,6 +100,7 @@ enum {
   UPDATE_CONNECTIONS = 1<<7,
   LINKING_SPLIT = 1<<8,
   SAVED_MOUSE_POS = 1<<9,
+  UPDATE_SIZE = 1<<10,
 };
 
 const struct nk_vec2 contextualSize = { .x = 100, .y = 220 };
@@ -105,7 +111,7 @@ struct nk_input* in;
 int width, height;
 int fps;
 int calcWidth = 800, calcHeight = 600;
-int flags = SHOW_INFO | SHOW_GRID | SHOW_DISCLAIMER;
+int flags = SHOW_INFO | SHOW_GRID | SHOW_DISCLAIMER | UPDATE_SIZE;
 struct nk_vec2 pan;
 int linkNode;
 int resizeNode;
@@ -875,9 +881,19 @@ void updateWindowSize() {
     width = w;
     height = h;
     glfwSetWindowSize(win, width, height);
+    flags |= UPDATE_SIZE;
   }
 }
 #endif
+
+#define CALC_NAME "MapleStory Cubing Calculator"
+#define CALC_BOUNDS nk_rect(0, 0, calcWidth, calcHeight)
+#define INFO_NAME "Info"
+#define INFO_BOUNDS nk_rect(0, 0, 150, 200)
+#define DISCLAIMER_NAME "Disclaimer"
+#define DISCLAIMER_BOUNDS nk_rect(0, 0, 610, 340)
+#define ERROR_NAME "Error"
+#define ERROR_BOUNDS nk_rect(0, 0, 400, 200)
 
 void loop() {
   int i, j;
@@ -885,7 +901,7 @@ void loop() {
   glfwPollEvents();
   nk_glfw3_new_frame();
 
-  if (nk_begin(nk, "MapleStory Cubing Calculator", nk_rect(10, 10, calcWidth, calcHeight),
+  if (nk_begin(nk, CALC_NAME, CALC_BOUNDS,
       NK_WINDOW_BORDER | NK_WINDOW_MOVABLE | NK_WINDOW_NO_SCROLLBAR | NK_WINDOW_TITLE |
       NK_WINDOW_SCALABLE))
   {
@@ -1093,11 +1109,18 @@ void loop() {
   NODE_WINDOW_FLAGS
 
   if (flags & SHOW_INFO) {
-    if (nk_begin(nk, "Info", nk_rect(calcWidth + 20, 10, 150, 200), UNMANAGEDWND)) {
+    if (nk_begin(nk, INFO_NAME, INFO_BOUNDS, UNMANAGEDWND)) {
       nk_layout_row_dynamic(nk, 10, 1);
       nk_value_int(nk, "FPS", fps);
       nk_value_int(nk, "Nodes", BufLen(tree));
       nk_value_int(nk, "Links", BufLen(links));
+      nk_layout_row_dynamic(nk, 20, 1);
+      float sf = nk_propertyf(nk, "Scale", 1, glfw.scale_factor, 2, 0.1, 0.02); \
+      if (sf != glfw.scale_factor) {
+        glfw.scale_factor = sf;
+        flags |= UPDATE_SIZE;
+      }
+      nk_layout_row_dynamic(nk, 10, 1);
       nk_label(nk, "", NK_TEXT_CENTERED);
 
 #define showFlag(x) \
@@ -1128,7 +1151,7 @@ void loop() {
   }
 
   if (flags & SHOW_DISCLAIMER) {
-    if (nk_begin(nk, "Disclaimer", nk_rect(10, calcHeight + 20, 610, 340), UNMANAGEDWND)) {
+    if (nk_begin(nk, DISCLAIMER_NAME, DISCLAIMER_BOUNDS, UNMANAGEDWND)) {
       nk_layout_row_dynamic(nk, 10, 1);
       for (i = 0; i < NK_LEN(disclaimer); ++i) {
         nk_label(nk, disclaimer[i], NK_TEXT_LEFT);
@@ -1140,7 +1163,7 @@ void loop() {
   }
 
   if (BufLen(errors)) {
-    if (nk_begin(nk, "Error", nk_rect(width / 2 - 200, height / 2 - 100, 400, 200), UNMANAGEDWND)){
+    if (nk_begin(nk, ERROR_NAME, ERROR_BOUNDS, UNMANAGEDWND)){
       nk_layout_row_dynamic(nk, 10, 1);
       for (i = 0; i < BufLen(errors); ++i) {
         nk_label(nk, errors[i], NK_TEXT_LEFT);
@@ -1156,6 +1179,25 @@ void loop() {
 #else
   glfwGetWindowSize(win, &width, &height);
 #endif
+
+  if (flags & UPDATE_SIZE) {
+    calcWidth = NK_MAX(width - 200 * glfw.scale_factor, 50) / glfw.scale_factor;
+    calcHeight = NK_MAX(height - 380 * glfw.scale_factor, 50) / glfw.scale_factor;
+    struct nk_rect calcBounds = CALC_BOUNDS;
+    struct nk_rect disclaimerBounds = DISCLAIMER_BOUNDS;
+    struct nk_rect errorBounds = ERROR_BOUNDS;
+    struct nk_rect infoBounds = INFO_BOUNDS;
+    calcBounds.x = calcBounds.y = disclaimerBounds.x = infoBounds.y = 10;
+    disclaimerBounds.y = calcHeight + 20;
+    errorBounds.x = width / 2 - 200;
+    errorBounds.y = height / 2 - 100;
+    infoBounds.x = calcWidth + 20;
+    nk_window_set_bounds(nk, CALC_NAME, calcBounds);
+    nk_window_set_bounds(nk, DISCLAIMER_NAME, disclaimerBounds);
+    nk_window_set_bounds(nk, ERROR_NAME, errorBounds);
+    nk_window_set_bounds(nk, INFO_NAME, infoBounds);
+    flags &= ~UPDATE_SIZE;
+  }
 
   glViewport(0, 0, width, height);
   glClear(GL_COLOR_BUFFER_BIT);
@@ -1261,10 +1303,10 @@ int main() {
 #ifdef __EMSCRIPTEN__
   resizeCanvas();
   updateWindowSize();
-  calcWidth = NK_MAX(width - 200, 800);
-  calcHeight = NK_MAX(height - 380, 600);
+  glfw.scale_factor = deviceScaleFactor();
   emscripten_set_main_loop(loop, 0, 1);
 #else
+  glfw.scale_factor = 1;
   while (!glfwWindowShouldClose(win)) {
     loop();
   }
