@@ -1,3 +1,5 @@
+#include <math.h>
+
 struct BufHdr {
   size_t len, cap, elementSize;
   char data[0];
@@ -83,3 +85,16 @@ void _BufAlloc(void* p, size_t count, size_t elementSize) {
 #define Pack16to32(hi, lo) (((hi) << 16) & 0xFFFF0000 | ((lo) & 0x0000FFFF))
 #define LoWord(dw) ((dw) & 0x0000FFFF)
 #define HiWord(dw) (((dw) >> 16) & 0x0000FFFF)
+
+int ProbToOneIn(float p) {
+  if (p <= 0) return 0;
+  return roundf(1 / p + 0.5);
+}
+
+// examples:
+// percent=75 returns the num of attempts to have 75% chance for an event of probability p to occur
+// percent=50 is the median
+int ProbToGeoDistrQuantileDingle(float p, float percent) {
+  if (p <= 0) return 0;
+  return roundf(logf(1 - percent / 100) / logf(1 - p));
+}

@@ -137,7 +137,7 @@ int toolToMouseButton[] = {
   f(NCATEGORY) \
   f(NSTAT) \
   f(NAMOUNT) \
-  f(NAVERAGE) \
+  f(NRESULT) \
   f(NSPLIT) \
   f(NLEVEL) \
   f(NREGION) \
@@ -197,9 +197,14 @@ typedef struct _Comment {
   int len;
 } Comment;
 
+typedef struct _Result {
+  int within50, within75, within95, within99;
+} Result;
+
 Node* tree;
 NodeData* data[NLAST];
 Comment* commentData;
+Result* resultData;
 char** errors;
 int* removeNodes;
 
@@ -353,8 +358,9 @@ int treeAdd(int type, int x, int y) {
   d->node = BufLen(tree) - 1;
 
   switch (type) {
-    case NAVERAGE:
+    case NRESULT:
       flags |= DIRTY;
+      BufAllocZero(&resultData);
       break;
     case NCOMMENT:
       BufAllocZero(&commentData);
@@ -420,6 +426,9 @@ void treeDel(int nodeIndex) {
   switch (type) {
     case NCOMMENT:
       BufDel(commentData, index);
+      break;
+    case NRESULT:
+      BufDel(resultData, index);
       break;
   }
 
@@ -753,7 +762,7 @@ void treeCalcBranch(int* values, Pair** wants, int node, int* seen) {
     // TODO: more advanced logic (AND, OR, etc)
     case NSPLIT: // handled above
     case NSTAT: // handled below
-    case NAVERAGE:
+    case NRESULT:
       break;
     default:
       fprintf(stderr, "error visiting node %d, unknown type %d\n", node, n->type);
@@ -811,7 +820,7 @@ void treeCalc() {
   for (int i = 0; i < BufLen(tree); ++i) {
     Node* n = &tree[i];
     // TODO: more type of result nodes (median, 75%, 85%, etc)
-    if (n->type == NAVERAGE) {
+    if (n->type == NRESULT) {
       NodeData* d = &data[n->type][n->data];
       printf("treeCalc %s\n", d->name);
       pyCalcFree(n->id);
@@ -832,7 +841,7 @@ void treeCalc() {
         switch (j) {
           case NSTAT:
           case NAMOUNT:
-          case NAVERAGE:
+          case NRESULT:
           case NCOMMENT:
           case NSPLIT:
             // these are handled separately, or are not relevant
@@ -880,10 +889,16 @@ void treeCalc() {
       BufFree(&wants);
 
       float chance = pyCalc(n->id);
+      Result* resd = &resultData[n->data];
       if (chance > 0) {
-        d->value = (int)(1 / chance + 0.5);
+        d->value = ProbToOneIn(chance);
+        resd->within50 = ProbToGeoDistrQuantileDingle(chance, 50);
+        resd->within75 = ProbToGeoDistrQuantileDingle(chance, 75);
+        resd->within95 = ProbToGeoDistrQuantileDingle(chance, 95);
+        resd->within99 = ProbToGeoDistrQuantileDingle(chance, 99);
       } else {
         d->value = 0;
+        memset(resd, 0, sizeof(*resd));
       }
     }
   }
@@ -976,14 +991,6 @@ void loop() {
     } \
   }
 
-#define valueNode(type, valueType, text) \
-  for (i = 0; i < BufLen(data[type]); ++i) { \
-    if (uiBeginNode(type, i, 10)) { \
-      nk_value_##valueType(nk, text, data[type][i].value); \
-      uiEndNode(type, i); \
-    } \
-  }
-
 #define propNode(type, valueType) \
   for (i = 0; i < BufLen(data[type]); ++i) { \
     if (uiBeginNode(type, i, 20)) { \
@@ -1023,7 +1030,17 @@ void loop() {
     comboNode(NREGION, region);
     propNode(NAMOUNT, i);
     propNode(NLEVEL, i);
-    valueNode(NAVERAGE, int, "average 1 in");
+
+    for (i = 0; i < BufLen(data[NRESULT]); ++i) {
+      if (uiBeginNode(NRESULT, i, 10)) {
+        nk_value_int(nk, "average 1 in", data[NRESULT][i].value);
+        nk_value_int(nk, "50% chance within", resultData[i].within50);
+        nk_value_int(nk, "75% chance within", resultData[i].within75);
+        nk_value_int(nk, "95% chance within", resultData[i].within95);
+        nk_value_int(nk, "99% chance within", resultData[i].within99);
+        uiEndNode(NRESULT, i);
+      }
+    }
 
     // draw rounded border around selected node
     if (selectedNode >= 0) {
@@ -1288,13 +1305,13 @@ int main() {
     int ncomment = treeAddComment(20, 130, 200, 310, "example: 23+ %att", &succ);
     int nstat = treeAddChk(NSTAT, 20, 180, &succ);
     int namt = treeAddChk(NAMOUNT, 20, 270, &succ);
-    int navg = treeAddChk(NAVERAGE, 20, 360, &succ);
+    int nres = treeAddChk(NRESULT, 20, 360, &succ);
 
     if (succ) {
       data[NAMOUNT][tree[namt].data].value = 23;
       treeLink(nsplit, nstat);
       treeLink(nstat, namt);
-      treeLink(namt, navg);
+      treeLink(namt, nres);
     }
   }
 
@@ -1304,7 +1321,7 @@ int main() {
     int namt2 = treeAddChk(NAMOUNT, 260, 270, &succ);
     int nstat = treeAddChk(NSTAT, 470, 180, &succ);
     int namt = treeAddChk(NAMOUNT, 470, 270, &succ);
-    int navg = treeAddChk(NAVERAGE, 470, 360, &succ);
+    int nres = treeAddChk(NRESULT, 470, 360, &succ);
 
     if (succ) {
       data[NSTAT][tree[nstat2].data].value = BOSS;
@@ -1313,8 +1330,8 @@ int main() {
       treeLink(nsplit, nstat);
       treeLink(nstat, namt);
       treeLink(nstat2, namt2);
-      treeLink(namt, navg);
-      treeLink(namt2, navg);
+      treeLink(namt, nres);
+      treeLink(namt2, nres);
     }
   }
 
