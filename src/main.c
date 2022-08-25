@@ -541,9 +541,6 @@ int uiBeginNode(int type, int i, int h) {
         NK_BUTTON_LEFT, dragBounds, nk_true);
 
     // prevent dragging when the window overlaps with the parent window title
-    if (nk_input_is_mouse_hovering_rect(in, infoBounds)) {
-      puts("hovering info");
-    }
     int inParent = nk_input_is_mouse_hovering_rect(in, parentPanel->bounds) &&
       !nk_input_is_mouse_hovering_rect(in, infoBounds) &&
       !nk_input_is_mouse_hovering_rect(in, disclaimerBounds) &&
@@ -1084,7 +1081,7 @@ void loop() {
     }
     BufClear(removeNodes);
 
-    if (nk_contextual_begin(nk, 0, nk_vec2(100, 220), totalSpace)) {
+    if (nk_contextual_begin(nk, 0, nk_vec2(100, 320), totalSpace)) {
       if (!(flags & SAVED_MOUSE_POS)) {
         flags |= SAVED_MOUSE_POS;
         savedMousePos = mouse;
@@ -1258,8 +1255,10 @@ void loop() {
 #endif
 
   if (flags & UPDATE_SIZE) {
-    calcWidth = NK_MAX(width - 250 * glfw.scale_factor, 50) / glfw.scale_factor;
-    calcHeight = NK_MAX(height - 20, 50) / glfw.scale_factor;
+    // TODO: use calcBounds.{w,h} instead of calc{Width,Height}
+    calcWidth = NK_MAX(width - (20 + ((flags & SHOW_INFO) ? 230 : 0)) * glfw.scale_factor, 50)
+                / glfw.scale_factor;
+    calcHeight = NK_MAX(height - 20 * glfw.scale_factor, 50) / glfw.scale_factor;
     calcBounds = CALC_BOUNDS;
     disclaimerBounds = DISCLAIMER_BOUNDS;
     disclaimerBounds.w = NK_MIN(width, disclaimerBounds.w);
@@ -1271,6 +1270,8 @@ void loop() {
     errorBounds.x = width / 2 - 200;
     errorBounds.y = height / 2 - 100;
     infoBounds.x = calcWidth + 20;
+    calcBounds.w = calcWidth;
+    calcBounds.h = calcHeight;
     nk_window_set_bounds(nk, CALC_NAME, calcBounds);
     nk_window_set_bounds(nk, DISCLAIMER_NAME, disclaimerBounds);
     nk_window_set_bounds(nk, ERROR_NAME, errorBounds);
