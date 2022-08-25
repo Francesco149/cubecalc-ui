@@ -1103,13 +1103,13 @@ void loop() {
         }
       }
 
-#define flag(x, text) (void)( \
+#define flag(x, text, f) (void)( \
       nk_contextual_item_label(nk, (flags & x) ? "Hide " text : "Show " text, NK_TEXT_CENTERED) &&\
-        (flags ^= x))
+        (flags = (flags ^ x) | f))
 
-      flag(SHOW_INFO, "Info");
-      flag(SHOW_GRID, "Grid");
-      flag(SHOW_DISCLAIMER, "Disclaimer");
+      flag(SHOW_INFO, "Info", UPDATE_SIZE);
+      flag(SHOW_GRID, "Grid", 0);
+      flag(SHOW_DISCLAIMER, "Disclaimer", 0);
 
       if (nk_contextual_item_label(nk, "I'm Lost", NK_TEXT_CENTERED)) {
         if (BufLen(tree)) {
@@ -1211,6 +1211,7 @@ void loop() {
       }
     } else {
       flags &= ~SHOW_INFO;
+      flags |= UPDATE_SIZE;
     }
     nk_end(nk);
   }
