@@ -100,6 +100,7 @@ enum {
   LINKING_SPLIT = 1<<8,
   SAVED_MOUSE_POS = 1<<9,
   UPDATE_SIZE = 1<<10,
+  PORTRAIT = 1<<11,
 };
 
 const struct nk_vec2 contextualSize = { .x = 100, .y = 220 };
@@ -108,8 +109,8 @@ GLFWwindow* win;
 struct nk_context* nk;
 struct nk_input* in;
 int width, height;
+int displayWidth, displayHeight;
 int fps;
-int calcWidth = 800, calcHeight = 600;
 int flags = SHOW_INFO | SHOW_GRID | SHOW_DISCLAIMER | UPDATE_SIZE;
 struct nk_vec2 pan;
 int linkNode;
@@ -117,20 +118,14 @@ int resizeNode;
 int selectedNode = -1;
 struct nk_vec2 savedMousePos; // in node space, not screen space
 int tool;
+int disclaimerHeight = 290;
 
 #define CALC_NAME "MapleStory Cubing Calculator"
-#define CALC_BOUNDS nk_rect(0, 0, calcWidth, calcHeight)
 #define INFO_NAME "Info"
-#define INFO_BOUNDS nk_rect(0, 0, 200, 400)
 #define DISCLAIMER_NAME "Disclaimer"
-#define DISCLAIMER_BOUNDS nk_rect(0, 0, 610, 340)
 #define ERROR_NAME "Error"
-#define ERROR_BOUNDS nk_rect(0, 0, 400, 200)
 
-struct nk_rect calcBounds;
-struct nk_rect disclaimerBounds;
-struct nk_rect errorBounds;
-struct nk_rect infoBounds;
+struct nk_rect calcBounds, infoBounds, disclaimerBounds, errorBounds;
 
 #define tools(f) \
   f(MOVE) \
@@ -159,6 +154,10 @@ int toolToMouseButton[] = {
 #define stringifyComma(x) #x,
 char* nodeNames[] = { nodeTypes(stringifyComma) };
 char const* toolNames[] = { tools(stringifyComma) };
+
+#define NODEWND  NK_WINDOW_BORDER | NK_WINDOW_TITLE
+#define OTHERWND NODEWND | NK_WINDOW_CLOSABLE
+#define CALCWND  NODEWND | NK_WINDOW_NO_SCROLLBAR
 
 // NSOME_NODE_NAME -> Some Node Name
 void treeInitNodeNames() {
@@ -473,11 +472,6 @@ void updateFPS() {
   }
 }
 
-#define NODE_WINDOW_FLAGS \
-  NK_WINDOW_BORDER | \
-  NK_WINDOW_TITLE | \
-  0
-
 struct nk_rect commentBounds(struct nk_rect bounds) {
   bounds.x -= COMMENT_ROUND;
   bounds.y -= COMMENT_ROUND;
@@ -493,7 +487,7 @@ int uiBeginNode(int type, int i, int h) {
   struct nk_rect bounds = d->bounds;
   struct nk_rect screenBounds = nk_layout_space_rect_to_screen(nk, d->bounds);
   struct nk_panel* parentPanel = nk_window_get_panel(nk);
-  int winFlags = NODE_WINDOW_FLAGS;
+  int winFlags = NODEWND;
   struct nk_style* style = &nk->style;
   struct nk_user_font const* font = style->font;
   // TODO: avoid branching, make a separate func for comments
@@ -541,10 +535,7 @@ int uiBeginNode(int type, int i, int h) {
         NK_BUTTON_LEFT, dragBounds, nk_true);
 
     // prevent dragging when the window overlaps with the parent window title
-    int inParent = nk_input_is_mouse_hovering_rect(in, parentPanel->bounds) &&
-      !nk_input_is_mouse_hovering_rect(in, infoBounds) &&
-      !nk_input_is_mouse_hovering_rect(in, disclaimerBounds) &&
-      !nk_input_is_mouse_hovering_rect(in, errorBounds);
+    int inParent = nk_input_is_mouse_hovering_rect(in, parentPanel->bounds);
 
     // lock dragging to the window we started dragging so we don't drag other windows when we
     // hover over them during dragging
@@ -932,6 +923,12 @@ void updateWindowSize() {
     glfwSetWindowSize(win, width, height);
     flags |= UPDATE_SIZE;
   }
+  glfwGetFramebufferSize(win, &w, &h);
+  if (w != displayWidth || h != displayHeight) {
+    flags |= UPDATE_SIZE;
+    displayWidth = w;
+    displayHeight = h;
+  }
 }
 #endif
 
@@ -941,11 +938,11 @@ void loop() {
   glfwPollEvents();
   nk_glfw3_new_frame();
 
-  if (nk_begin(nk, CALC_NAME, CALC_BOUNDS,
-      NK_WINDOW_BORDER | NK_WINDOW_MOVABLE | NK_WINDOW_NO_SCROLLBAR | NK_WINDOW_TITLE |
-      NK_WINDOW_SCALABLE))
-  {
-    calcBounds = nk_window_get_bounds(nk);
+  if (flags & SHOW_DISCLAIMER) {
+    goto dontShowCalc;
+  }
+
+  if (nk_begin(nk, CALC_NAME, calcBounds, CALCWND)) {
     struct nk_command_buffer* canvas = nk_window_get_canvas(nk);
     struct nk_rect totalSpace = nk_window_get_content_region(nk);
 
@@ -1145,48 +1142,72 @@ void loop() {
     flags &= ~UPDATE_CONNECTIONS;
   }
 
-#define UNMANAGEDWND \
-  NK_WINDOW_CLOSABLE | \
-  NK_WINDOW_MOVABLE | \
-  NK_WINDOW_SCALABLE | \
-  NODE_WINDOW_FLAGS
-
   if (flags & SHOW_INFO) {
-    if (nk_begin(nk, INFO_NAME, INFO_BOUNDS, UNMANAGEDWND)) {
-      infoBounds = nk_window_get_bounds(nk);
-      nk_layout_row_dynamic(nk, 20, 1);
+    if (nk_begin(nk, INFO_NAME, infoBounds, OTHERWND)) {
+      if (flags & PORTRAIT) {
+        nk_layout_row_static(nk, 20, NK_MAX(100, nk_widget_width(nk) / 5), 5);
+      } else {
+        nk_layout_row_dynamic(nk, 20, 1);
+      }
       float sf = nk_propertyf(nk, "Scale", 1, glfw.scale_factor, 2, 0.1, 0.02);
       if (sf != glfw.scale_factor) {
         glfw.scale_factor = sf;
         flags |= UPDATE_SIZE;
       }
-      nk_layout_row_dynamic(nk, 10, 1);
+      if (!(flags & PORTRAIT)) {
+        nk_layout_row_dynamic(nk, 10, 1);
+      }
       nk_spacer(nk);
       nk_value_int(nk, "FPS", fps);
       nk_value_int(nk, "Nodes", BufLen(tree));
       nk_value_int(nk, "Links", BufLen(links));
-      nk_spacer(nk);
+      if (flags & PORTRAIT) {
+        nk_layout_row_static(nk, 20, NK_MAX(180, nk_widget_width(nk) / 2), 2);
+      } else {
+        nk_spacer(nk);
+      }
       nk_label(nk, "pan: middle drag", NK_TEXT_LEFT);
       nk_label(nk, "move nodes: left drag", NK_TEXT_LEFT);
       nk_label(nk, "node actions: rclick", NK_TEXT_LEFT);
       nk_label(nk, "add nodes: rclick space", NK_TEXT_LEFT);
-      nk_spacer(nk);
-      nk_label(nk, "tool", NK_TEXT_LEFT);
-      nk_label(nk, "(override lclick for devs", NK_TEXT_LEFT);
-      nk_label(nk, "w/ limited mouse support)", NK_TEXT_LEFT);
-      nk_layout_row_dynamic(nk, 20, 1);
+#define TOOL1 "tool "
+#define TOOL2 "(override lclick for devs "
+#define TOOL3 "w/ limited mouse support)"
+      if (flags & PORTRAIT) {
+        nk_layout_row_dynamic(nk, 20, 1);
+        nk_spacer(nk);
+        nk_label(nk, TOOL1 TOOL2 TOOL3, NK_TEXT_LEFT);
+      } else {
+        nk_spacer(nk);
+        nk_label(nk, TOOL1, NK_TEXT_LEFT);
+        nk_label(nk, TOOL2, NK_TEXT_LEFT);
+        nk_label(nk, TOOL3, NK_TEXT_LEFT);
+      }
 
-      int newTool = nk_combo(nk, toolNames, NK_LEN(toolNames), tool, 25,
-                      nk_vec2(nk_widget_width(nk), 100));
+      nk_layout_row_dynamic(nk, 20, (flags & PORTRAIT) ? 3 : 1);
+
+      int newTool = tool;
+
+      for (int curTool = 0; curTool < NK_LEN(toolNames); ++curTool) {
+        if (tool == curTool) {
+          nk_label(nk, toolNames[curTool], NK_TEXT_CENTERED);
+        } else {
+          if (nk_button_label(nk, toolNames[curTool])) {
+            newTool = curTool;
+          }
+        }
+      }
 
       if (newTool != tool) {
         tool = newTool;
         glfw.left_button = toolToMouseButton[tool];
       }
 
-      nk_spacer(nk);
-      nk_layout_row_dynamic(nk, 10, 1);
-      nk_spacer(nk);
+      if (!(flags & PORTRAIT)) {
+        nk_spacer(nk);
+        nk_layout_row_dynamic(nk, 10, 1);
+        nk_spacer(nk);
+      }
 
 #define showFlag(x) \
       if (flags & x) { \
@@ -1197,7 +1218,10 @@ void loop() {
       showFlag(UNLINKING)
       showFlag(RESIZING)
 
-      nk_layout_row_dynamic(nk, 20, 1);
+      if (!(flags & PORTRAIT)) {
+        nk_layout_row_dynamic(nk, 20, 1);
+      }
+
       if ((flags & (LINKING | UNLINKING | RESIZING)) && (
             glfwGetKey(win, GLFW_KEY_ESCAPE) == GLFW_PRESS ||
             nk_button_label(nk, "cancel")
@@ -1216,14 +1240,14 @@ void loop() {
     nk_end(nk);
   }
 
+dontShowCalc:
   if (flags & SHOW_DISCLAIMER) {
-    if (nk_begin(nk, DISCLAIMER_NAME, DISCLAIMER_BOUNDS, UNMANAGEDWND)) {
-      disclaimerBounds = nk_window_get_bounds(nk);
+    if (nk_begin(nk, DISCLAIMER_NAME, disclaimerBounds, OTHERWND)) {
       nk_layout_row_dynamic(nk, 20, 1);
       if (nk_button_label(nk, "I understand")) {
         flags &= ~SHOW_DISCLAIMER;
       }
-      nk_layout_row_static(nk, 300, 580, 1);
+      nk_layout_row_static(nk, disclaimerHeight, NK_MAX(570, nk_widget_width(nk)), 1);
       static int disclaimerLen = -1;
       if (disclaimerLen < 0) {
         disclaimerLen = strlen(disclaimer);
@@ -1237,8 +1261,7 @@ void loop() {
   }
 
   if (BufLen(errors)) {
-    if (nk_begin(nk, ERROR_NAME, ERROR_BOUNDS, UNMANAGEDWND)){
-      errorBounds = nk_window_get_bounds(nk);
+    if (nk_begin(nk, ERROR_NAME, errorBounds, OTHERWND)){
       nk_layout_row_dynamic(nk, 10, 1);
       for (i = 0; i < BufLen(errors); ++i) {
         nk_label(nk, errors[i], NK_TEXT_LEFT);
@@ -1256,23 +1279,34 @@ void loop() {
 #endif
 
   if (flags & UPDATE_SIZE) {
-    // TODO: use calcBounds.{w,h} instead of calc{Width,Height}
-    calcWidth = NK_MAX(width - (20 + ((flags & SHOW_INFO) ? 230 : 0)) * glfw.scale_factor, 50)
-                / glfw.scale_factor;
-    calcHeight = NK_MAX(height - 20 * glfw.scale_factor, 50) / glfw.scale_factor;
-    calcBounds = CALC_BOUNDS;
-    disclaimerBounds = DISCLAIMER_BOUNDS;
-    disclaimerBounds.w = NK_MIN(width, disclaimerBounds.w);
-    errorBounds = ERROR_BOUNDS;
-    infoBounds = INFO_BOUNDS;
-    calcBounds.x = calcBounds.y = infoBounds.y = 10;
-    disclaimerBounds.x = width / 2 - disclaimerBounds.w / 2;
-    disclaimerBounds.y = height / 2 - disclaimerBounds.h / 2;
-    errorBounds.x = width / 2 - 200;
-    errorBounds.y = height / 2 - 100;
-    infoBounds.x = calcWidth + 20;
-    calcBounds.w = calcWidth;
-    calcBounds.h = calcHeight;
+    calcBounds.x = calcBounds.y = 10;
+    calcBounds.w = width / glfw.scale_factor - 20;
+    calcBounds.h = height / glfw.scale_factor - 20;
+    disclaimerBounds.w = NK_MIN(calcBounds.w, 610);
+    disclaimerBounds.h = NK_MIN(calcBounds.h, 370);
+    disclaimerBounds.x = calcBounds.w / 2 - disclaimerBounds.w / 2 + 10;
+    disclaimerBounds.y = calcBounds.h / 2 - disclaimerBounds.h / 2 + 10;
+    errorBounds.x = calcBounds.w / 2 - 200 + 10;
+    errorBounds.y = calcBounds.h / 2 - 100 + 10;
+    errorBounds.w = 400;
+    errorBounds.h = 200;
+    if (width > height) {
+      if (flags & SHOW_INFO) calcBounds.w -= 210;
+      infoBounds.x = calcBounds.w + 20;
+      infoBounds.y = 10;
+      infoBounds.w = 200;
+      infoBounds.h = calcBounds.h;
+      flags &= ~PORTRAIT;
+    } else {
+      if (flags & SHOW_INFO) calcBounds.h -= 210;
+      infoBounds.x = 10;
+      infoBounds.y = calcBounds.h + 20;
+      infoBounds.w = calcBounds.w;
+      infoBounds.h = 200;
+      flags |= PORTRAIT;
+    }
+    calcBounds.w = NK_MAX(50, calcBounds.w);
+    calcBounds.h = NK_MAX(50, calcBounds.h);
     nk_window_set_bounds(nk, CALC_NAME, calcBounds);
     nk_window_set_bounds(nk, DISCLAIMER_NAME, disclaimerBounds);
     nk_window_set_bounds(nk, ERROR_NAME, errorBounds);
@@ -1381,6 +1415,16 @@ int main() {
     nk_glfw3_font_stash_begin(&atlas);
     nk_glfw3_font_stash_end();
   }
+
+  disclaimerHeight = 0;
+  int rowHeight = nk->style.font->height + nk->style.edit.row_padding;
+  for (char* p = disclaimer; *p; ++p) {
+    if (*p == '\n') {
+      disclaimerHeight += rowHeight;
+    }
+  }
+  disclaimerHeight = NK_MAX(rowHeight, disclaimerHeight);
+  disclaimerHeight += nk->style.edit.padding.y * 2 + nk->style.edit.border * 2;
 
 #ifdef __EMSCRIPTEN__
   resizeCanvas();
