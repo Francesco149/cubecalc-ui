@@ -112,7 +112,7 @@ enum {
 #define otherMutexFlags(x) (MUTEX_FLAGS & ~(x))
 #define flagAllowed(x) (!(flags & otherMutexFlags(x)))
 
-const struct nk_vec2 contextualSize = { .x = 100, .y = 220 };
+const struct nk_vec2 contextualSize = { .x = 300, .y = 220 };
 
 GLFWwindow* win;
 struct nk_context* nk;
@@ -595,7 +595,7 @@ int uiBeginNode(int type, int i, int h) {
 
   if (showContextual) {
     selectedNode = d->node;
-    nk_layout_row_dynamic(nk, CONTEXT_HEIGHT, 1);
+    nk_layout_row_dynamic(nk, CONTEXT_HEIGHT, 2);
 
     if (flagAllowed(RESIZING)) {
       char const* resizingText = (flags & RESIZING) ? "Stop Resizing" : "Resize";
@@ -1091,7 +1091,7 @@ void loop() {
     }
     BufClear(removeNodes);
 
-    if (nk_contextual_begin(nk, 0, nk_vec2(100, 320), totalSpace)) {
+    if (nk_contextual_begin(nk, 0, contextualSize, totalSpace)) {
       if (!(flags & SAVED_MOUSE_POS)) {
         flags |= SAVED_MOUSE_POS;
         savedMousePos = mouse;
@@ -1099,12 +1099,11 @@ void loop() {
         savedMousePos.y += pan.y;
       }
 
-      nk_layout_row_dynamic(nk, CONTEXT_HEIGHT, 1);
-
       int activeFlags = 0;
 
 #define flagDisable(x) \
       if ((flags & x)) { \
+        nk_layout_row_dynamic(nk, CONTEXT_HEIGHT, 1); \
         activeFlags |= x; \
         if (nk_contextual_item_label(nk, "Stop " #x, NK_TEXT_CENTERED)) { \
           flags &= ~x; \
@@ -1116,11 +1115,13 @@ void loop() {
       flagDisable(UNLINKING)
 
       if (!activeFlags) {
+        nk_layout_row_dynamic(nk, CONTEXT_HEIGHT, 2);
         for (int i = 0; i < NK_LEN(nodeNames); ++i) {
           if (nk_contextual_item_label(nk, nodeNames[i], NK_TEXT_CENTERED)) {
             treeAdd(i + 1, savedMousePos.x, savedMousePos.y);
           }
         }
+        nk_layout_row_dynamic(nk, CONTEXT_HEIGHT, 1);
       }
 
 #define flag(x, text, f) (void)( \
