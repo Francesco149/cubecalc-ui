@@ -167,7 +167,7 @@ char const* toolNames[] = { tools(stringifyComma) };
 
 #define NODEWND  NK_WINDOW_BORDER | NK_WINDOW_TITLE
 #define OTHERWND NODEWND | NK_WINDOW_CLOSABLE
-#define CALCWND  NODEWND | NK_WINDOW_NO_SCROLLBAR
+#define CALCWND  NK_WINDOW_NO_SCROLLBAR
 
 // NSOME_NODE_NAME -> Some Node Name
 void treeInitNodeNames() {
@@ -544,15 +544,12 @@ int uiBeginNode(int type, int i, int h) {
     int leftMouseClickInCursor = nk_input_has_mouse_click_down_in_rect(in,
         NK_BUTTON_LEFT, dragBounds, nk_true);
 
-    // prevent dragging when the window overlaps with the parent window title
-    int inParent = nk_input_is_mouse_hovering_rect(in, parentPanel->bounds);
-
     // lock dragging to the window we started dragging so we don't drag other windows when we
     // hover over them during dragging
     static int draggingId = -1;
     int inCombo = nk->current->popup.win != 0; // HACK: this relies on nk internals
     int draggingThisNode = draggingId == tree[d->node].id;
-    if (!inCombo && inParent && leftMouseDown && leftMouseClickInCursor && !leftMouseClicked &&
+    if (!inCombo && leftMouseDown && leftMouseClickInCursor && !leftMouseClicked &&
         tool == MOVE)
     {
       if (draggingId == -1 || draggingThisNode) {
@@ -1304,9 +1301,9 @@ dontShowCalc:
 #endif
 
   if (flags & UPDATE_SIZE) {
-    calcBounds.x = calcBounds.y = 10;
-    calcBounds.w = width / glfw.scale_factor - 20;
-    calcBounds.h = height / glfw.scale_factor - 20;
+    calcBounds.x = calcBounds.y = 0;
+    calcBounds.w = width / glfw.scale_factor;
+    calcBounds.h = height / glfw.scale_factor;
     disclaimerBounds.w = NK_MIN(calcBounds.w, 610);
     disclaimerBounds.h = NK_MIN(calcBounds.h, 370);
     disclaimerBounds.x = calcBounds.w / 2 - disclaimerBounds.w / 2 + 10;
@@ -1324,15 +1321,15 @@ dontShowCalc:
     }
     if (calcBounds.w - 210 > calcBounds.h) {
       if (flags & SHOW_INFO) calcBounds.w -= 210;
-      infoBounds.x = calcBounds.w + 20;
-      infoBounds.y = 10;
+      infoBounds.x = calcBounds.w;
+      infoBounds.y = 0;
       infoBounds.w = 200;
       infoBounds.h = calcBounds.h;
       flags &= ~PORTRAIT;
     } else {
-      if (flags & SHOW_INFO) calcBounds.h -= (flags & FULL_INFO) ? 210 : 130;
-      infoBounds.x = 10;
-      infoBounds.y = calcBounds.h + 20;
+      if (flags & SHOW_INFO) calcBounds.h -= (flags & FULL_INFO) ? 200 : 120;
+      infoBounds.x = 0;
+      infoBounds.y = calcBounds.h;
       infoBounds.w = calcBounds.w;
       infoBounds.h = (flags & FULL_INFO) ? 200 : 120;
       flags |= PORTRAIT;
