@@ -103,6 +103,15 @@ enum {
   PORTRAIT = 1<<11,
 };
 
+#define MUTEX_FLAGS ( \
+    LINKING | \
+    UNLINKING | \
+    RESIZING | \
+    0)
+
+#define otherMutexFlags(x) (MUTEX_FLAGS & ~(x))
+#define flagAllowed(x) (!(flags & otherMutexFlags(x)))
+
 const struct nk_vec2 contextualSize = { .x = 100, .y = 220 };
 
 GLFWwindow* win;
@@ -588,10 +597,12 @@ int uiBeginNode(int type, int i, int h) {
     selectedNode = d->node;
     nk_layout_row_dynamic(nk, CONTEXT_HEIGHT, 1);
 
-    if (nk_contextual_item_label(nk, (flags & RESIZING) ? "Stop Resizing" : "Resize",
-                                 NK_TEXT_CENTERED)) {
-      flags ^= RESIZING;
-      resizeNode = d->node;
+    if (flagAllowed(RESIZING)) {
+      char const* resizingText = (flags & RESIZING) ? "Stop Resizing" : "Resize";
+      if (nk_contextual_item_label(nk, resizingText, NK_TEXT_CENTERED)) {
+        flags ^= RESIZING;
+        resizeNode = d->node;
+      }
     }
 
     if (flags & RESIZING) {
@@ -608,7 +619,7 @@ int uiBeginNode(int type, int i, int h) {
     }
 
     // not unlinking and not linking to same node
-    if (!(flags & UNLINKING) && !((flags & LINKING) && linkNode == d->node)) {
+    if (flagAllowed(LINKING) && !((flags & LINKING) && linkNode == d->node)) {
       int isSplit =
         type == NSPLIT &&
         nk_contextual_item_label(nk, "Link Split", NK_TEXT_CENTERED);
@@ -653,7 +664,7 @@ int uiBeginNode(int type, int i, int h) {
       }
     }
 
-    if (!(flags & LINKING) && nk_contextual_item_label(nk, "Un-Link", NK_TEXT_CENTERED)) {
+    if (flagAllowed(UNLINKING) && nk_contextual_item_label(nk, "Un-Link", NK_TEXT_CENTERED)) {
       if (flags & UNLINKING) {
         treeUnlink(linkNode, d->node);
 
@@ -1090,11 +1101,21 @@ void loop() {
 
       nk_layout_row_dynamic(nk, CONTEXT_HEIGHT, 1);
 
-      if ((flags & RESIZING)) {
-        if (nk_contextual_item_label(nk, "Stop Resizing", NK_TEXT_CENTERED)) {
-          flags &= ~RESIZING;
-        }
-      } else {
+      int activeFlags = 0;
+
+#define flagDisable(x) \
+      if ((flags & x)) { \
+        activeFlags |= x; \
+        if (nk_contextual_item_label(nk, "Stop " #x, NK_TEXT_CENTERED)) { \
+          flags &= ~x; \
+        } \
+      } \
+
+      flagDisable(RESIZING)
+      flagDisable(LINKING)
+      flagDisable(UNLINKING)
+
+      if (!activeFlags) {
         for (int i = 0; i < NK_LEN(nodeNames); ++i) {
           if (nk_contextual_item_label(nk, nodeNames[i], NK_TEXT_CENTERED)) {
             treeAdd(i + 1, savedMousePos.x, savedMousePos.y);
@@ -1147,7 +1168,7 @@ void loop() {
   if (flags & SHOW_INFO) {
     if (nk_begin(nk, INFO_NAME, infoBounds, OTHERWND)) {
       if (flags & PORTRAIT) {
-        nk_layout_row_static(nk, 20, NK_MAX(100, nk_widget_width(nk) / 5), 5);
+        nk_layout_row_static(nk, 20, NK_MAX(360, nk_widget_width(nk)), 5);
       } else {
         nk_layout_row_dynamic(nk, 20, 1);
       }
@@ -1156,13 +1177,6 @@ void loop() {
         glfw.scale_factor = sf;
         flags |= UPDATE_SIZE;
       }
-      if (!(flags & PORTRAIT)) {
-        nk_layout_row_dynamic(nk, 10, 1);
-      }
-      nk_spacer(nk);
-      nk_value_int(nk, "FPS", fps);
-      nk_value_int(nk, "Nodes", BufLen(tree));
-      nk_value_int(nk, "Links", BufLen(links));
       if (flags & PORTRAIT) {
         nk_layout_row_static(nk, 20, NK_MAX(180, nk_widget_width(nk) / 2), 2);
       } else {
@@ -1177,7 +1191,6 @@ void loop() {
 #define TOOL3 "w/ limited mouse support)"
       if (flags & PORTRAIT) {
         nk_layout_row_dynamic(nk, 20, 1);
-        nk_spacer(nk);
         nk_label(nk, TOOL1 TOOL2 TOOL3, NK_TEXT_LEFT);
       } else {
         nk_spacer(nk);
@@ -1211,29 +1224,33 @@ void loop() {
         nk_spacer(nk);
       }
 
+      int activeFlags = 0;
+
 #define showFlag(x) \
       if (flags & x) { \
         nk_label(nk, #x "...", NK_TEXT_CENTERED); \
+        activeFlags |= x; \
       }
 
       showFlag(LINKING)
       showFlag(UNLINKING)
       showFlag(RESIZING)
 
+      if (!activeFlags) {
+        nk_value_int(nk, "FPS", fps);
+        nk_value_int(nk, "Nodes", BufLen(tree));
+        nk_value_int(nk, "Links", BufLen(links));
+      }
+
       if (!(flags & PORTRAIT)) {
         nk_layout_row_dynamic(nk, 20, 1);
       }
 
-      if ((flags & (LINKING | UNLINKING | RESIZING)) && (
+      if (activeFlags && (
             glfwGetKey(win, GLFW_KEY_ESCAPE) == GLFW_PRESS ||
-            nk_button_label(nk, "cancel")
+            nk_button_label(nk, "esc/ctx to cancel")
           )) {
-        flags &= ~(
-          LINKING |
-          UNLINKING |
-          RESIZING |
-          0
-        );
+        flags &= ~activeFlags;
       }
     } else {
       flags &= ~SHOW_INFO;
