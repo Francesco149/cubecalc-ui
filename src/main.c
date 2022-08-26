@@ -1310,7 +1310,7 @@ dontShowCalc:
     errorBounds.y = calcBounds.h / 2 - 100 + 10;
     errorBounds.w = 400;
     errorBounds.h = 200;
-    if (width > height) {
+    if (calcBounds.w - 210 > height) {
       if (flags & SHOW_INFO) calcBounds.w -= 210;
       infoBounds.x = calcBounds.w + 20;
       infoBounds.y = 10;
