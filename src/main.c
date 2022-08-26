@@ -101,6 +101,7 @@ enum {
   SAVED_MOUSE_POS = 1<<9,
   UPDATE_SIZE = 1<<10,
   PORTRAIT = 1<<11,
+  FULL_INFO = 1<<12,
 };
 
 #define MUTEX_FLAGS ( \
@@ -1178,26 +1179,30 @@ void loop() {
         glfw.scale_factor = sf;
         flags |= UPDATE_SIZE;
       }
-      if (flags & PORTRAIT) {
-        nk_layout_row_static(nk, 20, NK_MAX(180, nk_widget_width(nk) / 2), 2);
-      } else {
-        nk_spacer(nk);
-      }
-      nk_label(nk, "pan: middle drag", NK_TEXT_LEFT);
-      nk_label(nk, "move nodes: left drag", NK_TEXT_LEFT);
-      nk_label(nk, "node actions: rclick", NK_TEXT_LEFT);
-      nk_label(nk, "add nodes: rclick space", NK_TEXT_LEFT);
+      if (flags & FULL_INFO) {
+        if (flags & PORTRAIT) {
+          nk_layout_row_static(nk, 20, NK_MAX(180, nk_widget_width(nk) / 2), 2);
+        } else {
+          nk_spacer(nk);
+        }
+        nk_label(nk, "pan: middle drag", NK_TEXT_LEFT);
+        nk_label(nk, "move nodes: left drag", NK_TEXT_LEFT);
+        nk_label(nk, "node actions: rclick", NK_TEXT_LEFT);
+        nk_label(nk, "add nodes: rclick space", NK_TEXT_LEFT);
+
 #define TOOL1 "tool "
 #define TOOL2 "(override lclick for devs "
 #define TOOL3 "w/ limited mouse support)"
-      if (flags & PORTRAIT) {
-        nk_layout_row_dynamic(nk, 20, 1);
-        nk_label(nk, TOOL1 TOOL2 TOOL3, NK_TEXT_LEFT);
-      } else {
-        nk_spacer(nk);
-        nk_label(nk, TOOL1, NK_TEXT_LEFT);
-        nk_label(nk, TOOL2, NK_TEXT_LEFT);
-        nk_label(nk, TOOL3, NK_TEXT_LEFT);
+
+        if (flags & PORTRAIT) {
+          nk_layout_row_dynamic(nk, 20, 1);
+          nk_label(nk, TOOL1 TOOL2 TOOL3, NK_TEXT_LEFT);
+        } else {
+          nk_spacer(nk);
+          nk_label(nk, TOOL1, NK_TEXT_LEFT);
+          nk_label(nk, TOOL2, NK_TEXT_LEFT);
+          nk_label(nk, TOOL3, NK_TEXT_LEFT);
+        }
       }
 
       nk_layout_row_dynamic(nk, 20, (flags & PORTRAIT) ? 3 : 1);
@@ -1310,6 +1315,13 @@ dontShowCalc:
     errorBounds.y = calcBounds.h / 2 - 100 + 10;
     errorBounds.w = 400;
     errorBounds.h = 200;
+    calcBounds.w = NK_MAX(50, calcBounds.w);
+    calcBounds.h = NK_MAX(50, calcBounds.h);
+    if (calcBounds.h >= 500) {
+      flags |= FULL_INFO;
+    } else {
+      flags &= ~FULL_INFO;
+    }
     if (calcBounds.w - 210 > calcBounds.h) {
       if (flags & SHOW_INFO) calcBounds.w -= 210;
       infoBounds.x = calcBounds.w + 20;
@@ -1318,15 +1330,13 @@ dontShowCalc:
       infoBounds.h = calcBounds.h;
       flags &= ~PORTRAIT;
     } else {
-      if (flags & SHOW_INFO) calcBounds.h -= 210;
+      if (flags & SHOW_INFO) calcBounds.h -= (flags & FULL_INFO) ? 210 : 130;
       infoBounds.x = 10;
       infoBounds.y = calcBounds.h + 20;
       infoBounds.w = calcBounds.w;
-      infoBounds.h = 200;
+      infoBounds.h = (flags & FULL_INFO) ? 200 : 120;
       flags |= PORTRAIT;
     }
-    calcBounds.w = NK_MAX(50, calcBounds.w);
-    calcBounds.h = NK_MAX(50, calcBounds.h);
     nk_window_set_bounds(nk, CALC_NAME, calcBounds);
     nk_window_set_bounds(nk, DISCLAIMER_NAME, disclaimerBounds);
     nk_window_set_bounds(nk, ERROR_NAME, errorBounds);
