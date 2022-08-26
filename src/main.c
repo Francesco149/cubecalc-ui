@@ -540,9 +540,11 @@ int uiBeginNode(int type, int i, int h) {
     // lock dragging to the window we started dragging so we don't drag other windows when we
     // hover over them during dragging
     static int draggingId = -1;
-
+    int inCombo = nk->current->popup.win != 0; // HACK: this relies on nk internals
     int draggingThisNode = draggingId == tree[d->node].id;
-    if (inParent && leftMouseDown && leftMouseClickInCursor && !leftMouseClicked && tool == MOVE) {
+    if (!inCombo && inParent && leftMouseDown && leftMouseClickInCursor && !leftMouseClicked &&
+        tool == MOVE)
+    {
       if (draggingId == -1 || draggingThisNode) {
         draggingId = tree[d->node].id;
         d->bounds.x += in->mouse.delta.x;
