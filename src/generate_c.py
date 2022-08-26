@@ -10,14 +10,17 @@ for en in [Cube, Category, Line, CalcParam, Tier, Region]:
   n = en.__name__.lower()
   print(f"char const* {n}Names[] = {{")
   vals = [x for x in en]
+  exclude = {}
   if en == Line:
     vals = [x for x in LineMasks] + vals
     exclude = {MAINSTAT, BOSS_OTHER, BOSS_35, BOSS_40, IED_OTHER, IED_35, IED_40, ANY,
                COOLDOWN_1, COOLDOWN_2, FLAT_MAINSTAT, FLAT_ALLSTAT, FLAT_HP}
-    vals = [x for x in vals if x not in exclude]
-  if en == Category:
+  elif en == Category:
     exclude = {LINE_CACHE, NAME, DEFAULT_CUBE}
-    vals = [x for x in vals if x not in exclude]
+
+  vals = [x for x in vals if x not in exclude]
+
+  if en == Category:
     for x in vals:
       print(f"  \"{category_name(x)}\",")
   else:
