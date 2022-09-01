@@ -1464,18 +1464,34 @@ int main() {
     treeLink(nlevel, nregion);
   }
 
+  int nprevres;
   {
     s = nk_vec2(20, 130);
     int ncomment = treeAddComment(s, 0, 0, 200, 310, "example: 23+ %att", &succ);
     int nstat = treeAddChk(s, NSTAT, 0, 50, &succ);
     int namt = treeAddChk(s, NAMOUNT, 0, 140, &succ);
-    int nres = treeAddChk(s, NRESULT, 0, 230, &succ);
+    int nres = nprevres = treeAddChk(s, NRESULT, 0, 230, &succ);
 
     if (succ) {
       data[NAMOUNT][tree[namt].data].value = 23;
       treeLink(nsplit, nstat);
       treeLink(nstat, namt);
       treeLink(namt, nres);
+    }
+  }
+
+  {
+    s = nk_vec2(20, 480);
+    int ncomment = treeAddComment(s, 0, 0, 200, 220, "example: bpot 23+ %att", &succ);
+    int nbpot = treeAddChk(s, NCUBE, 0, 50, &succ);
+    int nres = treeAddChk(s, NRESULT, 0, 140, &succ);
+    int nsplit2 = treeAddChk(s, NSPLIT, -100, -20, &succ);
+
+    if (succ) {
+      data[NCUBE][tree[nbpot].data].value = BONUS;
+      data[NSPLIT][tree[nsplit2].data].value = nprevres;
+      treeLink(nbpot, nsplit2);
+      treeLink(nbpot, nres);
     }
   }
 
