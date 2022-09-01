@@ -2,8 +2,10 @@
 
 struct BufHdr {
   size_t len, cap, elementSize;
-  char data[0];
-};
+} __attribute__ ((aligned (8)));
+
+// IMPORTANT: asm.js requires loads and stores to be 8-byte aligned
+//            wasm can handle it but might be slower
 
 #define BufHdr(b) ((struct BufHdr*)(b) - 1)
 
@@ -14,9 +16,10 @@ size_t BufLen(void* b) {
 void BufDel(void* b, size_t i) {
   if (b) {
     struct BufHdr* hdr = BufHdr(b);
+    char* data = (char*)(hdr + 1);
     --hdr->len;
-    memmove(&hdr->data[i * hdr->elementSize],
-            &hdr->data[(i + 1) * hdr->elementSize],
+    memmove(&data[i * hdr->elementSize],
+            &data[(i + 1) * hdr->elementSize],
             hdr->elementSize * (hdr->len - i));
   }
 }
