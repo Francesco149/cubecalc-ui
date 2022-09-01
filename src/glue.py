@@ -27,8 +27,9 @@ calc_param_to_key = {
 bitenum_to_str = lambda e, v: " | ".join([x.name for x in e if x & v])
 
 calc_param_stringify = {
-  WANTS: lambda x: "{ " + ", ".join([f"{bitenum_to_str(Line, k)}: {v}"
-                                     for k, v in x.items()]) + " }",
+  WANTS: lambda x: "[" + ", ".join(["{ " + ", ".join([f"{bitenum_to_str(Line, k)}: {v}"
+                                                      for k, v in want.items()]) + " }"
+                                    for want in x]) + "]",
   CUBE: lambda x: Cube(x).name,
   TIER: lambda x: Tier(x).name,
   CATEGORY: lambda x: Category(x).name,
@@ -64,12 +65,19 @@ def calc_set(i, k, v):
   calc_debug_print("set", i)
 
 
+def calc_push_want(i):
+  c = calcs[i]
+  if WANTS not in c:
+    c[WANTS] = []
+  c[WANTS].append({})
+
+
 def calc_want(i, k, v):
   calc_ensure(i)
   c = calcs[i]
-  if WANTS not in c:
-    c[WANTS] = {}
-  c[WANTS][k] = v
+  if WANTS not in c or not len(c[WANTS]):
+    calc_push_want(i)
+  c[WANTS][-1][k] = v
   calc_debug_print("want", i)
 
 
@@ -84,7 +92,6 @@ def calc(i):
   calc_debug_print("calc", i)
   c = calcs[i]
   params = {calc_param_to_key[k]: v for k, v in c.items() if k in calc_param_to_key}
-  params[calc_param_to_key[WANTS]] = [params[calc_param_to_key[WANTS]]]
   params["lines"] = find_lines(c[CUBE], c[CATEGORY])
   console.log(str(params["lines"]))
   if not params["lines"]:
