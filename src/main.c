@@ -1,7 +1,27 @@
+#define NK_IMPLEMENTATION
+#define NK_INCLUDE_FONT_BAKING
+#define NK_INCLUDE_DEFAULT_FONT
+#define NK_INCLUDE_FIXED_TYPES
+#define NK_INCLUDE_STANDARD_IO
+#define NK_INCLUDE_STANDARD_VARARGS
+#define NK_INCLUDE_DEFAULT_ALLOCATOR
+
+// required by glfw backend
+#define NK_KEYSTATE_BASED_INPUT
+#define NK_INCLUDE_VERTEX_BUFFER_OUTPUT
+#define NK_GLFW_ES2_IMPLEMENTATION
+
+#include "thirdparty/nuklear.h"
+#include "thirdparty/nuklear_glfw_es2.h"
+#include <ctype.h>
+#include <float.h>
+#include <inttypes.h>
+
+typedef int64_t i64;
+
+#include "utils.c"
 #include "generated.c"
 
-#include <stdio.h>
-#include <float.h>
 
 // TODO: figure out a way to embed numpy + python for non-browser version?
 // ... or just port the calculator to C
@@ -45,11 +65,11 @@ EM_JS(void, pyCalcFree, (int calcIdx), {
   return Module.pyFunc("calc_free")(calcIdx);
 });
 
-EM_JS(void, pyCalcSet, (int calcIdx, int key, int value), {
+EM_JS(void, pyCalcSet, (int calcIdx, int key, i64 value), {
   return Module.pyFunc("calc_set")(calcIdx, key, value);
 });
 
-EM_JS(void, pyCalcWant, (int calcIdx, int key, float value), {
+EM_JS(void, pyCalcWant, (int calcIdx, i64 key, int value), {
   return Module.pyFunc("calc_want")(calcIdx, key, value);
 });
 
@@ -57,24 +77,6 @@ EM_JS(float, pyCalc, (int calcIdx), {
   return Module.pyFunc("calc")(calcIdx);
 });
 #endif
-
-#define NK_IMPLEMENTATION
-#define NK_INCLUDE_FONT_BAKING
-#define NK_INCLUDE_DEFAULT_FONT
-//#define NK_INCLUDE_FIXED_TYPES
-#define NK_INCLUDE_STANDARD_IO
-#define NK_INCLUDE_STANDARD_VARARGS
-#define NK_INCLUDE_DEFAULT_ALLOCATOR
-
-// required by glfw backend
-#define NK_KEYSTATE_BASED_INPUT
-#define NK_INCLUDE_VERTEX_BUFFER_OUTPUT
-#define NK_GLFW_ES2_IMPLEMENTATION
-
-#include "thirdparty/nuklear.h"
-#include "thirdparty/nuklear_glfw_es2.h"
-#include "utils.c"
-#include <ctype.h>
 
 #define WINDOW_WIDTH 800
 #define WINDOW_HEIGHT 600
@@ -171,11 +173,11 @@ char const* toolNames[] = { tools(stringifyComma) };
 
 // NSOME_NODE_NAME -> Some Node Name
 void treeInitNodeNames() {
-  for (int i = 0; i < NK_LEN(nodeNames); ++i) {
+  for (size_t i = 0; i < NK_LEN(nodeNames); ++i) {
     char* p = nodeNames[i];
-    int len = strlen(p + 1);
+    size_t len = strlen(p + 1);
     memmove(p, p + 1, len + 1);
-    for (int j = 1; j < len; ++j) {
+    for (size_t j = 1; j < len; ++j) {
       if (p[j] == '_') {
         p[j++] = ' ';
       } else {
@@ -208,7 +210,8 @@ typedef struct _Node {
 
 typedef struct _NodeData {
   struct nk_rect bounds;
-  int value, node;
+  i64 value;
+  int node;
   char name[16];
 } NodeData;
 
@@ -221,7 +224,11 @@ typedef struct _Comment {
 } Comment;
 
 typedef struct _Result {
-  int within50, within75, within95, within99;
+  char average[22];
+  char within50[22];
+  char within75[22];
+  char within95[22];
+  char within99[22];
 } Result;
 
 Node* tree;
@@ -269,10 +276,10 @@ void treeUpdateConnections() {
   BufReserve(&done, BufLen(tree));
   memset(done, 0, BufLen(done) * sizeof(done[0]));
 
-  for (int i = 0; i < BufLen(tree); ++i) {
+  for (size_t i = 0; i < BufLen(tree); ++i) {
     int* cons = tree[i].connections;
     done[i] = 1;
-    for (int j = 0; j < BufLen(cons); ++j) {
+    for (size_t j = 0; j < BufLen(cons); ++j) {
       int other = cons[j];
       if (done[other]) continue;
       // TODO: could cache pre computed positions and update them when nodes are moved
@@ -305,14 +312,14 @@ void error(char* s) {
   fprintf(stderr, "%s\n", s);
 }
 
-int defaultValue(int type, int stat) {
+int defaultValue(int type, i64 stat) {
   switch (type) {
     case NCUBE: return RED;
     case NTIER: return LEGENDARY;
     case NCATEGORY: return WEAPON;
     case NSTAT: return ATT;
     case NAMOUNT: {
-      int val = lineValues[stat];
+      i64 val = lineValues[stat];
       if ((val & lineValues[COOLDOWN]) || val == lineValues[INVIN]) {
         return 2;
       }
@@ -340,7 +347,7 @@ int defaultValue(int type, int stat) {
 int treeNextId() {
   int id = 0;
 nextId:
-  for (int i = 0; i < BufLen(tree); ++i) {
+  for (size_t i = 0; i < BufLen(tree); ++i) {
     if (tree[i].id == id) {
       ++id;
       goto nextId;
@@ -349,7 +356,7 @@ nextId:
   return id;
 }
 
-int treeAdd(int type, int x, int y) {
+int treeAdd(int type, i64 x, i64 y) {
   int id = treeNextId(); // important: do this BEFORE allocating the node
   NodeData* d = BufAlloc(&data[type]);
   Node* n;
@@ -402,13 +409,13 @@ void treeDel(int nodeIndex) {
 
   // since we are deleting an element in the packed arrays we have to adjust all indices pointing
   // after it. this means we have slow add/del but fast iteration which is what we want
-  for (int i = 0; i < BufLen(tree); ++i) {
+  for (size_t i = 0; i < BufLen(tree); ++i) {
     if (i == nodeIndex) continue;
     Node* n = &tree[i];
 
     // adjust connections indices
     int* newConnections = 0;
-    for (int j = 0; j < BufLen(n->connections); ++j) {
+    for (size_t j = 0; j < BufLen(n->connections); ++j) {
       if (n->connections[j] > nodeIndex) {
         *BufAlloc(&newConnections) = n->connections[j] - 1;
       } else if (n->connections[j] < nodeIndex) {
@@ -514,7 +521,7 @@ int uiBeginNode(int type, int i, int h) {
     struct nk_panel* panel = nk_window_get_panel(nk);
     struct nk_rect nodeBounds = panel->bounds;
 
-    nk_layout_row_dynamic(nk, h, 1);
+    if (type != NRESULT) nk_layout_row_dynamic(nk, h, 1);
 
     struct nk_rect dragBounds = nodeBounds;
 
@@ -765,7 +772,7 @@ void treeCalcBranch(int* values, Pair** wants, int node, int* seen) {
       treeCalcBranch(values, wants, d->value, seen);
     }
   } else {
-    for (int i = 0; i < BufLen(n->connections); ++i) {
+    for (size_t i = 0; i < BufLen(n->connections); ++i) {
       treeCalcBranch(values, wants, n->connections[i], seen);
     }
   }
@@ -784,7 +791,7 @@ void treeCalcBranch(int* values, Pair** wants, int node, int* seen) {
     case NRESULT:
       break;
     default:
-      fprintf(stderr, "error visiting node %d, unknown type %d\n", node, n->type);
+      fprintf(stderr, "error visiting node %d, unk type %d\n", node, n->type);
   }
 
   // every time we counter either stat or amount:
@@ -813,7 +820,7 @@ char const* valueName(int type, int value) {
   return 0;
 }
 
-int valueToCalc(int type, int value) {
+i64 valueToCalc(int type, int value) {
   switch (type) {
     case NCUBE: return cubeValues[value];
     case NTIER: return tierValues[value];
@@ -835,8 +842,60 @@ int treeTypeToCalcParam(int type) {
   return 0;
 }
 
+int humanizeSnprintf(i64 x, char* buf, size_t sz, char const* suff) {
+  return snprintf(buf, sz, "%" PRId64 "%s ", x, suff);
+}
+
+int humanizeSnprintfWithDot(double x, char* buf, size_t sz, char const* suff) {
+  i64 mod = (i64)(x * 10) % 10;
+  if (mod) {
+    return snprintf(buf, sz, "%" PRId64 ".%" PRId64 "%s ", (i64)x, mod, suff);
+  }
+  return humanizeSnprintf((i64)x, buf, sz, suff);
+}
+
+int humanizeStepWithDot(i64 mag, char const* suff, char* buf, size_t sz, i64 value) {
+  if (value >= mag) {
+    double x = value / (double)mag;
+    int n = humanizeSnprintfWithDot(x, 0, 0, suff);
+    if (n >= sz) {
+      snprintf(buf, sz, "...");
+    } else {
+      humanizeSnprintfWithDot(x, buf, sz, suff);
+    }
+    return n;
+  }
+  return 0;
+}
+
+void humanize(char* buf, size_t sz, i64 value) {
+  const i64 k = 1000;
+  const i64 m = k * k;
+  const i64 b = k * m;
+  const i64 t = k * b;
+  const i64 q = k * t;
+
+  if (value < k) {
+    snprintf(buf, sz, "%" PRId64, value);
+    return;
+  }
+
+  if (value >= q * k) {
+    if (snprintf(buf, sz, "%.2e", (double)value) >= sz) {
+      snprintf(buf, sz, "(too big)");
+    }
+    return;
+  }
+
+  humanizeStepWithDot(q, "q", buf, sz, value) ||
+  humanizeStepWithDot(t, "t", buf, sz, value) ||
+  humanizeStepWithDot(b, "b", buf, sz, value) ||
+  humanizeStepWithDot(m, "m", buf, sz, value) ||
+  humanizeStepWithDot(k, "k", buf, sz, value);
+}
+
 void treeCalc() {
-  for (int i = 0; i < BufLen(tree); ++i) {
+  for (size_t i = 0; i < BufLen(tree); ++i) {
     Node* n = &tree[i];
     // TODO: more type of result nodes (median, 75%, 85%, etc)
     if (n->type == NRESULT) {
@@ -845,7 +904,7 @@ void treeCalc() {
       pyCalcFree(n->id);
 
       int values[NLAST];
-      for (int j = 0; j < NLAST; ++j) {
+      for (size_t j = 0; j < NLAST; ++j) {
         values[j] = -1;
       }
 
@@ -856,7 +915,7 @@ void treeCalc() {
       treeCalcBranch(values, &wants, i, seen);
       BufFree(&seen);
 
-      for (int j = NINVALID + 1; j < NLAST; ++j) {
+      for (size_t j = NINVALID + 1; j < NLAST; ++j) {
         switch (j) {
           case NSTAT:
           case NAMOUNT:
@@ -871,7 +930,7 @@ void treeCalc() {
           printf("(assumed) ");
         }
         char const* svalue = valueName(j, values[j]);
-        char* fmt = svalue ? "%s = %s\n" : "%s = %d\n";
+        char* fmt = svalue ? "%s = %s\n" : "%s = %" PRId64 "\n";
         char* valueName = nodeNames[j - 1];
         if (svalue) {
           printf(fmt, valueName, svalue);
@@ -879,11 +938,11 @@ void treeCalc() {
           printf(fmt, valueName, values[j]);
         }
         int param = treeTypeToCalcParam(j);
-        int value = valueToCalc(j, values[j]);
+        i64 value = valueToCalc(j, values[j]);
         if (param) {
           pyCalcSet(n->id, param, value);
         } else {
-          fprintf(stderr, "unknown calc param %d = %d\n", j, values[j]);
+          fprintf(stderr, "unknown calc param %zu = %d = %" PRId64 "\n", j, values[j], value);
         }
       }
 
@@ -892,7 +951,7 @@ void treeCalc() {
         treeCalcAppendWants(values, &wants);
       }
 
-      for (int j = 0; j < BufLen(wants); ++j) {
+      for (size_t j = 0; j < BufLen(wants); ++j) {
         if (wants[j].assumed & ASSUMED_KEY) {
           printf("(assumed) ");
         }
@@ -910,13 +969,16 @@ void treeCalc() {
       float chance = pyCalc(n->id);
       Result* resd = &resultData[n->data];
       if (chance > 0) {
-        d->value = ProbToOneIn(chance);
-        resd->within50 = ProbToGeoDistrQuantileDingle(chance, 50);
-        resd->within75 = ProbToGeoDistrQuantileDingle(chance, 75);
-        resd->within95 = ProbToGeoDistrQuantileDingle(chance, 95);
-        resd->within99 = ProbToGeoDistrQuantileDingle(chance, 99);
+#define fmt(x, y) humanize(resd->x, sizeof(resd->x), y)
+#define quant(n, ...) fmt(within##n, ProbToGeoDistrQuantileDingle(chance, n))
+        fmt(average, ProbToOneIn(chance));
+        quant(50);
+        quant(75);
+        quant(95);
+        quant(99);
+#undef fmt
+#undef quant
       } else {
-        d->value = 0;
         memset(resd, 0, sizeof(*resd));
       }
     }
@@ -944,7 +1006,7 @@ void updateWindowSize() {
 #endif
 
 void loop() {
-  int i, j;
+  size_t i, j;
 
   glfwPollEvents();
   nk_glfw3_new_frame();
@@ -1050,11 +1112,21 @@ void loop() {
 
     for (i = 0; i < BufLen(data[NRESULT]); ++i) {
       if (uiBeginNode(NRESULT, i, 10)) {
-        nk_value_int(nk, "average 1 in", data[NRESULT][i].value);
-        nk_value_int(nk, "50% chance within", resultData[i].within50);
-        nk_value_int(nk, "75% chance within", resultData[i].within75);
-        nk_value_int(nk, "95% chance within", resultData[i].within95);
-        nk_value_int(nk, "99% chance within", resultData[i].within99);
+#define l(text, x) \
+  nk_label(nk, text, NK_TEXT_RIGHT); \
+  nk_label(nk, *resultData[i].x ? resultData[i].x : "impossible", NK_TEXT_LEFT)
+#define q(n) l(#n "% within:", within##n)
+
+        nk_layout_row_template_begin(nk, 10);
+        nk_layout_row_template_push_static(nk, 90);
+        nk_layout_row_template_push_dynamic(nk);
+        nk_layout_row_template_end(nk);
+        l("average 1 in:", average);
+        q(50); q(75); q(95); q(99);
+
+#undef l
+#undef q
+
         uiEndNode(NRESULT, i);
       }
     }
@@ -1114,7 +1186,7 @@ void loop() {
 
       if (!activeFlags) {
         nk_layout_row_dynamic(nk, CONTEXT_HEIGHT, 2);
-        for (int i = 0; i < NK_LEN(nodeNames); ++i) {
+        for (i = 0; i < NK_LEN(nodeNames); ++i) {
           if (nk_contextual_item_label(nk, nodeNames[i], NK_TEXT_CENTERED)) {
             treeAdd(i + 1, savedMousePos.x, savedMousePos.y);
           }

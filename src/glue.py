@@ -12,6 +12,7 @@ from glue_common import *
 from common import *
 from kms import cubes as kms
 from tms import event as tms
+from familiars import familiars, red_card_estimate
 from js import console
 
 calc_param_to_key = {
@@ -73,8 +74,10 @@ def calc_want(i, k, v):
 
 
 def find_lines(cube, category):
-  data = tms if cube & reduce(or_, tms.keys()) else kms
-  return find_probabilities(data, cube, category)
+  r = [x for x in [kms, tms, familiars, red_card_estimate] if cube & reduce(or_, x.keys())]
+  if len(r) <= 0:
+    return {}
+  return find_probabilities(r[0], cube, category)
 
 
 def calc(i):
@@ -84,6 +87,8 @@ def calc(i):
   params[calc_param_to_key[WANTS]] = [params[calc_param_to_key[WANTS]]]
   params["lines"] = find_lines(c[CUBE], c[CATEGORY])
   console.log(str(params["lines"]))
+  if not params["lines"]:
+    return 0
   res, tier = cube_calc(**params)
   console.log(f"result: {res}")
   console.log(f"resulting tier: {Tier(tier)}")

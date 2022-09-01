@@ -11,7 +11,7 @@ size_t BufLen(void* b) {
   return b ? BufHdr(b)->len : 0;
 }
 
-void BufDel(void* b, int i) {
+void BufDel(void* b, size_t i) {
   if (b) {
     struct BufHdr* hdr = BufHdr(b);
     --hdr->len;
@@ -86,15 +86,15 @@ void _BufAlloc(void* p, size_t count, size_t elementSize) {
 #define LoWord(dw) ((dw) & 0x0000FFFF)
 #define HiWord(dw) (((dw) >> 16) & 0x0000FFFF)
 
-int ProbToOneIn(float p) {
+i64 ProbToOneIn(double p) {
   if (p <= 0) return 0;
-  return roundf(1 / p + 0.5);
+  return round(1 / p + 0.5);
 }
 
 // examples:
 // percent=75 returns the num of attempts to have 75% chance for an event of probability p to occur
 // percent=50 is the median
-int ProbToGeoDistrQuantileDingle(float p, float percent) {
+i64 ProbToGeoDistrQuantileDingle(double p, double percent) {
   if (p <= 0) return 0;
-  return roundf(logf(1 - percent / 100) / logf(1 - p));
+  return round(log(1 - percent / 100) / log(1 - p));
 }

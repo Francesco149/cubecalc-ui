@@ -11,14 +11,24 @@ for en in [Cube, Category, Line, CalcParam, Tier, Region]:
   print(f"char const* {n}Names[] = {{")
   vals = [x for x in en]
   exclude = {}
+  inttype = "int"
+  intsuffix = ""
   if en == Line:
     vals = [x for x in LineMasks] + vals
-    exclude = {MAINSTAT, BOSS_OTHER, BOSS_35, BOSS_40, IED_OTHER, IED_35, IED_40, ANY,
-               COOLDOWN_1, COOLDOWN_2, FLAT_MAINSTAT, FLAT_ALLSTAT, FLAT_HP}
+    exclude = {
+      ANY, MAINSTAT, FLAT_MAINSTAT, AUTOSTEAL_1, AUTOSTEAL_2, FLAT_DEX_ONLY, MESO_ONLY, DROP_ONLY,
+      DROP_MESO, LINE_A, LINE_B, LINE_C,
+      HEAL_HP_MP, HEAL_HP_ONLY, HEAL_MP_ONLY,
+      HEAL_HP_MP_NEAR, HEAL_HP_ONLY_NEAR, HEAL_MP_ONLY_NEAR,
+      HEAL_HP_MP_PARTY, HEAL_HP_ONLY_PARTY, HEAL_MP_ONLY_PARTY,
+    }
   elif en == Category:
     exclude = {LINE_CACHE, NAME, DEFAULT_CUBE}
 
   vals = [x for x in vals if x not in exclude]
+  if len([x for x in vals if x >= 0x7FFFFFFF]) > 0:
+    inttype = "i64"
+    intsuffix = "ll"
 
   if en == Category:
     for x in vals:
@@ -28,9 +38,9 @@ for en in [Cube, Category, Line, CalcParam, Tier, Region]:
       vn = x.name.lower().replace("_", " ")
       print(f"  \"{vn}\",")
   print("};")
-  print(f"int {n}Values[] = {{")
+  print(f"{inttype} {n}Values[] = {{")
   for x in vals:
-    print(f"  {x.value},")
+    print(f"  {x.value}{intsuffix},")
   print("};")
   for i, x in enumerate(vals):
     print(f"#define {x.name} {i}")
