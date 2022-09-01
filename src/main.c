@@ -1503,7 +1503,7 @@ int main() {
   {
     s = nk_vec2(260, 480);
     int ncomment = treeAddComment(s, 0, 0, 410, 310,
-        "example: any 3l combo of %att and %boss", &succ);
+        "example: any 3l combo of %att or %boss", &succ);
     int nstat2 = treeAddChk(s, NSTAT, 0, 50, &succ);
     int namt2 = treeAddChk(s, NAMOUNT, 0, 140, &succ);
     int nstat3 = treeAddChk(s, NSTAT, 210, 140, &succ);
