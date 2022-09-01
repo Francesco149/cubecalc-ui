@@ -1422,14 +1422,14 @@ dontShowCalc:
   updateFPS();
 }
 
-int treeAddChk(int type, int x, int y, int* succ) {
-  int res = treeAdd(type, x, y);
+int treeAddChk(struct nk_vec2 start, int type, int x, int y, int* succ) {
+  int res = treeAdd(type, start.x + x, start.y + y);
   *succ = *succ && res >= 0;
   return res;
 }
 
-int treeAddComment(int x, int y, int w, int h, char* text, int* succ) {
-  int ncomment = treeAddChk(NCOMMENT, x, y, succ);
+int treeAddComment(struct nk_vec2 start, int x, int y, int w, int h, char* text, int* succ) {
+  int ncomment = treeAddChk(start, NCOMMENT, x, y, succ);
   int i = tree[ncomment].data;
   NodeData* d = &data[NCOMMENT][i];
   Comment* cd = &commentData[i];
@@ -1446,12 +1446,14 @@ int main() {
 
   int succ = 1;
 
-  int ncategory = treeAddChk(NCATEGORY, 20, 20, &succ);
-  int ncube = treeAddChk(NCUBE, 340, 20, &succ);
-  int ntier = treeAddChk(NTIER, 560, 20, &succ);
-  int nlevel = treeAddChk(NLEVEL, 770, 20, &succ);
-  int nregion = treeAddChk(NREGION, 770, 110, &succ);
-  int nsplit = treeAddChk(NSPLIT, 690, 110, &succ);
+  struct nk_vec2 s = nk_vec2(20, 20);
+  int ncategory = treeAddChk(s, NCATEGORY, 0, 0, &succ);
+  int ncube = treeAddChk(s, NCUBE, 320, 0, &succ);
+  int ntier = treeAddChk(s, NTIER, 540, 0, &succ);
+  int nlevel = treeAddChk(s, NLEVEL, 750, 0, &succ);
+  int nregion = treeAddChk(s, NREGION, 750, 90, &succ);
+  int nsplit = treeAddChk(s, NSPLIT, 670, 90, &succ);
+
   if (succ) {
     data[NSPLIT][tree[nsplit].data].value = ntier;
     data[NLEVEL][tree[nlevel].data].value = 200;
@@ -1462,10 +1464,11 @@ int main() {
   }
 
   {
-    int ncomment = treeAddComment(20, 130, 200, 310, "example: 23+ %att", &succ);
-    int nstat = treeAddChk(NSTAT, 20, 180, &succ);
-    int namt = treeAddChk(NAMOUNT, 20, 270, &succ);
-    int nres = treeAddChk(NRESULT, 20, 360, &succ);
+    s = nk_vec2(20, 130);
+    int ncomment = treeAddComment(s, 0, 0, 200, 310, "example: 23+ %att", &succ);
+    int nstat = treeAddChk(s, NSTAT, 0, 50, &succ);
+    int namt = treeAddChk(s, NAMOUNT, 0, 140, &succ);
+    int nres = treeAddChk(s, NRESULT, 0, 230, &succ);
 
     if (succ) {
       data[NAMOUNT][tree[namt].data].value = 23;
@@ -1476,12 +1479,13 @@ int main() {
   }
 
   {
-    int ncomment = treeAddComment(260, 130, 410, 310, "example: 20+ %att and 30+ %boss", &succ);
-    int nstat2 = treeAddChk(NSTAT, 260, 180, &succ);
-    int namt2 = treeAddChk(NAMOUNT, 260, 270, &succ);
-    int nstat = treeAddChk(NSTAT, 470, 180, &succ);
-    int namt = treeAddChk(NAMOUNT, 470, 270, &succ);
-    int nres = treeAddChk(NRESULT, 470, 360, &succ);
+    s = nk_vec2(260, 130);
+    int ncomment = treeAddComment(s, 0, 0, 410, 310, "example: 20+ %att and 30+ %boss", &succ);
+    int nstat2 = treeAddChk(s, NSTAT, 0, 50, &succ);
+    int namt2 = treeAddChk(s, NAMOUNT, 0, 140, &succ);
+    int nstat = treeAddChk(s, NSTAT, 210, 50, &succ);
+    int namt = treeAddChk(s, NAMOUNT, 210, 140, &succ);
+    int nres = treeAddChk(s, NRESULT, 210, 230, &succ);
 
     if (succ) {
       data[NSTAT][tree[nstat2].data].value = BOSS;
