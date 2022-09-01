@@ -1538,6 +1538,54 @@ int main() {
     }
   }
 
+  {
+    s = nk_vec2(710, 220);
+    int ncomment = treeAddComment(s, 0, 0, 410, 400, "example: unique fam 30+ boss reveal", &succ);
+    int nfamcat = treeAddChk(s, NCATEGORY, 0, 50, &succ);
+    int nstat = treeAddChk(s, NSTAT, 0, 140, &succ);
+    int namt = treeAddChk(s, NAMOUNT, 0, 230, &succ);
+    int nfamtier = treeAddChk(s, NTIER, 210, 140, &succ);
+    int nfamcube = treeAddChk(s, NCUBE, 210, 230, &succ);
+    int nres = nprevres = treeAddChk(s, NRESULT, 0, 320, &succ);
+
+    if (succ) {
+      data[NAMOUNT][tree[namt].data].value = 30;
+      data[NCATEGORY][tree[nfamcat].data].value = FAMILIAR_STATS;
+      data[NCUBE][tree[nfamcube].data].value = FAMILIAR;
+      data[NTIER][tree[nfamtier].data].value = UNIQUE;
+      data[NSTAT][tree[nstat].data].value = BOSS;
+      treeLink(nfamcat, nstat);
+      treeLink(nstat, namt);
+      treeLink(nfamcube, namt);
+      treeLink(nfamtier, nfamcube);
+      treeLink(nfamcube, nres);
+    }
+  }
+
+  {
+    s = nk_vec2(710, 660);
+    int ncomment = treeAddComment(s, 0, 0, 410, 310, "example: red cards 40+ boss", &succ);
+    int nstat = treeAddChk(s, NSTAT, 0, 50, &succ);
+    int namt = treeAddChk(s, NAMOUNT, 0, 140, &succ);
+    int nfamtier = treeAddChk(s, NTIER, 210, 50, &succ);
+    int nfamcube = treeAddChk(s, NCUBE, 210, 140, &succ);
+    int nres = treeAddChk(s, NRESULT, 0, 230, &succ);
+    int nsplit = treeAddChk(s, NSPLIT, 290, -100, &succ);
+
+    if (succ) {
+      data[NAMOUNT][tree[namt].data].value = 40;
+      data[NCUBE][tree[nfamcube].data].value = RED_FAM_CARD;
+      data[NTIER][tree[nfamtier].data].value = LEGENDARY;
+      data[NSTAT][tree[nstat].data].value = BOSS;
+      data[NSPLIT][tree[nsplit].data].value = nprevres;
+      treeLink(nsplit, nstat);
+      treeLink(nstat, namt);
+      treeLink(nfamcube, namt);
+      treeLink(nfamtier, nfamcube);
+      treeLink(nfamcube, nres);
+    }
+  }
+
   glfwSetErrorCallback(errorCallback);
   if (!glfwInit()) {
       fprintf(stdout, "[GFLW] failed to init!\n");
