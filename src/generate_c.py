@@ -24,6 +24,8 @@ for en in [Cube, Category, Line, CalcParam, Tier, Region]:
     }
   elif en == Category:
     exclude = {LINE_CACHE, NAME, DEFAULT_CUBE}
+  elif en == Tier:
+    exclude = {BASE}
 
   vals = [x for x in vals if x not in exclude]
   if len([x for x in vals if x >= 0x7FFFFFFF]) > 0:
@@ -31,9 +33,12 @@ for en in [Cube, Category, Line, CalcParam, Tier, Region]:
     intsuffix = "ll"
 
   if en == Category:
+    vals.sort(reverse=False, key=lambda x: category_name(x))
     for x in vals:
       print(f"  \"{category_name(x)}\",")
   else:
+    if en != Tier:
+      vals.sort(reverse=False, key=lambda x: x.name)
     for x in vals:
       vn = x.name.lower().replace("_", " ")
       print(f"  \"{vn}\",")
