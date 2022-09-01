@@ -509,8 +509,9 @@ int uiBeginNode(int type, int i, int h) {
   struct nk_user_font const* font = style->font;
   // TODO: avoid branching, make a separate func for comments
   if (type == NCOMMENT) {
-    bounds.h = h + 20;
+    bounds.h = h + 10;
     winFlags &= ~NK_WINDOW_TITLE;
+    winFlags |= NK_WINDOW_NO_SCROLLBAR;
   }
   nk_layout_space_push(nk,
     nk_rect(bounds.x - pan.x, bounds.y - pan.y, bounds.w, bounds.h)
@@ -1086,7 +1087,7 @@ void loop() {
       const struct nk_color color = nk_rgb(255, 255, 128);
       nk_stroke_rect(canvas, nk_layout_space_rect_to_screen(nk, bounds),
                      COMMENT_ROUND, COMMENT_THICK, color);
-      if (uiBeginNode(NCOMMENT, i, 20)) {
+      if (uiBeginNode(NCOMMENT, i, 30)) {
         bounds.x -= pan.x;
         bounds.y -= pan.y;
 
@@ -1495,6 +1496,28 @@ int main() {
       treeLink(nstat, namt);
       treeLink(nstat2, namt2);
       treeLink(namt, nres);
+      treeLink(namt2, nres);
+    }
+  }
+
+  {
+    s = nk_vec2(260, 480);
+    int ncomment = treeAddComment(s, 0, 0, 410, 310,
+        "example: any 3l combo of %att and %boss", &succ);
+    int nstat2 = treeAddChk(s, NSTAT, 0, 50, &succ);
+    int namt2 = treeAddChk(s, NAMOUNT, 0, 140, &succ);
+    int nstat3 = treeAddChk(s, NSTAT, 210, 140, &succ);
+    int nstat = treeAddChk(s, NSTAT, 210, 50, &succ);
+    int nres = treeAddChk(s, NRESULT, 210, 230, &succ);
+
+    if (succ) {
+      data[NSTAT][tree[nstat2].data].value = BOSS_ONLY;
+      data[NSTAT][tree[nstat3].data].value = LINES;
+      data[NAMOUNT][tree[namt2].data].value = 3;
+      treeLink(nsplit, nstat);
+      treeLink(nstat, nstat3);
+      treeLink(nstat, nstat2);
+      treeLink(nstat3, namt2);
       treeLink(namt2, nres);
     }
   }
