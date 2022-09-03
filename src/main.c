@@ -73,6 +73,22 @@ EM_JS(void, pyCalcWant, (int calcIdx, i64 key, int value), {
   return Module.pyFunc("calc_want")(calcIdx, key, value);
 });
 
+EM_JS(void, pyCalcWantOp, (int calcIdx, int op, int n), {
+  return Module.pyFunc("calc_want_op")(calcIdx, op, n);
+});
+
+EM_JS(int, pyCalcWantPush, (int calcIdx), {
+  return Module.pyFunc("calc_want_push")(calcIdx);
+});
+
+EM_JS(int, pyCalcWantLen, (int calcIdx), {
+  return Module.pyFunc("calc_want_len")(calcIdx);
+});
+
+EM_JS(int, pyCalcWantCurrentLen, (int calcIdx), {
+  return Module.pyFunc("calc_want_current_len")(calcIdx);
+});
+
 EM_JS(float, pyCalc, (int calcIdx), {
   return Module.pyFunc("calc")(calcIdx);
 });
@@ -162,6 +178,8 @@ int toolToMouseButton[] = {
   f(NSPLIT) \
   f(NLEVEL) \
   f(NREGION) \
+  f(NOR) \
+  f(NAND) \
 
 #define stringifyComma(x) #x,
 char* nodeNames[] = { nodeTypes(stringifyComma) };
@@ -364,6 +382,8 @@ int treeAdd(int type, i64 x, i64 y) {
 
   switch (type) {
     case NSPLIT:
+    case NOR:
+    case NAND:
       d->bounds = nk_rect(x, y, 70, 30);
       break;
     case NCATEGORY:
@@ -731,33 +751,49 @@ void treeSetValue(NodeData* d, int newValue) {
   }
 }
 
-#define ASSUMED_KEY 1
-#define ASSUMED_VALUE 2
-typedef struct _Pair { int assumed, key, value; } Pair;
-
-void treeCalcAppendWants(int* values, Pair** wants) {
-  Pair* want = BufAlloc(wants);
+void treeCalcAppendWants(int id, int* values) {
+  int key, value;
   // TODO: DRY
   if (values[NSTAT] == -1) {
-    want->key = defaultValue(NSTAT, 0);
-    want->assumed |= ASSUMED_KEY;
+    key = defaultValue(NSTAT, 0);
+    printf("(assumed) ");
   } else {
-    want->key = values[NSTAT];
+    key = values[NSTAT];
   }
+  printf("%s = ", lineNames[key]);
   if (values[NAMOUNT] == -1) {
-    want->value = defaultValue(NAMOUNT, want->key);
-    want->assumed |= ASSUMED_VALUE;
+    value = defaultValue(NAMOUNT, key);
+    printf("(assumed) ");
   } else {
-    want->value = values[NAMOUNT];
+    value = values[NAMOUNT];
   }
+  printf("%d\n", value);
   values[NSTAT] = -1;
   values[NAMOUNT] = -1;
+  pyCalcWant(id, lineValues[key], value);
 }
 
-void treeCalcBranch(int* values, Pair** wants, int node, int* seen) {
+int treeCalcFinalizeWants(int id, int* values, int optionalCondition) {
+  // append complete any pending line to wants, or just the default line
+  if (optionalCondition || values[NSTAT] != -1 || values[NAMOUNT] != -1) {
+    treeCalcAppendWants(id, values);
+    return 1;
+  }
+  return 0;
+}
+
+int treeTypeToCalcOperator(int type) {
+  switch (type) {
+    case NOR: return calcoperatorValues[OR];
+    case NAND: return calcoperatorValues[AND];
+  }
+  return 0;
+}
+
+int treeCalcBranch(int id, int* values, int node, int* seen) {
   if (seen[node]) {
     // it's important to not visit the same node twice so we don't get into a loop
-    return;
+    return 0;
   }
 
   seen[node] = 1;
@@ -770,12 +806,65 @@ void treeCalcBranch(int* values, Pair** wants, int node, int* seen) {
     if (d->value >= 0) {
       // in the case of a split, we only take the parent so that we don't traverse the other
       // branches. that's the whole point of this node. to allow reusing common nodes
-      treeCalcBranch(values, wants, d->value, seen);
+      return treeCalcBranch(id, values, d->value, seen);
     }
-  } else {
-    for (size_t i = 0; i < BufLen(n->connections); ++i) {
-      treeCalcBranch(values, wants, n->connections[i], seen);
+    return 0;
+  }
+
+  int isOperator = 0;
+  switch (n->type) {
+  case NOR:
+  case NAND:
+    isOperator = 1;
+    break;
+  }
+
+  // we implicitly AND all the stats in a branch. usually this is trivial since we just keep
+  // adding them to a dict which gets pushed on the stack when we hit an operator. but if you
+  // have nested operators, you end up having to actually emit an AND operator since you will
+  // end up with multiple values on the stack
+  //
+  // for example if we have
+  // a -- or -- b
+  //       |
+  //       c
+  //       |
+  //       or -- z
+  // that should translate to [a, b, <or 2>, c, <and 2> z <or 2>], or (((a || b) && c) || z)
+  // the and is implicit and we have to figure out when to emit it by keeping track of how many
+  // extra elements on the stack we will have from upstream branches
+
+  int numOperands = 0;
+  int elementsOnStack = 0;
+
+  for (size_t i = 0; i < BufLen(n->connections); ++i) {
+    int branchElementsOnStack = treeCalcBranch(id, values, n->connections[i], seen);
+    elementsOnStack += branchElementsOnStack;
+
+    // operators. for every branch, finish pending stats and push the parameters to the stack
+    // we don't want default value if there's no stats in this branch, otherwise we would get
+    // a bunch of 21 att's for each branch that doesn't have stats.
+    // that's why WantPush only pushes and returns 1 if the current stats dict is not empty.
+    if (isOperator) {
+      treeCalcFinalizeWants(id, values, 0);
+
+      int pushed = pyCalcWantPush(id);
+
+      if (branchElementsOnStack > 0) {
+        pyCalcWantOp(id, treeTypeToCalcOperator(NAND), branchElementsOnStack + 1);
+        pyCalcWantPush(id);
+        ++numOperands;
+      } else {
+        numOperands += pushed;
+      }
     }
+  }
+  if (isOperator) {
+    if (numOperands) {
+      pyCalcWantOp(id, treeTypeToCalcOperator(n->type), numOperands);
+      pyCalcWantPush(id);
+    }
+    return 1;
   }
 
   switch (n->type) {
@@ -786,8 +875,6 @@ void treeCalcBranch(int* values, Pair** wants, int node, int* seen) {
     case NLEVEL:
     case NREGION:
       values[n->type] = d->value;
-    // TODO: more advanced logic (AND, OR, etc)
-    case NSPLIT: // handled above
     case NSTAT: // handled below
     case NRESULT:
       break;
@@ -802,13 +889,14 @@ void treeCalcBranch(int* values, Pair** wants, int node, int* seen) {
   //   downstream, another line is found or we're done visiting the graph
 
   if (n->type == NAMOUNT || (n->type == NSTAT && values[NSTAT] != -1)) {
-    treeCalcAppendWants(values, wants); // add either default line or upstream line
+    treeCalcAppendWants(id, values); // add either default line or upstream line
   }
 
   if (n->type == NSTAT) {
-    // save this line for later
-    values[NSTAT] = d->value;
+    values[NSTAT] = d->value; // save this line for later
   }
+
+  return elementsOnStack;
 }
 
 char const* valueName(int type, int value) {
@@ -910,10 +998,9 @@ void treeCalc() {
       }
 
       int* seen = 0;
-      Pair* wants = 0;
       BufReserve(&seen, BufLen(tree));
       BufZero(seen);
-      treeCalcBranch(values, &wants, i, seen);
+      int elementsOnStack = treeCalcBranch(n->id, values, i, seen);
       BufFree(&seen);
 
       for (size_t j = NINVALID + 1; j < NLAST; ++j) {
@@ -923,6 +1010,8 @@ void treeCalc() {
           case NRESULT:
           case NCOMMENT:
           case NSPLIT:
+          case NOR:
+          case NAND:
             // these are handled separately, or are not relevant
             continue;
         }
@@ -947,25 +1036,16 @@ void treeCalc() {
         }
       }
 
-      // append complete any pending line to wants, or just the default line
-      if (!BufLen(wants) || values[NSTAT] != -1 || values[NAMOUNT] != -1) {
-        treeCalcAppendWants(values, &wants);
+      // if the wants stack is completely empty, append the default value.
+      // also complete any pending stats
+      treeCalcFinalizeWants(n->id, values, !pyCalcWantLen(n->id));
+
+      // terminate with an AND in case we have multiple sets of stats
+      elementsOnStack += pyCalcWantPush(n->id);
+
+      if (elementsOnStack > 1) {
+        pyCalcWantOp(n->id, treeTypeToCalcOperator(NAND), -1);
       }
-
-      for (size_t j = 0; j < BufLen(wants); ++j) {
-        if (wants[j].assumed & ASSUMED_KEY) {
-          printf("(assumed) ");
-        }
-        printf("%s = ", lineNames[wants[j].key]);
-        if (wants[j].assumed & ASSUMED_VALUE) {
-          printf("(assumed) ");
-        }
-        printf("%d\n", wants[j].value);
-
-        pyCalcWant(n->id, lineValues[wants[j].key], wants[j].value);
-      }
-
-      BufFree(&wants);
 
       float chance = pyCalc(n->id);
       Result* resd = &resultData[n->data];
@@ -1005,6 +1085,14 @@ void updateWindowSize() {
   }
 }
 #endif
+
+void uiEmptyNode(int type) {
+  for (size_t i = 0; i < BufLen(data[type]); ++i) {
+    if (uiBeginNode(type, i, 20)) {
+      uiEndNode(type, i);
+    }
+  }
+}
 
 void loop() {
   size_t i, j;
@@ -1097,11 +1185,9 @@ void loop() {
       }
     }
 
-    for (i = 0; i < BufLen(data[NSPLIT]); ++i) {
-      if (uiBeginNode(NSPLIT, i, 20)) {
-        uiEndNode(NSPLIT, i);
-      }
-    }
+    uiEmptyNode(NSPLIT);
+    uiEmptyNode(NOR);
+    uiEmptyNode(NAND);
 
     comboNode(NCUBE, cube);
     comboNode(NTIER, tier);
@@ -1535,6 +1621,51 @@ int main() {
       treeLink(nstat, nstat2);
       treeLink(nstat3, namt2);
       treeLink(namt2, nres);
+    }
+  }
+
+  {
+    s = nk_vec2(260, 830);
+    struct nk_vec2 s0 = s;
+    int nmeso = treeAddChk(s, NSTAT, 0, 50, &succ);
+    int ndrop = treeAddChk(s, NSTAT, 210, 50, &succ);
+    int nor = treeAddChk(s, NOR, 210 + 210 / 2 - 80 / 2, 140, &succ);
+    s.y += 140 + 40;
+    int n23stat = treeAddChk(s, NSTAT, 0, 0, &succ);
+    int n9stat = treeAddChk(s, NSTAT, 210, 0, &succ);
+    s.y += 90;
+    int n23amt = treeAddChk(s, NAMOUNT, 0, 0, &succ);
+    int n9amt = treeAddChk(s, NAMOUNT, 210, 0, &succ);
+    s.y += 90;
+    int nor2 = treeAddChk(s, NOR, 210 - 80 / 2, 0, &succ);
+    s.y += 60;
+    int nres = treeAddChk(s, NRESULT, 210/2, 0, &succ);
+    int ncat = treeAddChk(s, NCATEGORY, 450, 0, &succ);
+    s.y += 90;
+    int ncomment = treeAddComment(s0, 0, 0, 410, s.y - s0.y,
+        "example: ((meso or drop) and 9+ stat) or 23+ stat", &succ);
+
+    if (succ) {
+      data[NSTAT][tree[n23stat].data].value = data[NSTAT][tree[n9stat].data].value = STAT;
+      data[NAMOUNT][tree[n23amt].data].value = 23;
+      data[NAMOUNT][tree[n9amt].data].value = 9;
+      data[NSTAT][tree[ndrop].data].value = DROP;
+      data[NSTAT][tree[nmeso].data].value = MESO;
+      data[NCATEGORY][tree[ncat].data].value = FACE_EYE_RING_EARRING_PENDANT;
+
+      treeLink(ndrop, nor);
+      treeLink(nmeso, nor);
+      treeLink(nor, n9stat);
+      treeLink(n9stat, n9amt);
+      treeLink(n9amt, nor2);
+
+      treeLink(n23stat, n23amt);
+      treeLink(n23amt, nor2);
+
+      treeLink(nor2, nres);
+
+      treeLink(nsplit, ncat);
+      treeLink(ncat, nres);
     }
   }
 

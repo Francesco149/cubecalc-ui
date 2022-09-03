@@ -8,3 +8,8 @@ class CalcParam(IntEnum):
   CATEGORY = auto()
   LEVEL = auto()
   REGION = auto()
+
+@global_enum
+class CalcOperator(IntEnum):
+  OR = auto()
+  AND = auto()
