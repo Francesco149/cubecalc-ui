@@ -554,8 +554,14 @@ int uiBeginNode(int type, int i, int h) {
   nk_layout_space_push(nk,
     nk_rect(bounds.x - pan.x, bounds.y - pan.y, bounds.w, bounds.h)
   );
-  int showContextual = 0;
+
+  // if there's already a selected node, we don't want to perform any context menu tests.
+  // for some reason the rect overlap check bugs out when a context menu is already open
+  int skipContextual = selectedNode != -1 && selectedNode != d->node;
+
+  int showContextual = skipContextual;
   int res = nk_group_begin(nk, d->name, winFlags);
+
   if (res) {
     struct nk_panel* panel = nk_window_get_panel(nk);
     struct nk_rect nodeBounds = panel->bounds;
@@ -617,7 +623,7 @@ int uiBeginNode(int type, int i, int h) {
   // comments, we could trigger the contextual menu when the node's main window is not visible
   // by clicking on the border for example
 
-  if (type == NCOMMENT) {
+  if (!showContextual && type == NCOMMENT) {
     const int loff = COMMENT_ROUND + COMMENT_THICK * 3;
     const int roff = COMMENT_ROUND;
     struct nk_rect left, right, top, bottom;
@@ -638,6 +644,7 @@ int uiBeginNode(int type, int i, int h) {
   }
 
   if (showContextual) {
+    if (skipContextual) return res;
     selectedNode = d->node;
     nk_layout_row_dynamic(nk, CONTEXT_HEIGHT, 2);
 
