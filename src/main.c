@@ -1679,12 +1679,12 @@ int main() {
     int ncat = treeAddChk(s, NCATEGORY, -340, 0, &succ);
     s.y += 90;
     int ncomment = treeAddComment(s0, 0, 0, 410, s.y - s0.y,
-        "example: ((meso or drop) and 9+ stat) or 23+ stat", &succ);
+        "example: ((meso or drop) and 10+ stat) or 23+ stat", &succ);
 
     if (succ) {
       data[NSTAT][tree[n23stat].data].value = data[NSTAT][tree[n9stat].data].value = STAT;
       data[NAMOUNT][tree[n23amt].data].value = 23;
-      data[NAMOUNT][tree[n9amt].data].value = 9;
+      data[NAMOUNT][tree[n9amt].data].value = 10;
       data[NSTAT][tree[ndrop].data].value = DROP;
       data[NSTAT][tree[nmeso].data].value = MESO;
       data[NCATEGORY][tree[ncat].data].value = FACE_EYE_RING_EARRING_PENDANT;
