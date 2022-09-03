@@ -910,6 +910,7 @@ char const* valueName(int type, int value) {
     case NTIER: return tierNames[value];
     case NCATEGORY: return categoryNames[value];
     case NSTAT: return lineNames[value];
+    case NREGION: return regionNames[value];
   }
   return 0;
 }
@@ -1025,7 +1026,7 @@ void treeCalc() {
           printf("(assumed) ");
         }
         char const* svalue = valueName(j, values[j]);
-        char* fmt = svalue ? "%s = %s\n" : "%s = %" PRId64 "\n";
+        char* fmt = svalue ? ("%s = %s\n") : ("%s = %d\n");
         char* valueName = nodeNames[j - 1];
         if (svalue) {
           printf(fmt, valueName, svalue);
