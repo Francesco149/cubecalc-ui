@@ -62,13 +62,31 @@ def calc_ensure(i):
   return calcs[i]
 
 
-def calc_debug_print(pre, i):
+noop = lambda *args, **kwargs: None
+calc_debug_print = noop
+dbg = noop
+dbgcall = noop
+
+def calc_debug_print_(pre, i):
   if i not in calcs:
     return "(not present)"
-  console.log(
+  dbg(
     f"{pre} calc {i} = " +
     "; ".join([f"{CalcParam(k).name}: {calc_param_stringify[k](v)}" for k, v in calcs[i].items()])
   )
+
+
+def dbgcall_(f):
+  return f()
+
+
+def calc_debug(enabled):
+  global calc_debug_print
+  global dbg
+  global dbgcall
+  calc_debug_print = calc_debug_print_ if enabled else noop
+  dbg = console.log if enabled else noop
+  dbgcall = dbgcall_ if enabled else noop
 
 
 def calc_set(i, k, v):
@@ -81,10 +99,12 @@ def calc_want_push(i):
   c = calc_ensure(i)
   if WANTS not in c:
     c[WANTS] = []
+  res = 0
   if (not len(c[WANTS])) or c[WANTS][-1]:
     c[WANTS].append({})
-    return to_js(1)
-  return to_js(0)
+    res = 1
+  calc_debug_print("push", i)
+  return to_js(res)
 
 
 def calc_want_len(i):
@@ -148,10 +168,12 @@ def calc(i):
   c[WANTS] = [x for x in c[WANTS] if x]
   params = {calc_param_to_key[k]: v for k, v in c.items() if k in calc_param_to_key}
   params["lines"] = find_lines(c[CUBE], c[CATEGORY])
-  console.log(str(params["lines"]))
+  dbgcall(lambda: dbg(str(params["lines"])))
   if not params["lines"]:
     return 0
   res, tier = cube_calc(**params)
-  console.log(f"result: {res}")
-  console.log(f"resulting tier: {Tier(tier)}")
+  def dbgprint():
+    dbg(f"result: {res}")
+    dbg(f"resulting tier: {Tier(tier)}")
+  dbgcall(dbgprint)
   return to_js(res)

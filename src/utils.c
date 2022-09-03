@@ -41,12 +41,12 @@ int BufDelFindInt(int* b, int value) {
   return i;
 }
 
-void BufPrintInt(int* b) {
-  printf("[");
+void BufPrintInt(FILE* f, int* b) {
+  fprintf(f, "[");
   for (size_t i = 0; i < BufLen(b); ++i) {
-    printf("%d ", b[i]);
+    fprintf(f, "%d ", b[i]);
   }
-  printf("]");
+  fprintf(f, "]");
 }
 
 void BufClear(void* b) {

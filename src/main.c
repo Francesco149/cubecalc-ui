@@ -61,6 +61,10 @@ EM_ASYNC_JS(void, pyInit, (int ts), {
   `);
 });
 
+EM_JS(void, pyCalcDebug, (int enable), {
+  return Module.pyFunc("calc_debug")(enable != 0);
+});
+
 EM_JS(void, pyCalcFree, (int calcIdx), {
   return Module.pyFunc("calc_free")(calcIdx);
 });
@@ -102,10 +106,6 @@ EM_JS(float, pyCalc, (int calcIdx), {
 
 #define CONTEXT_HEIGHT 20
 
-void errorCallback(int e, const char *d) {
-  printf("Error %d: %s\n", e, d);
-}
-
 enum {
   SHOW_INFO = 1<<0,
   SHOW_GRID = 1<<1,
@@ -120,6 +120,7 @@ enum {
   UPDATE_SIZE = 1<<10,
   PORTRAIT = 1<<11,
   FULL_INFO = 1<<12,
+  DEBUG = 1<<13,
 };
 
 #define MUTEX_FLAGS ( \
@@ -131,7 +132,7 @@ enum {
 #define otherMutexFlags(x) (MUTEX_FLAGS & ~(x))
 #define flagAllowed(x) (!(flags & otherMutexFlags(x)))
 
-const struct nk_vec2 contextualSize = { .x = 300, .y = 220 };
+const struct nk_vec2 contextualSize = { .x = 300, .y = 240 };
 
 GLFWwindow* win;
 struct nk_context* nk;
@@ -147,6 +148,19 @@ int selectedNode = -1;
 struct nk_vec2 savedMousePos; // in node space, not screen space
 int tool;
 int disclaimerHeight = 290;
+
+void dbg(char* fmt, ...) {
+  if (flags & DEBUG) {
+    va_list va;
+    va_start(va, fmt);
+    vfprintf(stderr, fmt, va);
+    va_end(va);
+  }
+}
+
+void errorCallback(int e, const char *d) {
+  dbg("Error %d: %s\n", e, d);
+}
 
 #define CALC_NAME "MapleStory Cubing Calculator"
 #define INFO_NAME "Info"
@@ -327,7 +341,7 @@ void treeUpdateConnections() {
 
 void error(char* s) {
   *BufAlloc(&errors) = s;
-  fprintf(stderr, "%s\n", s);
+  dbg("%s\n", s);
 }
 
 int defaultValue(int type, i64 stat) {
@@ -761,18 +775,18 @@ void treeCalcAppendWants(int id, int* values) {
   // TODO: DRY
   if (values[NSTAT] == -1) {
     key = defaultValue(NSTAT, 0);
-    printf("(assumed) ");
+    dbg("(assumed) ");
   } else {
     key = values[NSTAT];
   }
-  printf("%s = ", lineNames[key]);
+  dbg("%s = ", lineNames[key]);
   if (values[NAMOUNT] == -1) {
     value = defaultValue(NAMOUNT, key);
-    printf("(assumed) ");
+    dbg("(assumed) ");
   } else {
     value = values[NAMOUNT];
   }
-  printf("%d\n", value);
+  dbg("%d\n", value);
   values[NSTAT] = -1;
   values[NAMOUNT] = -1;
   pyCalcWant(id, lineValues[key], value);
@@ -859,8 +873,10 @@ int treeCalcBranch(int id, int* values, int node, int* seen) {
         pyCalcWantOp(id, treeTypeToCalcOperator(NAND), branchElementsOnStack + 1);
         pyCalcWantPush(id);
         ++numOperands;
+        dbg("%d emitting AND\n", node);
       } else {
         numOperands += pushed;
+        dbg("%d pushed: %d\n", node, pushed);
       }
     }
   }
@@ -884,7 +900,7 @@ int treeCalcBranch(int id, int* values, int node, int* seen) {
     case NRESULT:
       break;
     default:
-      fprintf(stderr, "error visiting node %d, unk type %d\n", node, n->type);
+      dbg("error visiting node %d, unk type %d\n", node, n->type);
   }
 
   // every time we counter either stat or amount:
@@ -995,8 +1011,12 @@ void treeCalc() {
     // TODO: more type of result nodes (median, 75%, 85%, etc)
     if (n->type == NRESULT) {
       NodeData* d = &data[n->type][n->data];
-      printf("treeCalc %s\n", d->name);
+      dbg("treeCalc %s\n", d->name);
       pyCalcFree(n->id);
+
+      // initialize wants array so that it doesn't happen when traversing a tree
+      // (we don't want it to count as an operand or stuff like that)
+      pyCalcWantPush(n->id);
 
       int values[NLAST];
       for (size_t j = 0; j < NLAST; ++j) {
@@ -1023,22 +1043,21 @@ void treeCalc() {
         }
         if (values[j] == -1) {
           values[j] = defaultValue(j, values[CATEGORY]);
-          printf("(assumed) ");
+          dbg("(assumed) ");
         }
         char const* svalue = valueName(j, values[j]);
-        char* fmt = svalue ? ("%s = %s\n") : ("%s = %d\n");
         char* valueName = nodeNames[j - 1];
         if (svalue) {
-          printf(fmt, valueName, svalue);
+          dbg("%s = %s\n", valueName, svalue);
         } else {
-          printf(fmt, valueName, values[j]);
+          dbg("%s = %d\n", valueName, values[j]);
         }
         int param = treeTypeToCalcParam(j);
         i64 value = valueToCalc(j, values[j]);
         if (param) {
           pyCalcSet(n->id, param, value);
         } else {
-          fprintf(stderr, "unknown calc param %zu = %d = %" PRId64 "\n", j, values[j], value);
+          dbg("unknown calc param %zu = %d = %" PRId64 "\n", j, values[j], value);
         }
       }
 
@@ -1287,13 +1306,17 @@ void loop() {
         nk_layout_row_dynamic(nk, CONTEXT_HEIGHT, 1);
       }
 
-#define flag(x, text, f) (void)( \
+#define flag(x, text, f) ( \
       nk_contextual_item_label(nk, (flags & x) ? "Hide " text : "Show " text, NK_TEXT_CENTERED) &&\
         (flags = (flags ^ x) | f))
 
       flag(SHOW_INFO, "Info", UPDATE_SIZE);
       flag(SHOW_GRID, "Grid", 0);
       flag(SHOW_DISCLAIMER, "Disclaimer", 0);
+
+      if (flag(DEBUG, "Debug in Console", 0)) {
+        pyCalcDebug(flags & DEBUG);
+      }
 
       if (nk_contextual_item_label(nk, "I'm Lost", NK_TEXT_CENTERED)) {
         if (BufLen(tree)) {
@@ -1725,8 +1748,8 @@ int main() {
 
   glfwSetErrorCallback(errorCallback);
   if (!glfwInit()) {
-      fprintf(stdout, "[GFLW] failed to init!\n");
-      exit(1);
+    puts("[GFLW] failed to init!");
+    return 1;
   }
   glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
   win = glfwCreateWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "MapleStory Average Cubing Cost", 0, 0);
