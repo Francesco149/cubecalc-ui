@@ -41,6 +41,14 @@ int BufDelFindInt(int* b, int value) {
   return i;
 }
 
+void BufPrintInt(int* b) {
+  printf("[");
+  for (size_t i = 0; i < BufLen(b); ++i) {
+    printf("%d ", b[i]);
+  }
+  printf("]");
+}
+
 void BufClear(void* b) {
   if (b) {
     BufHdr(b)->len = 0;
