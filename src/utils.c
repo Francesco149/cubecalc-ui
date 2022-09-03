@@ -24,14 +24,18 @@ void BufDel(void* b, size_t i) {
   }
 }
 
-int BufDelFindInt(int* b, int value) {
-  int i;
-  for (i = 0; i < BufLen(b); ++i) {
+int BufFindInt(int* b, int value) {
+  for (int i = 0; i < BufLen(b); ++i) {
     if (b[i] == value) {
-      break;
+      return i;
     }
   }
-  if (i < BufLen(b)) {
+  return -1;
+}
+
+int BufDelFindInt(int* b, int value) {
+  int i = BufFindInt(b, value);
+  if (i >= 0) {
     BufDel(b, i);
   }
   return i;

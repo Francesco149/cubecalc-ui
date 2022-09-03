@@ -487,6 +487,10 @@ void treeDel(int nodeIndex) {
 
 void treeLink(int from, int to) {
   // redundant but useful so we can walk up the graph without searching all nodes
+  if (BufFindInt(tree[from].connections, to) >= 0) {
+    // could sanity check the other connections here?
+    return;
+  }
   *BufAlloc(&tree[from].connections) = to;
   *BufAlloc(&tree[to].connections) = from;
   flags |= UPDATE_CONNECTIONS;
@@ -696,10 +700,11 @@ int uiBeginNode(int type, int i, int h) {
 
         // unlink split
         int otherType = tree[linkNode].type;
-        if (type == NSPLIT) {
+        NodeData* otherData = &data[NSPLIT][tree[linkNode].data];
+        if (type == NSPLIT && d->value == linkNode) {
           d->value = -1;
-        } else if (otherType == NSPLIT) {
-          data[NSPLIT][tree[linkNode].data].value = -1;
+        } else if (otherType == NSPLIT && otherData->value == d->node) {
+          otherData->value = -1;
         }
 
         flags |= UPDATE_CONNECTIONS;
