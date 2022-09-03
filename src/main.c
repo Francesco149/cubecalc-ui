@@ -1646,7 +1646,7 @@ int main() {
     int nor2 = treeAddChk(s, NOR, 210 - 80 / 2, 0, &succ);
     s.y += 60;
     int nres = treeAddChk(s, NRESULT, 210/2, 0, &succ);
-    int ncat = treeAddChk(s, NCATEGORY, 450, 0, &succ);
+    int ncat = treeAddChk(s, NCATEGORY, -340, 0, &succ);
     s.y += 90;
     int ncomment = treeAddComment(s0, 0, 0, 410, s.y - s0.y,
         "example: ((meso or drop) and 9+ stat) or 23+ stat", &succ);
