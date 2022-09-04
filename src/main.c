@@ -1191,6 +1191,8 @@ void treeCalc() {
         resd->page = 0;
         resd->comboLen = 0;
       }
+
+      pyCalcFree(n->id);
     }
   }
 }
