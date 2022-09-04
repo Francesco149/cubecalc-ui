@@ -8,6 +8,7 @@ class CalcParam(IntEnum):
   CATEGORY = auto()
   LEVEL = auto()
   REGION = auto()
+  MATCHING = auto()
 
 @global_enum
 class CalcOperator(IntEnum):

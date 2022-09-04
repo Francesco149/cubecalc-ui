@@ -17,8 +17,6 @@
 #include <float.h>
 #include <inttypes.h>
 
-typedef int64_t i64;
-
 #include "utils.c"
 #include "generated.c"
 
@@ -59,6 +57,11 @@ EM_ASYNC_JS(void, pyInit, (int ts), {
       import sys; sys.path.append("cubecalc/");
       from glue import ${x}; ${x}
   `);
+
+  Module.matchingLine = {};
+  Module.matchingProbability = {};
+  Module.matchingValue = {};
+  Module.matchingIsPrime = {};
 });
 
 EM_JS(void, pyCalcDebug, (int enable), {
@@ -95,6 +98,37 @@ EM_JS(int, pyCalcWantCurrentLen, (int calcIdx), {
 
 EM_JS(float, pyCalc, (int calcIdx), {
   return Module.pyFunc("calc")(calcIdx);
+});
+
+EM_JS(int, pyCalcMatchingLen, (int calcIdx), {
+  return Module.matchingLine[calcIdx].length;
+});
+
+EM_JS(int, pyCalcMatchingComboLen, (int calcIdx), {
+  return Module.matchingLine[calcIdx][0].length;
+});
+
+EM_JS(void, pyCalcMatchingLoad, (int calcIdx), {
+  Module.matchingLine[calcIdx] = Module.pyFunc("calc_matching_lines")(calcIdx);
+  Module.matchingProbability[calcIdx] = Module.pyFunc("calc_matching_probabilities")(calcIdx);
+  Module.matchingValue[calcIdx] = Module.pyFunc("calc_matching_values")(calcIdx);
+  Module.matchingIsPrime[calcIdx] = Module.pyFunc("calc_matching_is_primes")(calcIdx);
+});
+
+EM_JS(i64, pyCalcMatchingLine, (int calcIdx, int i, int j), {
+  return BigInt(Module.matchingLine[calcIdx][i][j]);
+});
+
+EM_JS(int, pyCalcMatchingValue, (int calcIdx, int i, int j), {
+  return Module.matchingValue[calcIdx][i][j];
+});
+
+EM_JS(float, pyCalcMatchingProbability, (int calcIdx, int i, int j), {
+  return Module.matchingProbability[calcIdx][i][j];
+});
+
+EM_JS(float, pyCalcMatchingIsPrime, (int calcIdx, int i, int j), {
+  return Module.matchingIsPrime[calcIdx][i][j];
 });
 #endif
 
@@ -255,13 +289,29 @@ typedef struct _Comment {
   int len;
 } Comment;
 
+
 typedef struct _Result {
   char average[22];
   char within50[22];
   char within75[22];
   char within95[22];
   char within99[22];
+  int page, perPage;
+  int comboLen;
+  i64* line;
+  char** value;
+  char** prob;
+  int* prime;
 } Result;
+
+// TODO: avoid the extra pointers, this is not good for the cpu cache
+// ideally cache 1 page worth of lines into the struct for performance at draw time
+void ResultFree(Result* r) {
+  BufFree(&r->line);
+  BufFree(&r->value);
+  BufFree(&r->prob);
+  BufFree(&r->prime);
+}
 
 Node* tree;
 NodeData* data[NLAST];
@@ -425,6 +475,7 @@ int treeAdd(int type, i64 x, i64 y) {
     case NRESULT:
       flags |= DIRTY;
       BufAllocZero(&resultData);
+      resultData[BufLen(resultData) - 1].perPage = 3;
       break;
     case NCOMMENT:
       BufAllocZero(&commentData);
@@ -492,6 +543,7 @@ void treeDel(int nodeIndex) {
       BufDel(commentData, index);
       break;
     case NRESULT:
+      ResultFree(&resultData[index]);
       BufDel(resultData, index);
       break;
   }
@@ -1091,8 +1143,31 @@ void treeCalc() {
         quant(99);
 #undef fmt
 #undef quant
+
+        BufClear(resd->line);
+        BufFreeClear((void**)resd->value);
+        BufFreeClear((void**)resd->prob);
+        BufClear(resd->prime);
+
+        pyCalcMatchingLoad(n->id);
+        int comboLen = pyCalcMatchingComboLen(n->id);
+        resd->comboLen = comboLen;
+        for (int i = 0; i < pyCalcMatchingLen(n->id); ++i) {
+          float comboProbability = 0;
+          for (int j = 0; j < comboLen; ++j) {
+            *BufAlloc(&resd->line) = pyCalcMatchingLine(n->id, i, j);
+            BufAllocStrf(&resd->value, "%d", pyCalcMatchingValue(n->id, i, j));
+            float prob = pyCalcMatchingProbability(n->id, i, j);
+            BufAllocStrf(&resd->prob, "%.02f", prob);
+            *BufAlloc(&resd->prime) = pyCalcMatchingIsPrime(n->id, i, j);
+            comboProbability += prob;
+          }
+        }
       } else {
-        memset(resd, 0, sizeof(*resd));
+        resd->average[0] = resd->within50[0] = resd->within75[0] = resd->within95[0] =
+          resd->within99[0] = 0;
+        resd->page = 0;
+        resd->comboLen = 0;
       }
     }
   }
@@ -1242,6 +1317,60 @@ void loop() {
         nk_layout_row_template_end(nk);
         l("average 1 in:", average);
         q(50); q(75); q(95); q(99);
+
+        Result* r = &resultData[i];
+        if (!r->comboLen) continue;
+
+        nk_layout_row_dynamic(nk, 10, 1);
+        nk_spacer(nk);
+        nk_layout_row_dynamic(nk, 20, 1);
+
+        r->perPage = nk_propertyi(nk, "combos per page", 1, r->perPage, 10000, 1, 0.02);
+        r->perPage = NK_MAX(1, NK_MIN(r->perPage, 10000));
+        int totalCombos = BufLen(r->line) / r->comboLen;
+        int totalPages = (totalCombos + r->perPage - 1) / r->perPage;
+        const int cs = 7;
+
+        nk_layout_row_template_begin(nk, 20);
+        nk_layout_row_template_push_dynamic(nk);
+        nk_layout_row_template_push_static(nk, cs * 4);
+        nk_layout_row_template_end(nk);
+
+        r->page = nk_propertyi(nk, "combos page", 1, r->page, totalPages, 1, 0.02);
+        r->page = NK_MAX(1, NK_MIN(r->page, totalPages));
+        nk_labelf(nk, NK_TEXT_LEFT, "/%d", totalPages);
+        nk_spacer(nk);
+        nk_spacer(nk);
+
+        nk_layout_row_template_begin(nk, 10);
+        nk_layout_row_template_push_static(nk, cs * 2);
+        nk_layout_row_template_push_static(nk, cs * 3);
+        //nk_layout_row_template_push_static(nk, MAX_LINENAME * cs);
+        nk_layout_row_template_push_dynamic(nk);
+        nk_layout_row_template_push_static(nk, cs * 7);
+        nk_layout_row_template_end(nk);
+
+        nk_spacer(nk);
+        nk_spacer(nk);
+        nk_label(nk, "line", NK_TEXT_LEFT);
+        nk_label(nk, "1 in", NK_TEXT_RIGHT);
+
+        int pagei = (r->page - 1) * r->perPage;
+        for (int i = pagei; i < NK_MIN(pagei + r->perPage, totalCombos); ++i) {
+          for (int j = 0; j < r->comboLen; ++j) {
+            int k = i * r->comboLen + j;
+            static char const* primestr[2] = { "", "P" };
+            nk_label(nk, primestr[r->prime[k]], NK_TEXT_LEFT);
+            nk_label(nk, r->value[k], NK_TEXT_RIGHT);
+            nk_label(nk, allLineNames[Log2i64(r->line[k])], NK_TEXT_LEFT);
+            nk_label(nk, r->prob[k], NK_TEXT_RIGHT);
+          }
+
+          nk_spacer(nk);
+          nk_spacer(nk);
+          nk_spacer(nk);
+          nk_spacer(nk);
+        }
 
 #undef l
 #undef q

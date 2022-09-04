@@ -166,14 +166,51 @@ def calc(i):
   calc_debug_print("calc", i)
   c = calc_ensure(i)
   c[WANTS] = [x for x in c[WANTS] if x]
+  if not len(c[WANTS]):
+    return to_js(0.0) # just in case something goes wrong
   params = {calc_param_to_key[k]: v for k, v in c.items() if k in calc_param_to_key}
   params["lines"] = find_lines(c[CUBE], c[CATEGORY])
   dbgcall(lambda: dbg(str(params["lines"])))
   if not params["lines"]:
     return 0
-  res, tier = cube_calc(**params)
+  res, tier, good = cube_calc(**params)
+  c[MATCHING] = [x.tolist() for x in good.lines]
   def dbgprint():
     dbg(f"result: {res}")
     dbg(f"resulting tier: {Tier(tier)}")
   dbgcall(dbgprint)
   return to_js(res)
+
+
+def calc_matching_len(i):
+  c = calcs[i]
+  return to_js(len(c[MATCHING][0]))
+
+
+def calc_matching_combo_len(i):
+  c = calcs[i]
+  return to_js(len(c[MATCHING][0][0]))
+
+
+def calc_matching_lines(i):
+  c = calcs[i]
+  types, values, onein, is_prime = c[MATCHING]
+  return to_js(types)
+
+
+def calc_matching_values(i):
+  c = calcs[i]
+  types, values, onein, is_prime = c[MATCHING]
+  return to_js(values)
+
+
+def calc_matching_probabilities(i):
+  c = calcs[i]
+  types, values, onein, is_prime = c[MATCHING]
+  return to_js(onein)
+
+
+def calc_matching_is_primes(i):
+  c = calcs[i]
+  types, values, onein, is_prime = c[MATCHING]
+  return to_js(is_prime)
