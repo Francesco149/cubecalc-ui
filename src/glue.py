@@ -187,11 +187,6 @@ def calc_matching_len(i):
   return to_js(len(c[MATCHING][0]))
 
 
-def calc_matching_combo_len(i):
-  c = calcs[i]
-  return to_js(len(c[MATCHING][0][0]))
-
-
 def calc_matching_lines(i):
   c = calcs[i]
   types, values, onein, is_prime = c[MATCHING]

@@ -58,6 +58,8 @@ EM_ASYNC_JS(void, pyInit, (int ts), {
       from glue import ${x}; ${x}
   `);
 
+  Module.numCombos = {};
+  Module.comboLen = {};
   Module.matchingLine = {};
   Module.matchingProbability = {};
   Module.matchingValue = {};
@@ -105,14 +107,28 @@ EM_JS(int, pyCalcMatchingLen, (int calcIdx), {
 });
 
 EM_JS(int, pyCalcMatchingComboLen, (int calcIdx), {
-  return Module.matchingLine[calcIdx][0].length;
+  return Module.comboLen[calcIdx];
 });
 
-EM_JS(void, pyCalcMatchingLoad, (int calcIdx), {
+EM_JS(i64, pyCalcMatchingNumCombos, (int calcIdx), {
+  return BigInt(Module.numCombos[calcIdx]);
+});
+
+EM_JS(void, pyCalcMatchingLoad, (int calcIdx, int maxCombos), {
+  Module.numCombos[calcIdx] = Module.pyFunc("calc_matching_len")(calcIdx);
+  if (Module.numCombos[calcIdx] > maxCombos) {
+    Module.matchingLine[calcIdx] =
+    Module.matchingProbability[calcIdx] =
+    Module.matchingValue[calcIdx] =
+    Module.matchingIsPrime[calcIdx] = [];
+    Module.comboLen[calcIdx] = 0;
+    return;
+  }
   Module.matchingLine[calcIdx] = Module.pyFunc("calc_matching_lines")(calcIdx);
   Module.matchingProbability[calcIdx] = Module.pyFunc("calc_matching_probabilities")(calcIdx);
   Module.matchingValue[calcIdx] = Module.pyFunc("calc_matching_values")(calcIdx);
   Module.matchingIsPrime[calcIdx] = Module.pyFunc("calc_matching_is_primes")(calcIdx);
+  Module.comboLen[calcIdx] = Module.matchingLine[calcIdx][0].length;
 });
 
 EM_JS(i64, pyCalcMatchingLine, (int calcIdx, int i, int j), {
@@ -182,6 +198,7 @@ int selectedNode = -1;
 struct nk_vec2 savedMousePos; // in node space, not screen space
 int tool;
 int disclaimerHeight = 290;
+int maxCombos = 50;
 
 void dbg(char* fmt, ...) {
   if (flags & DEBUG) {
@@ -302,6 +319,8 @@ typedef struct _Result {
   char** value;
   char** prob;
   int* prime;
+  i64 numCombos;
+  char numCombosStr[22];
 } Result;
 
 // TODO: avoid the extra pointers, this is not good for the cpu cache
@@ -1141,15 +1160,19 @@ void treeCalc() {
         quant(75);
         quant(95);
         quant(99);
-#undef fmt
-#undef quant
 
         BufClear(resd->line);
         BufFreeClear((void**)resd->value);
         BufFreeClear((void**)resd->prob);
         BufClear(resd->prime);
 
-        pyCalcMatchingLoad(n->id);
+        pyCalcMatchingLoad(n->id, maxCombos);
+        resd->numCombos = pyCalcMatchingNumCombos(n->id);
+        fmt(numCombosStr, resd->numCombos);
+
+#undef fmt
+#undef quant
+
         int comboLen = pyCalcMatchingComboLen(n->id);
         resd->comboLen = comboLen;
         for (int i = 0; i < pyCalcMatchingLen(n->id); ++i) {
@@ -1317,6 +1340,8 @@ void loop() {
         nk_layout_row_template_end(nk);
         l("average 1 in:", average);
         q(50); q(75); q(95); q(99);
+        l("combos:", numCombosStr);
+
 
         Result* r = &resultData[i];
         if (!r->comboLen) goto terminateNode;
@@ -1500,6 +1525,11 @@ terminateNode:
       if (sf != glfw.scale_factor) {
         glfw.scale_factor = sf;
         flags |= UPDATE_SIZE;
+      }
+      int newMaxCombos = nk_propertyi(nk, "Max Combos", 0, maxCombos, 500, 100, 0.02);
+      if (newMaxCombos != maxCombos) {
+        maxCombos = newMaxCombos;
+        flags |= DIRTY;
       }
       if (flags & FULL_INFO) {
         if (flags & PORTRAIT) {
