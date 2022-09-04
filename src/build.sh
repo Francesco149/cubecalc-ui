@@ -7,7 +7,7 @@ flags="-sALLOW_MEMORY_GROWTH  -sWASM_BIGINT"
 fastbuild="-O0" # ~1s build time
 case "$1" in
   rel*) flags="$flags -O3" ;; # ~6s build time
-  san*) flags="$flags -O3 -g -fsanitize=address,undefined" ;;
+  san*) flags="$flags -O3 -g -fsanitize=address,undefined,leak" ;;
   *) flags="$flags $fastbuild" ;;
 esac
 
