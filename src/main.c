@@ -1319,7 +1319,7 @@ void loop() {
         q(50); q(75); q(95); q(99);
 
         Result* r = &resultData[i];
-        if (!r->comboLen) continue;
+        if (!r->comboLen) goto terminateNode;
 
         nk_layout_row_dynamic(nk, 10, 1);
         nk_spacer(nk);
@@ -1375,6 +1375,7 @@ void loop() {
 #undef l
 #undef q
 
+terminateNode:
         uiEndNode(NRESULT, i);
       }
     }
