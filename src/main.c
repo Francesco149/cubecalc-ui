@@ -494,7 +494,6 @@ int treeAdd(int type, i64 x, i64 y) {
     case NRESULT:
       flags |= DIRTY;
       BufAllocZero(&resultData);
-      resultData[BufLen(resultData) - 1].perPage = 3;
       break;
     case NCOMMENT:
       BufAllocZero(&commentData);
@@ -1350,8 +1349,17 @@ void loop() {
         nk_spacer(nk);
         nk_layout_row_dynamic(nk, 20, 1);
 
-        r->perPage = nk_propertyi(nk, "combos per page", 1, r->perPage, 10000, 1, 0.02);
-        r->perPage = NK_MAX(1, NK_MIN(r->perPage, 10000));
+        int newPerPage = nk_propertyi(nk, "combos per page", 0, r->perPage, 10000, 1, 0.02);
+        if (newPerPage != r->perPage) {
+          if (newPerPage && !r->perPage) {
+            flags |= DIRTY;
+          }
+          r->perPage = newPerPage;
+          r->perPage = NK_MAX(0, NK_MIN(r->perPage, 10000));
+        }
+
+        if (!r->perPage) goto terminateNode;
+
         int totalCombos = BufLen(r->line) / r->comboLen;
         int totalPages = (totalCombos + r->perPage - 1) / r->perPage;
         const int cs = 7;
