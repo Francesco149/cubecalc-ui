@@ -175,7 +175,7 @@ int width, height;
 int displayWidth, displayHeight;
 int fps;
 int flags = SHOW_INFO | SHOW_GRID | SHOW_DISCLAIMER | UPDATE_SIZE;
-struct nk_vec2 pan;
+struct nk_vec2 pan = {.x = -210, .y = 0};
 int linkNode;
 int resizeNode;
 int selectedNode = -1;
@@ -1718,14 +1718,16 @@ int main() {
 
   int nprevres;
   {
-    s = nk_vec2(20, 130);
-    int ncomment = treeAddComment(s, 0, 0, 200, 310, "example: 23+ %att", &succ);
+    s = nk_vec2(20 - 210, 130);
+    int ncomment = treeAddComment(s, 0, 0, 410, 310, "example: 23+ %att", &succ);
     int nstat = treeAddChk(s, NSTAT, 0, 50, &succ);
     int namt = treeAddChk(s, NAMOUNT, 0, 140, &succ);
-    int nres = nprevres = treeAddChk(s, NRESULT, 0, 230, &succ);
+    int nres = nprevres = treeAddChk(s, NRESULT, 210, 50, &succ);
 
     if (succ) {
       data[NAMOUNT][tree[namt].data].value = 23;
+      data[NRESULT][tree[nres].data].bounds.h = 260;
+      resultData[tree[nres].data].perPage = 100;
       treeLink(nsplit, nstat);
       treeLink(nstat, namt);
       treeLink(namt, nres);
