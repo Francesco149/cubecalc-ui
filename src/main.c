@@ -358,6 +358,13 @@ struct nk_vec2 nodeSpaceToScreen(struct nk_vec2 v) {
   return v;
 }
 
+struct nk_rect nodeSpaceToScreenRect(struct nk_rect v) {
+  struct nk_vec2 pos = nodeSpaceToScreen(nk_rect_pos(v));
+  v.x = pos.x;
+  v.y = pos.y;
+  return v;
+}
+
 struct nk_vec2 nodeCenter(int node) {
   Node* n = &tree[node];
   int i = n->data;
@@ -585,9 +592,9 @@ void treeUnlink(int from, int to) {
   BufDelFindInt(tree[to].connections, from);
 }
 
+static int frames;
 void updateFPS() {
   static double framesTimer;
-  static int frames;
   double t = glfwGetTime();
   ++frames;
   if (t - framesTimer >= 1) {
@@ -607,98 +614,109 @@ struct nk_rect commentBounds(struct nk_rect bounds) {
   return bounds;
 }
 
+#define COMMENT_H 30
+#define COMMENT_BOUNDS_H (COMMENT_H + 10)
+
+int adjustCommentBounds(int type, struct nk_rect* b) {
+  if (type == NCOMMENT) {
+    b->h = COMMENT_BOUNDS_H;
+    return 1;
+  }
+  return 0;
+}
+
 int uiBeginNode(int type, int i, int h) {
   NodeData* d = &data[type][i];
   struct nk_rect bounds = d->bounds;
-  struct nk_rect screenBounds = nk_layout_space_rect_to_screen(nk, d->bounds);
   struct nk_panel* parentPanel = nk_window_get_panel(nk);
   int winFlags = NODEWND;
   struct nk_style* style = &nk->style;
   struct nk_user_font const* font = style->font;
+
   // TODO: avoid branching, make a separate func for comments
-  if (type == NCOMMENT) {
-    bounds.h = h + 10;
+  if (adjustCommentBounds(type, &bounds)) {
     winFlags &= ~NK_WINDOW_TITLE;
     winFlags |= NK_WINDOW_NO_SCROLLBAR;
   }
-  nk_layout_space_push(nk,
-    nk_rect(bounds.x - pan.x, bounds.y - pan.y, bounds.w, bounds.h)
-  );
 
-  // if there's already a selected node, we don't want to perform any context menu tests.
-  // for some reason the rect overlap check bugs out when a context menu is already open
-  int skipContextual = selectedNode != -1 && selectedNode != d->node;
+  nk_layout_space_push(nk, nk_rect(bounds.x - pan.x, bounds.y - pan.y, bounds.w, bounds.h));
 
-  int showContextual = skipContextual;
-  int res = nk_group_begin(nk, d->name, winFlags);
-
-  if (res) {
-    struct nk_panel* panel = nk_window_get_panel(nk);
-    struct nk_rect nodeBounds = panel->bounds;
-
-    if (type != NRESULT) nk_layout_row_dynamic(nk, h, 1);
-
-    struct nk_rect dragBounds = nodeBounds;
-
-    if (type != NCOMMENT) {
-      // make context menu click area more lenient for nodes
-      // HACK: there doesn't seem any api to get a panel's full bounds including title etc
-      // NOTE: this assumes the nodes always have a title bar
-      // TODO: find a way to get rid of all this jank
-      struct nk_vec2 panelPadding = nk_panel_get_padding(style, panel->type);
-      int headerHeight = font->height +
-        2 * style->window.header.padding.y +
-        2 * style->window.header.label_padding.y;
-      struct nk_vec2 scrollbarSize = style->window.scrollbar_size;
-      nodeBounds.y -= headerHeight;
-      nodeBounds.x -= panelPadding.x;
-      nodeBounds.h += headerHeight + panelPadding.y;
-      nodeBounds.w += scrollbarSize.x + panelPadding.x * 2 + style->window.header.padding.x;
-
-      dragBounds = nodeBounds;
-      dragBounds.h = headerHeight + panelPadding.y;
-    }
-
-    // HACK: nuklear's built in drag movement is janky when multiple windows overlap because of
-    // the stateless nature of it so I make my own slight adjustments
-    int leftMouseDown = in->mouse.buttons[NK_BUTTON_LEFT].down;
-    int leftMouseClicked = in->mouse.buttons[NK_BUTTON_LEFT].clicked;
-    int leftMouseClickInCursor = nk_input_has_mouse_click_down_in_rect(in,
-        NK_BUTTON_LEFT, dragBounds, nk_true);
-
-    // lock dragging to the window we started dragging so we don't drag other windows when we
-    // hover over them during dragging
-    static int draggingId = -1;
-    int inCombo = nk->current->popup.win != 0; // HACK: this relies on nk internals
-    int draggingThisNode = draggingId == tree[d->node].id;
-    if (!inCombo && leftMouseDown && leftMouseClickInCursor && !leftMouseClicked &&
-        tool == MOVE)
-    {
-      if (draggingId == -1 || draggingThisNode) {
-        draggingId = tree[d->node].id;
-        d->bounds.x += in->mouse.delta.x;
-        d->bounds.y += in->mouse.delta.y;
-        in->mouse.buttons[NK_BUTTON_LEFT].clicked_pos.x += in->mouse.delta.x;
-        in->mouse.buttons[NK_BUTTON_LEFT].clicked_pos.y += in->mouse.delta.y;
-        nk->style.cursor_active = nk->style.cursors[NK_CURSOR_MOVE];
-      }
-    } else if (draggingThisNode) {
-      draggingId = -1;
-    }
-
-    showContextual = showContextual || nk_contextual_begin(nk, 0, contextualSize, nodeBounds);
+  int res;
+  if (!(res = nk_group_begin(nk, d->name, winFlags))) {
+    return res;
   }
+
+  struct nk_panel* panel = nk_window_get_panel(nk);
+  struct nk_rect nodeBounds = panel->bounds;
+
+  if (type != NRESULT) nk_layout_row_dynamic(nk, h, 1);
+
+  struct nk_rect dragBounds = nodeBounds;
+
+  if (type != NCOMMENT) {
+    // make context menu click area more lenient for nodes
+    // HACK: there doesn't seem any api to get a panel's full bounds including title etc
+    // NOTE: this assumes the nodes always have a title bar
+    // TODO: find a way to get rid of all this jank
+    struct nk_vec2 panelPadding = nk_panel_get_padding(style, panel->type);
+    int headerHeight = font->height +
+      2 * style->window.header.padding.y +
+      2 * style->window.header.label_padding.y;
+    struct nk_vec2 scrollbarSize = style->window.scrollbar_size;
+    nodeBounds.y -= headerHeight;
+    nodeBounds.x -= panelPadding.x;
+    nodeBounds.h += headerHeight + panelPadding.y;
+    nodeBounds.w += scrollbarSize.x + panelPadding.x * 2 + style->window.header.padding.x;
+
+    dragBounds = nodeBounds;
+    dragBounds.h = headerHeight + panelPadding.y;
+  }
+
+  // HACK: nuklear's built in drag movement is janky when multiple windows overlap because of
+  // the stateless nature of it so I make my own slight adjustments
+  int leftMouseDown = in->mouse.buttons[NK_BUTTON_LEFT].down;
+  int leftMouseClicked = in->mouse.buttons[NK_BUTTON_LEFT].clicked;
+  int leftMouseClickInCursor = nk_input_has_mouse_click_down_in_rect(in,
+      NK_BUTTON_LEFT, dragBounds, nk_true);
+
+  // lock dragging to the window we started dragging so we don't drag other windows when we
+  // hover over them during dragging
+  static int draggingId = -1;
+  int inCombo = nk->current->popup.win != 0; // HACK: this relies on nk internals
+  int draggingThisNode = draggingId == tree[d->node].id;
+  if (!inCombo && leftMouseDown && leftMouseClickInCursor && !leftMouseClicked &&
+      tool == MOVE)
+  {
+    if (draggingId == -1 || draggingThisNode) {
+      draggingId = tree[d->node].id;
+      d->bounds.x += in->mouse.delta.x;
+      d->bounds.y += in->mouse.delta.y;
+      in->mouse.buttons[NK_BUTTON_LEFT].clicked_pos.x += in->mouse.delta.x;
+      in->mouse.buttons[NK_BUTTON_LEFT].clicked_pos.y += in->mouse.delta.y;
+      nk->style.cursor_active = nk->style.cursors[NK_CURSOR_MOVE];
+    }
+  } else if (draggingThisNode) {
+    draggingId = -1;
+  }
+
+  return res;
+}
+
+int uiContextual(int type, int i) {
+  NodeData* d = &data[type][i];
+  struct nk_rect nodeBounds = nodeSpaceToScreenRect(d->bounds);
+
+  adjustCommentBounds(type, &nodeBounds);
 
   // the contextual menu logic should be outside of the window logic because for things like
   // comments, we could trigger the contextual menu when the node's main window is not visible
   // by clicking on the border for example
 
-  if (!showContextual && type == NCOMMENT) {
+  if (type == NCOMMENT) {
     const int loff = COMMENT_ROUND + COMMENT_THICK * 3;
     const int roff = COMMENT_ROUND;
     struct nk_rect left, right, top, bottom;
-    struct nk_rect b = screenBounds;
-    left = right = top = bottom = commentBounds(b);
+    left = right = top = bottom = commentBounds(d->bounds);
     left.x -= roff / 2;
     left.w = loff;
     right.x += right.w - roff / 2;
@@ -707,14 +725,22 @@ int uiBeginNode(int type, int i, int h) {
     top.h = loff;
     bottom.y += bottom.h - roff / 2;
     bottom.h = loff;
-    showContextual = showContextual || nk_contextual_begin(nk, 0, contextualSize, left);
-    showContextual = showContextual || nk_contextual_begin(nk, 0, contextualSize, right);
-    showContextual = showContextual || nk_contextual_begin(nk, 0, contextualSize, top);
-    showContextual = showContextual || nk_contextual_begin(nk, 0, contextualSize, bottom);
+
+    // IMPORTANT:
+    // the contextual menu system relies on having a consistent amount of calls to
+    // contextual_begin (call count is the index of the context menu)
+    // this is kind of a hack, but we have to check if we're in the context menu rect before
+    // we call nk_contextual_begin so that there's only one call per unique contextual menu
+
+#define checkRect(x) if (nk_input_mouse_clicked(in, NK_BUTTON_RIGHT, x)) nodeBounds = x
+    checkRect(left);
+    checkRect(right);
+    checkRect(top);
+    checkRect(bottom);
   }
 
+  int showContextual = nk_contextual_begin(nk, 0, contextualSize, nodeBounds);
   if (showContextual) {
-    if (skipContextual) return res;
     selectedNode = d->node;
     nk_layout_row_dynamic(nk, CONTEXT_HEIGHT, 2);
 
@@ -804,14 +830,12 @@ int uiBeginNode(int type, int i, int h) {
       }
       flags ^= UNLINKING;
     }
-
-contextualEnd:
-    nk_contextual_end(nk);
   } else if (selectedNode == d->node) {
     selectedNode = -1;
   }
 
-  return res;
+contextualEnd:
+  return showContextual;
 }
 
 void uiEndNode(int type, int i) {
@@ -1222,6 +1246,9 @@ void uiEmptyNode(int type) {
     if (uiBeginNode(type, i, 20)) {
       uiEndNode(type, i);
     }
+    if (uiContextual(type, i)) {
+      nk_contextual_end(nk);
+    }
   }
 }
 
@@ -1288,6 +1315,9 @@ void loop() {
       treeSetValue(d, newValue); \
       uiEndNode(type, i); \
     } \
+    if (uiContextual(type, i)) { \
+      nk_contextual_end(nk); \
+    } \
   }
 
 #define propNode(type, valueType) \
@@ -1298,6 +1328,9 @@ void loop() {
       treeSetValue(d, newValue); \
       uiEndNode(type, i); \
     } \
+    if (uiContextual(type, i)) { \
+      nk_contextual_end(nk); \
+    } \
   }
 
     for (i = 0; i < BufLen(data[NCOMMENT]); ++i) {
@@ -1306,13 +1339,16 @@ void loop() {
       const struct nk_color color = nk_rgb(255, 255, 128);
       nk_stroke_rect(canvas, nk_layout_space_rect_to_screen(nk, bounds),
                      COMMENT_ROUND, COMMENT_THICK, color);
-      if (uiBeginNode(NCOMMENT, i, 30)) {
+      if (uiBeginNode(NCOMMENT, i, COMMENT_H)) {
         bounds.x -= pan.x;
         bounds.y -= pan.y;
 
         Comment* com = &commentData[i];
         nk_edit_string(nk, NK_EDIT_FIELD, com->buf, &com->len, COMMENT_MAX, 0);
         uiEndNode(NCOMMENT, i);
+      }
+      if (uiContextual(NCOMMENT, i)) {
+        nk_contextual_end(nk);
       }
     }
 
@@ -1412,6 +1448,10 @@ void loop() {
 
 terminateNode:
         uiEndNode(NRESULT, i);
+      }
+
+      if (uiContextual(NRESULT, i)) {
+        nk_contextual_end(nk);
       }
     }
 
