@@ -654,7 +654,7 @@ int uiBeginNode(int type, int i, int h) {
   struct nk_rect dragBounds = nodeBounds;
 
   if (type != NCOMMENT) {
-    // make context menu click area more lenient for nodes
+    // calculate dragging click bounds (window title)
     // HACK: there doesn't seem any api to get a panel's full bounds including title etc
     // NOTE: this assumes the nodes always have a title bar
     // TODO: find a way to get rid of all this jank
