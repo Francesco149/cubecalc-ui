@@ -1,0 +1,59 @@
+syntax = "proto3";
+
+message SavedRect {
+  int32 x = 1;
+  int32 y = 2;
+  int32 w = 3;
+  int32 h = 4;
+}
+
+message SavedNodeData {
+  SavedRect bounds = 1;
+  int32 value = 2;
+}
+
+message SavedComment {
+  string text = 1;
+}
+
+message SavedResult {
+  int32 page = 1;
+  int32 perPage = 2;
+}
+
+message SavedNode {
+  int32 id = 1;
+  SavedNodeData data = 2;
+  SavedComment commentData = 3;
+  SavedResult resultData = 4;
+}
+
+message SavedConnection {
+  int32 fromId = 1;
+  int32 toId = 2;
+}
+
+enum SavedNodeType {
+  NCOMMENT = 0;
+  NCUBE = 1;
+  NTIER = 2;
+  NCATEGORY = 3;
+  NSTAT = 4;
+  NAMOUNT = 5;
+  NRESULT = 6;
+  NSPLIT = 7;
+  NLEVEL = 8;
+  NREGION = 9;
+  NOR = 10;
+  NAND = 11;
+}
+
+message SavedBucket {
+  SavedNodeType type = 1;
+  repeated SavedNode nodes = 2;
+}
+
+message SavedPreset {
+  repeated SavedBucket buckets = 1;
+  repeated SavedConnection connections = 2;
+}

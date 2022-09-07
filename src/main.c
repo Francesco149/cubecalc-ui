@@ -16,9 +16,16 @@
 #include <ctype.h>
 #include <float.h>
 #include <inttypes.h>
+#include <stdatomic.h>
+#include <errno.h>
 
 #include "utils.c"
 #include "generated.c"
+
+#include <sys/stat.h>
+#include "thirdparty/protobuf-c/protobuf-c.c"
+#include "proto/cubecalc.pb-c.h"
+#include "proto/cubecalc.pb-c.c"
 
 
 // TODO: figure out a way to embed numpy + python for non-browser version?
@@ -187,10 +194,16 @@ const struct nk_vec2 contextualSize = { .x = 300, .y = 240 };
 GLFWwindow* win;
 struct nk_context* nk;
 struct nk_input* in;
+char** errors;
+char statusText[64];
 int width, height;
 int displayWidth, displayHeight;
 int fps;
-int flags = SHOW_INFO | SHOW_GRID | SHOW_DISCLAIMER | UPDATE_SIZE;
+int flags = SHOW_INFO | SHOW_GRID | SHOW_DISCLAIMER | UPDATE_SIZE
+#ifdef CUBECALC_DEBUG
+| DEBUG
+#endif
+;
 struct nk_vec2 pan = {.x = -210, .y = 0};
 int linkNode;
 int resizeNode;
@@ -199,6 +212,7 @@ struct nk_vec2 savedMousePos; // in node space, not screen space
 int tool;
 int disclaimerHeight = 290;
 int maxCombos = 50;
+_Atomic int storageReady;
 
 void dbg(char* fmt, ...) {
   if (flags & DEBUG) {
@@ -207,6 +221,18 @@ void dbg(char* fmt, ...) {
     vfprintf(stderr, fmt, va);
     va_end(va);
   }
+}
+
+void error(char* s) {
+  *BufAlloc(&errors) = s;
+  dbg("%s\n", s);
+}
+
+void status(char* fmt, ...) {
+  va_list va;
+  va_start(va, fmt);
+  vsnprintf(statusText, sizeof(statusText), fmt, va);
+  va_end(va);
 }
 
 void errorCallback(int e, const char *d) {
@@ -293,7 +319,7 @@ typedef struct _Node {
 
 typedef struct _NodeData {
   struct nk_rect bounds;
-  i64 value;
+  int value;
   int node;
   char name[16];
 } NodeData;
@@ -305,7 +331,6 @@ typedef struct _Comment {
   char buf[COMMENT_MAX];
   int len;
 } Comment;
-
 
 typedef struct _Result {
   char average[22];
@@ -336,7 +361,6 @@ Node* tree;
 NodeData* data[NLAST];
 Comment* commentData;
 Result* resultData;
-char** errors;
 int* removeNodes;
 
 void treeInit() {
@@ -350,6 +374,16 @@ typedef struct _NodeLink {
 } NodeLink;
 
 NodeLink* links;
+
+void treeClear() {
+  for (size_t i = 0; i < NLAST; ++i) {
+    BufClear(data[i]);
+  }
+  BufClear(commentData);
+  BufClear(resultData);
+  BufClear(removeNodes);
+  flags |= UPDATE_CONNECTIONS;
+}
 
 struct nk_vec2 nodeSpaceToScreen(struct nk_vec2 v) {
   v = nk_layout_space_to_screen(nk, v);
@@ -413,11 +447,6 @@ void treeUpdateConnections() {
 
   BufFree(&done);
   flags |= DIRTY;
-}
-
-void error(char* s) {
-  *BufAlloc(&errors) = s;
-  dbg("%s\n", s);
 }
 
 int defaultValue(int type, i64 stat) {
@@ -486,16 +515,15 @@ int treeAdd(int type, i64 x, i64 y) {
   chars = snprintf(d->name, sizeof(d->name), "%s %d", nodeNames[type - 1], id);
   if (chars >= sizeof(d->name)) {
     error("too many nodes, can't format node name");
-    BufDel(data[type], BufLen(data[type]) - 1);
+    BufDel(data[type], -1);
     return -1;
   }
 
-  n = BufAlloc(&tree);
+  n = BufAllocZero(&tree);
   n->id = id;
-  n->data = BufLen(data[type]) - 1;
+  n->data = BufI(data[type], -1);
   n->type = type;
-  n->connections = 0;
-  d->node = BufLen(tree) - 1;
+  d->node = BufI(tree, -1);
 
   switch (type) {
     case NRESULT:
@@ -1253,10 +1281,13 @@ void uiEmptyNode(int type) {
 }
 
 void loop() {
-  size_t i, j;
-
   glfwPollEvents();
   nk_glfw3_new_frame();
+
+  // TODO: remove this
+  if (!atomic_load(&storageReady)) {
+    goto dontShowCalc;
+  }
 
   if (flags & SHOW_DISCLAIMER) {
     goto dontShowCalc;
@@ -1283,8 +1314,7 @@ void loop() {
     }
 
     // draw links BEFORE the nodes so they appear below them
-    for (i = 0; i < BufLen(links); ++i) {
-      NodeLink* l = &links[i];
+    BufEach(NodeLink, links, l) {
       struct nk_vec2 from = nodeSpaceToScreen(nodeCenter(l->from));
       struct nk_vec2 to = nodeSpaceToScreen(nodeCenter(l->to));
       drawLink(canvas, from, to, l->color, l->thick);
@@ -1307,7 +1337,7 @@ void loop() {
     }
 
 #define comboNode(type, enumName) \
-  for (i = 0; i < BufLen(data[type]); ++i) { \
+  BufEachi(data[type], i) { \
     if (uiBeginNode(type, i, 25)) { \
       NodeData* d = &data[type][i]; \
       int newValue = nk_combo(nk, enumName##Names, NK_LEN(enumName##Names), d->value, \
@@ -1321,7 +1351,7 @@ void loop() {
   }
 
 #define propNode(type, valueType) \
-  for (i = 0; i < BufLen(data[type]); ++i) { \
+  BufEachi(data[type], i) { \
     if (uiBeginNode(type, i, 20)) { \
       NodeData* d = &data[type][i]; \
       int newValue = nk_property##valueType(nk, d->name, 0, d->value, 300, 1, 0.02); \
@@ -1333,7 +1363,7 @@ void loop() {
     } \
   }
 
-    for (i = 0; i < BufLen(data[NCOMMENT]); ++i) {
+    BufEachi(data[NCOMMENT], i) {
       NodeData* d = &data[NCOMMENT][i];
       struct nk_rect bounds = commentBounds(d->bounds);
       const struct nk_color color = nk_rgb(255, 255, 128);
@@ -1364,7 +1394,7 @@ void loop() {
     propNode(NAMOUNT, i);
     propNode(NLEVEL, i);
 
-    for (i = 0; i < BufLen(data[NRESULT]); ++i) {
+    BufEachi(data[NRESULT], i) {
       if (uiBeginNode(NRESULT, i, 10)) {
 #define l(text, x) \
   nk_label(nk, text, NK_TEXT_RIGHT); \
@@ -1378,7 +1408,6 @@ void loop() {
         l("average 1 in:", average);
         q(50); q(75); q(95); q(99);
         l("combos:", numCombosStr);
-
 
         Result* r = &resultData[i];
         if (!r->comboLen) goto terminateNode;
@@ -1396,7 +1425,7 @@ void loop() {
           r->perPage = NK_MAX(0, NK_MIN(r->perPage, 10000));
         }
 
-        if (!r->perPage) goto terminateNode;
+        if (!r->perPage || !r->comboLen) goto terminateNode;
 
         int totalCombos = BufLen(r->line) / r->comboLen;
         int totalPages = (totalCombos + r->perPage - 1) / r->perPage;
@@ -1427,9 +1456,9 @@ void loop() {
         nk_label(nk, "1 in", NK_TEXT_RIGHT);
 
         int pagei = (r->page - 1) * r->perPage;
-        for (int i = pagei; i < NK_MIN(pagei + r->perPage, totalCombos); ++i) {
+        for (int pi = pagei; pi < NK_MIN(pagei + r->perPage, totalCombos); ++pi) {
           for (int j = 0; j < r->comboLen; ++j) {
-            int k = i * r->comboLen + j;
+            int k = pi * r->comboLen + j;
             static char const* primestr[2] = { "", "P" };
             nk_label(nk, primestr[r->prime[k]], NK_TEXT_LEFT);
             nk_label(nk, r->value[k], NK_TEXT_RIGHT);
@@ -1473,13 +1502,14 @@ terminateNode:
 
     // it really isn't necessary to handle multiple deletions right now, but why not.
     // maybe eventually I will have a select function and will want to do this
-    for (i = 0; i < BufLen(removeNodes); ++i) {
-      int nodeIndex = removeNodes[i];
-      treeDel(nodeIndex);
-      selectedNode = -1;
-      for (j = i; j < BufLen(removeNodes); ++j) {
-        if (removeNodes[j] > nodeIndex) {
-          --removeNodes[j];
+    BufEach(int, removeNodes, nodeIndex) {
+      treeDel(*nodeIndex);
+      if (selectedNode == *nodeIndex) {
+        selectedNode = -1;
+      }
+      BufEach(int, removeNodes, otherIndex) {
+        if (*otherIndex > *nodeIndex) {
+          --*otherIndex;
         }
       }
     }
@@ -1510,7 +1540,7 @@ terminateNode:
 
       if (!activeFlags) {
         nk_layout_row_dynamic(nk, CONTEXT_HEIGHT, 2);
-        for (i = 0; i < NK_LEN(nodeNames); ++i) {
+        for (size_t i = 0; i < NK_LEN(nodeNames); ++i) {
           if (nk_contextual_item_label(nk, nodeNames[i], NK_TEXT_CENTERED)) {
             treeAdd(i + 1, savedMousePos.x, savedMousePos.y);
           }
@@ -1581,6 +1611,7 @@ terminateNode:
         maxCombos = newMaxCombos;
         flags |= DIRTY;
       }
+      nk_label(nk, *statusText ? statusText : "Idle", NK_TEXT_LEFT);
       if (flags & FULL_INFO) {
         if (flags & PORTRAIT) {
           nk_layout_row_static(nk, 20, NK_MAX(180, nk_widget_width(nk) / 2), 2);
@@ -1690,8 +1721,8 @@ dontShowCalc:
   if (BufLen(errors)) {
     if (nk_begin(nk, ERROR_NAME, errorBounds, OTHERWND)){
       nk_layout_row_dynamic(nk, 10, 1);
-      for (i = 0; i < BufLen(errors); ++i) {
-        nk_label(nk, errors[i], NK_TEXT_LEFT);
+      BufEach(char*, errors, perr) {
+        nk_label(nk, *perr, NK_TEXT_LEFT);
       }
     } else {
       BufClear(errors);
@@ -1773,10 +1804,7 @@ int treeAddComment(struct nk_vec2 start, int x, int y, int w, int h, char* text,
   return ncomment;
 }
 
-int main() {
-  pyInit(TS);
-  treeInit();
-
+void examplesInit() {
   int succ = 1;
 
   struct nk_vec2 s = nk_vec2(20, 20);
@@ -1964,6 +1992,375 @@ int main() {
       treeLink(nfamcube, nres);
     }
   }
+}
+
+int SavedConnectionEqual(SavedConnection* a, SavedConnection* b) {
+  return (
+    (a->fromid == b->fromid && a->toid == b->  toid) ||
+    (a->fromid == b->  toid && a->toid == b->fromid)
+  );
+}
+
+// convert a Buf of structs to a Buf of pointers to the structs (no copying)
+// this is useless normally, it's mainly for protobuf
+
+#define BufToProto(protoStruc, member, b) \
+  (protoStruc)->member = BufToProto_(b, &(protoStruc)->n_##member, &allocatorDefault)
+
+void* BufToProto_(void* b, size_t *pn, Allocator* allocator) {
+  if (!BufLen(b)) return 0;
+  u8* p = b;
+  void** res = 0;
+  struct BufHdr* hdr = BufHdr(b);
+  *pn = hdr->len;
+  BufReserveWithAllocator(&res, hdr->len, allocator);
+  BufEachi(b, i) {
+    res[i] = p + i * hdr->elementSize;
+  }
+  return res;
+}
+
+int storageSaveSync(char* path) {
+  dbg("saving %s\n", path);
+
+  Arena arena = ArenaInitializer;
+  Allocator allocatorArena = ArenaAllocator(&arena);
+
+// override default allocator to use this memory arena so I don't have to manually free
+// all the arrays
+
+#undef allocatorDefault
+#define allocatorDefault allocatorArena
+
+  SavedNode* savedTree = 0;
+  SavedNodeData* savedData = 0;
+  SavedRect* savedRects = 0;
+
+  size_t treeLen = BufLen(tree);
+  BufReserve(&savedTree, treeLen);
+  BufReserve(&savedData, treeLen);
+  BufReserve(&savedRects, treeLen);
+
+  SavedComment* savedCommentData = 0;
+  BufReserve(&savedCommentData, BufLen(commentData));
+
+  SavedResult* savedResultData = 0;
+  BufReserve(&savedResultData, BufLen(resultData));
+
+  size_t numConnections = 0;
+
+  // first, convert everything into serialized structs, with no care for buckets
+  BufEachi(tree, i) {
+    Node* n = &tree[i];
+    NodeData* d = &data[n->type][n->data];
+    numConnections += BufLen(n->connections);
+
+    SavedRect* sr = &savedRects[i];
+    saved_rect__init(sr);
+    sr->x = d->bounds.x;
+    sr->y = d->bounds.y;
+    sr->w = d->bounds.w;
+    sr->h = d->bounds.h;
+
+    SavedNodeData* sd = &savedData[i];
+    saved_node_data__init(sd);
+    sd->bounds = sr;
+
+    if (n->type == NSPLIT) {
+      sd->value = tree[d->value].id;
+    } else {
+      sd->value = d->value;
+    }
+
+    SavedNode* sn = &savedTree[i];
+    saved_node__init(sn);
+    sn->id = n->id;
+    sn->data = sd;
+
+    switch (n->type) {
+      case NCOMMENT: {
+        Comment* c = &commentData[n->data];
+        SavedComment* sc = &savedCommentData[n->data];
+        saved_comment__init(sc);
+        sc->text = BufStrDupn(c->buf, c->len);
+
+        sn->commentdata = sc;
+        break;
+      }
+      case NRESULT: {
+        Result* r = &resultData[n->data];
+        SavedResult* sr = &savedResultData[n->data];
+        saved_result__init(sr);
+        sr->page = r->page;
+        sr->perpage = r->perPage;
+        sn->resultdata = sr;
+        break;
+      }
+    }
+  }
+
+  // now we figure out buckets and connections and copy to bucket arrays
+  SavedBucket* buckets = 0;
+  BufReserve(&buckets, NLAST); // make sure we don't trigger realloc
+  BufClear(buckets);
+
+  SavedConnection* connections = 0;
+  BufReserve(&connections, numConnections);
+  BufClear(connections);
+
+  for (size_t type = 0; type < NLAST; ++type) {
+    size_t bucketLen = BufLen(data[type]);
+    if (!bucketLen) continue;
+
+    SavedNode* savedNodes = 0;
+    BufReserve(&savedNodes, bucketLen);
+
+    BufEachi(data[type], i) {
+      NodeData* d = &data[type][i];
+      Node* n = &tree[d->node];
+      savedNodes[i] = savedTree[d->node];
+
+      BufEach(int, n->connections, conn) {
+        Node* to = &tree[*conn];
+        SavedConnection* sc = BufAlloc(&connections);
+        saved_connection__init(sc);
+        sc->fromid = n->id;
+        sc->toid = to->id;
+      }
+    }
+
+    SavedBucket* buck = BufAlloc(&buckets);
+    saved_bucket__init(buck);
+    #define nodeTypeToSavedEntry(x) [x] = SAVED_NODE_TYPE__##x,
+    int const nodeTypeToSaved[] = { nodeTypes(nodeTypeToSavedEntry) };
+    buck->type = nodeTypeToSaved[type];
+    BufToProto(buck, nodes, savedNodes);
+  }
+
+  // prune redundant connections
+  SavedConnection* uniqueConnections = 0;
+  BufReserve(&uniqueConnections, numConnections);
+  BufClear(uniqueConnections);
+
+  BufEach(SavedConnection, connections, conn) {
+    BufEach(SavedConnection, uniqueConnections, uniq) {
+      if (SavedConnectionEqual(conn, uniq)) {
+        goto nextConn;
+      }
+    }
+
+    *BufAlloc(&uniqueConnections) = *conn;
+nextConn:;
+  }
+
+  SavedPreset preset;
+  saved_preset__init(&preset);
+  BufToProto(&preset, buckets, buckets);
+  BufToProto(&preset, connections, uniqueConnections);
+
+  u8* out = 0;
+  BufReserve(&out, saved_preset__get_packed_size(&preset));
+  saved_preset__pack(&preset, out);
+
+  FILE* f = fopen(path, "wb");
+  if (!f) {
+    perror("fopen");
+  } else {
+    if (fwrite(out, 1, BufLen(out), f) != BufLen(out)) {
+      perror("fwrite");
+    }
+    fclose(f);
+  }
+
+  ArenaFree(&arena);
+
+// restore default allocator
+#undef allocatorDefault
+#define allocatorDefault allocatorDefault_
+
+  return 1;
+}
+
+int storageLoadSync(char* path) {
+  struct stat st;
+
+  dbg("loading %s\n", path);
+
+  if (stat(path, &st)) {
+    perror("stat");
+    return 0;
+  }
+
+  FILE* f = fopen(path, "rb");
+  if (!f) {
+    perror("fopen");
+    return 0;
+  }
+
+  int res = 0;
+  SavedPreset* preset = 0;
+  int* treeById = 0;
+
+  u8* rawData = 0;
+  BufReserve(&rawData, st.st_size);
+  if (fread(rawData, 1, st.st_size, f) != st.st_size) {
+    perror("fread");
+    goto cleanupData;
+  }
+  treeClear();
+
+  preset = saved_preset__unpack(0, st.st_size, rawData);
+
+cleanupData:
+  fclose(f);
+  BufFree(&rawData);
+
+  if (!preset) {
+    fprintf(stderr, "missing preset\n");
+    goto cleanup;
+  }
+
+  for (size_t i = 0; i < preset->n_buckets; ++i) {
+    SavedBucket* buck = preset->buckets[i];
+
+#define savedToNodeTypeEntry(x) [SAVED_NODE_TYPE__##x] = x,
+    int const savedToNodeType[] = { nodeTypes(savedToNodeTypeEntry) };
+    int type = savedToNodeType[buck->type];
+
+    BufReserveZero(&data[type], buck->n_nodes);
+
+    switch (type) {
+      case NCOMMENT: BufReserveZero(&commentData, buck->n_nodes); break;
+      case NRESULT: BufReserveZero(&resultData, buck->n_nodes); break;
+    }
+
+    for (size_t j = 0; j < buck->n_nodes; ++j) {
+      SavedNode* sn = buck->nodes[j];
+
+      // map tree id to tree index to convert the connections later
+      if (sn->id + 1 > BufLen(treeById)) {
+        BufReserve(&treeById, sn->id + 1 - BufLen(treeById));
+      }
+      treeById[sn->id] = BufLen(tree);
+
+      int in = treeAdd(type, 0, 0);
+      if (in < 0) {
+        goto cleanup;
+      }
+
+      Node* n = &tree[in];
+
+      SavedNodeData* sd = sn->data;
+      if (!sd) {
+        fprintf(stderr, "node id %d missing data\n", n->id);
+        goto cleanup;
+      }
+
+      SavedRect* r = sd->bounds;
+      if (!r) {
+        fprintf(stderr, "node id %d missing bounds\n", n->id);
+        goto cleanup;
+      }
+
+      NodeData* d = &data[type][n->data];
+      d->bounds = nk_rect(r->x, r->y, r->w, r->h);
+      d->value = sd->value;
+
+      switch (type) {
+        case NCOMMENT: {
+          SavedComment* sc = sn->commentdata;
+          if (!sc) {
+            fprintf(stderr, "node id %d missing commentData\n", n->id);
+            goto cleanup;
+          }
+          Comment* c = &commentData[n->data];
+          snprintf(c->buf, sizeof(c->buf), "%s", sc->text);
+          c->len = strlen(sc->text);
+          break;
+        }
+        case NRESULT: {
+          SavedResult* sr = sn->resultdata;
+          if (!sr) {
+            fprintf(stderr, "node id %d missing resultData\n", n->id);
+            goto cleanup;
+          }
+          Result* r = &resultData[n->data];
+          r->page = sr->page;
+          r->perPage = sr->perpage;
+          break;
+        }
+      }
+
+    }
+  }
+
+  // remember, these are also references to nodes which need to be converted from id to idx
+  BufEach(NodeData, data[NSPLIT], d) {
+    d->value = treeById[d->value];
+  }
+
+  for (size_t i = 0; i < preset->n_connections; ++i) {
+    SavedConnection* con = preset->connections[i];
+    int from = treeById[con->fromid];
+    int   to = treeById[con->  toid];
+    treeLink(from, to);
+  }
+
+  res = 1;
+
+cleanup:
+  saved_preset__free_unpacked(preset, 0);
+  BufFree(&treeById);
+
+  if (!res) {
+    treeClear();
+    error("failed to load preset, possibly corrupt file?");
+  }
+
+  return res;
+}
+
+void storageAfterInit() {
+  if (!storageLoadSync("/autosave.cubecalc")) {
+    examplesInit();
+    storageSaveSync("/autosave.cubecalc");
+    storageLoadSync("/autosave.cubecalc");
+  }
+  status("");
+  atomic_store(&storageReady, 1);
+}
+
+void storageInit() {
+  status("loading from storage");
+#ifdef __EMSCRIPTEN__
+  EM_ASM(
+    FS.mkdir('/data');
+    FS.mount(IDBFS, {}, '/data');
+    FS.syncfs(true, function (err) {
+      assert(!err);
+      ccall('storageAfterInit', 'v');
+    });
+  );
+#else
+  storageAfterInit();
+#endif
+}
+
+void storageSave() {
+#ifdef __EMSCRIPTEN__
+  EM_ASM(
+    FS.syncfs(function (err) {
+      assert(!err);
+    });
+  );
+#endif
+}
+
+int main() {
+  atomic_init(&storageReady, 0);
+  pyInit(TS);
+  treeInit();
+  storageInit();
 
   glfwSetErrorCallback(errorCallback);
   if (!glfwInit()) {

@@ -3,18 +3,21 @@
 # prevent browser from caching by appending timestamp to urls
 ts=$(date +%s)
 
-flags="-sALLOW_MEMORY_GROWTH  -sWASM_BIGINT"
-fastbuild="-O0" # ~1s build time
+flags="-sALLOW_MEMORY_GROWTH  -sWASM_BIGINT -lidbfs.js -sEXPORTED_FUNCTIONS=_main,_storageAfterInit"
+#flags="$flags -pthread"
+fastbuild="-O0 -DCUBECALC_DEBUG" # ~1s build time
 case "$1" in
   rel*) flags="$flags -O3" ;; # ~6s build time
-  san*) flags="$flags -O3 -g -fsanitize=address,undefined,leak" ;;
+  san*) flags="$flags -O3 -g -fsanitize=address,undefined,leak -DCUBECALC_DEBUG" ;;
   *) flags="$flags $fastbuild" ;;
 esac
 
 echo "flags: $flags"
 
 ./generate_c.py > generated.c &&
+protoc -I ./thirdparty/ -I . --c_out=./proto ./cubecalc.proto &&
 time emcc \
+  -I ./thirdparty/ \
   -DTS=$ts \
   -o main.js main.c -lGL \
   -s USE_WEBGL2=1 \

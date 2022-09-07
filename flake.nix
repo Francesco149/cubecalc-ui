@@ -20,6 +20,8 @@
             unzip
             zip
             emscripten
+            protobuf
+            protobufc
           ];
         };
       }
