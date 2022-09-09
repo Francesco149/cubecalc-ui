@@ -170,7 +170,7 @@ int treeDefaultValue(int type, i64 stat) {
         case MESO:
         case DROP: return 20;
         case BOSS:
-        case IED: return 35;
+        case IED: return 30;
         case FLAT_ATT: return 10;
       }
       return 21;

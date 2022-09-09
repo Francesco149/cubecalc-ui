@@ -9,7 +9,7 @@
 #include <string.h>
 #include <math.h>
 #include <sys/stat.h>
-#include <stdatomic.h>
+#include <threads.h>
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
@@ -89,7 +89,6 @@ int tool;
 int disclaimerHeight = 290;
 int maxCombos = 50;
 int* removeNodes;
-_Atomic int storageReady;
 
 void dbg(char* fmt, ...) {
   if (flags & DEBUG) {
@@ -550,14 +549,12 @@ void uiEmptyNode(int type) {
   }
 }
 
+int storageSaveGlobalsSync();
+void storageAutoSave();
+
 void loop() {
   glfwPollEvents();
   nk_glfw3_new_frame();
-
-  // TODO: remove this
-  if (!atomic_load(&storageReady)) {
-    goto dontShowCalc;
-  }
 
   if (flags & SHOW_DISCLAIMER) {
     goto dontShowCalc;
@@ -644,7 +641,14 @@ void loop() {
         bounds.y -= pan.y;
 
         Comment* com = &graph.commentData[i];
+        char oldBuf[sizeof(com->buf)];
+        int oldLen = com->len;
+        memcpy(oldBuf, com->buf, com->len);
         nk_edit_string(nk, NK_EDIT_FIELD, com->buf, &com->len, COMMENT_MAX, 0);
+        if (com->len != oldLen || memcmp(oldBuf, com->buf, com->len)) {
+          storageAutoSave();
+        }
+
         uiEndNode(NCOMMENT, i);
       }
       if (uiContextual(NCOMMENT, i)) {
@@ -856,6 +860,7 @@ terminateNode:
 
   if (flags & DIRTY) {
     treeCalc(&graph, maxCombos);
+    storageAutoSave();
     flags &= ~DIRTY;
   }
 
@@ -976,6 +981,7 @@ dontShowCalc:
       nk_layout_row_dynamic(nk, 20, 1);
       if (nk_button_label(nk, "I understand")) {
         flags &= ~SHOW_DISCLAIMER;
+        storageSaveGlobalsSync();
       }
       nk_layout_row_static(nk, disclaimerHeight, NK_MAX(570, nk_widget_width(nk)), 1);
       static int disclaimerLen = -1;
@@ -1122,7 +1128,7 @@ void examplesBasicUsage() {
 
   {
     s.x += 450;
-    int ncomment = uiTreeAddComment(s, 0, 0, 410, 310, "example: 20+ %att and 35+ %boss", &succ);
+    int ncomment = uiTreeAddComment(s, 0, 0, 410, 310, "example: 20+ %att and 30+ %boss", &succ);
     int nstat2 = uiTreeAddChk(s, NSTAT, 0, 50, &succ);
     int namt2 = uiTreeAddChk(s, NAMOUNT, 0, 140, &succ);
     int nstat = uiTreeAddChk(s, NSTAT, 210, 50, &succ);
@@ -1293,39 +1299,31 @@ void storageCommit() {
 #endif
 }
 
-int storageSaveSync(char* path) {
-  dbg("saving %s\n", path);
-
+static int storageWriteSync(char* path, u8* buf) {
   int res = 0;
-  Arena* arena = ArenaInit();
-  Allocator allocatorArena = ArenaAllocator(arena);
-  u8* out = packTree(&allocatorArena, &graph);
+
+  dbg("saving %s\n", path);
 
   FILE* f = fopen(path, "wb");
   if (!f) {
     perror("fopen");
   } else {
-    if (fwrite(out, 1, BufLen(out), f) != BufLen(out)) {
+    if (fwrite(buf, 1, BufLen(buf), f) != BufLen(buf)) {
       perror("fwrite");
+    } else {
+      res = 1;
     }
-    res = 1;
     fclose(f);
   }
 
-  ArenaFree(arena);
-
-  if (!res) {
-    error("failed to save preset, out of space?");
-  }
-
+  storageCommit();
   return res;
 }
 
-int storageLoadSync(char* path) {
+static u8* storageReadSync(char* path) {
+  dbg("reading %s\n", path);
+
   struct stat st;
-
-  dbg("loading %s\n", path);
-
   if (stat(path, &st)) {
     perror("stat");
     return 0;
@@ -1342,21 +1340,50 @@ int storageLoadSync(char* path) {
   BufReserve(&rawData, st.st_size);
   if (fread(rawData, 1, st.st_size, f) != st.st_size) {
     perror("fread");
-  } else {
-    res = unpackTree(&graph, rawData);
-    flags |= UPDATE_CONNECTIONS | DIRTY;
+    BufFree(&rawData);
   }
 
   fclose(f);
-  BufFree(&rawData);
+  return rawData;
+}
 
-  if (!res) {
+#define GLOBALS_FILE "/data/.globals.bin"
+#define EXTENSION ".cubecalc"
+#define AUTOSAVE_FILE "/data/autosave" EXTENSION
+
+int storageSaveGlobalsSync() {
+  u8* out = packGlobals(disclaimer);
+  int res = storageWriteSync(GLOBALS_FILE, out);
+  BufFree(&out);
+  return res;
+}
+
+char* storageLoadGlobalsSync() {
+  u8* out = storageReadSync(GLOBALS_FILE);
+  char* res = unpackGlobals(out);
+  BufFree(&out);
+  return res;
+}
+
+int storageSaveSync(char* path) {
+  Arena* arena = ArenaInit();
+  Allocator allocatorArena = ArenaAllocator(arena);
+  u8* out = packTree(&allocatorArena, &graph);
+  int res = storageWriteSync(path, out);
+  ArenaFree(arena);
+  return res;
+}
+
+int storageLoadSync(char* path) {
+  int res = 0;
+  u8* rawData = storageReadSync(path);
+  if (rawData) {
+    res = unpackTree(&graph, rawData);
+    flags |= UPDATE_CONNECTIONS | DIRTY;
+  } else {
     uiTreeClear();
-    error("failed to load preset, possibly corrupt file?");
   }
-
-  storageCommit();
-
+  BufFree(&rawData);
   return res;
 }
 
@@ -1365,21 +1392,34 @@ int storageExists(char* path) {
   return stat(path, &st) == 0;
 }
 
+// as far as I know, this is always called from the same thread as main so it should be fine
+// to not have any synchronization
 void storageAfterInit() {
+  char* disc = storageLoadGlobalsSync();
+  if (strcmp(disc, disclaimer)) {
+    flags |= SHOW_DISCLAIMER;
+  } else {
+    flags &= ~SHOW_DISCLAIMER;
+  }
+
 #define examplesFile(x) \
-  if (!storageExists("/data/" #x ".cubecalc")) { \
+  if (!storageExists("/data/" #x EXTENSION)) { \
     examples##x(); \
-    storageSaveSync("/data/" #x ".cubecalc"); \
+    storageSaveSync("/data/" #x EXTENSION); \
   }
   examplesFile(BasicUsage)
   examplesFile(Operators)
   examplesFile(Familiars)
 
-  if (!storageLoadSync("/data/autosave.cubecalc")) {
-    storageLoadSync("/data/BasicUsage.cubecalc");
+  if (!storageLoadSync(AUTOSAVE_FILE)) {
+    storageLoadSync("/data/BasicUsage" EXTENSION);
   }
   status("");
-  atomic_store(&storageReady, 1);
+}
+
+void storageAutoSave() {
+  // TODO: make async
+  storageSaveSync(AUTOSAVE_FILE);
 }
 
 void storageInit() {
@@ -1399,7 +1439,6 @@ void storageInit() {
 }
 
 int main() {
-  atomic_init(&storageReady, 0);
   treeGlobalInit();
   treeCalcGlobalInit(TS);
   storageInit();

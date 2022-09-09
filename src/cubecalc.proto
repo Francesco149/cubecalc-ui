@@ -57,3 +57,7 @@ message SavedPreset {
   repeated SavedBucket buckets = 1;
   repeated SavedConnection connections = 2;
 }
+
+message SavedGlobals {
+  string disclaimer = 1;
+}

@@ -23,6 +23,7 @@ typedef struct _SavedNode SavedNode;
 typedef struct _SavedConnection SavedConnection;
 typedef struct _SavedBucket SavedBucket;
 typedef struct _SavedPreset SavedPreset;
+typedef struct _SavedGlobals SavedGlobals;
 
 
 /* --- enums --- */
@@ -137,6 +138,16 @@ struct  _SavedPreset
 #define SAVED_PRESET__INIT \
  { PROTOBUF_C_MESSAGE_INIT (&saved_preset__descriptor) \
     , 0,NULL, 0,NULL }
+
+
+struct  _SavedGlobals
+{
+  ProtobufCMessage base;
+  char *disclaimer;
+};
+#define SAVED_GLOBALS__INIT \
+ { PROTOBUF_C_MESSAGE_INIT (&saved_globals__descriptor) \
+    , (char *)protobuf_c_empty_string }
 
 
 /* SavedRect methods */
@@ -291,6 +302,25 @@ SavedPreset *
 void   saved_preset__free_unpacked
                      (SavedPreset *message,
                       ProtobufCAllocator *allocator);
+/* SavedGlobals methods */
+void   saved_globals__init
+                     (SavedGlobals         *message);
+size_t saved_globals__get_packed_size
+                     (const SavedGlobals   *message);
+size_t saved_globals__pack
+                     (const SavedGlobals   *message,
+                      uint8_t             *out);
+size_t saved_globals__pack_to_buffer
+                     (const SavedGlobals   *message,
+                      ProtobufCBuffer     *buffer);
+SavedGlobals *
+       saved_globals__unpack
+                     (ProtobufCAllocator  *allocator,
+                      size_t               len,
+                      const uint8_t       *data);
+void   saved_globals__free_unpacked
+                     (SavedGlobals *message,
+                      ProtobufCAllocator *allocator);
 /* --- per-message closures --- */
 
 typedef void (*SavedRect_Closure)
@@ -317,6 +347,9 @@ typedef void (*SavedBucket_Closure)
 typedef void (*SavedPreset_Closure)
                  (const SavedPreset *message,
                   void *closure_data);
+typedef void (*SavedGlobals_Closure)
+                 (const SavedGlobals *message,
+                  void *closure_data);
 
 /* --- services --- */
 
@@ -332,6 +365,7 @@ extern const ProtobufCMessageDescriptor saved_node__descriptor;
 extern const ProtobufCMessageDescriptor saved_connection__descriptor;
 extern const ProtobufCMessageDescriptor saved_bucket__descriptor;
 extern const ProtobufCMessageDescriptor saved_preset__descriptor;
+extern const ProtobufCMessageDescriptor saved_globals__descriptor;
 
 PROTOBUF_C__END_DECLS
 

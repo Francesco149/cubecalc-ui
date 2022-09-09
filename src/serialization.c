@@ -12,6 +12,11 @@ u8* packTree(Allocator const* allocator, TreeData* g);
 // rawData is a Buf
 int unpackTree(TreeData* g, u8* rawData);
 
+u8* packGlobals(char* disclaimer);
+
+// returns Buf containing disclaimer text
+char* unpackGlobals(u8* rawData);
+
 #endif
 
 #if defined(SERIALIZATION_IMPLEMENTATION) && !defined(SERIALIZATION_UNIT)
@@ -273,6 +278,24 @@ cleanup:
   saved_preset__free_unpacked(preset, 0);
   BufFree(&treeById);
 
+  return res;
+}
+
+u8* packGlobals(char* disclaimer) {
+  SavedGlobals glob;
+  saved_globals__init(&glob);
+  glob.disclaimer = disclaimer;
+
+  u8* out = 0;
+  BufReserve(&out, saved_globals__get_packed_size(&glob));
+  saved_globals__pack(&glob, out);
+  return out;
+}
+
+char* unpackGlobals(u8* rawData) {
+  SavedGlobals* glob = saved_globals__unpack(0, BufLen(rawData), rawData);
+  char* res = BufStrDup(glob->disclaimer);
+  saved_globals__free_unpacked(glob, 0);
   return res;
 }
 

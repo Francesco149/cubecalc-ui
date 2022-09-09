@@ -367,6 +367,51 @@ void   saved_preset__free_unpacked
   assert(message->base.descriptor == &saved_preset__descriptor);
   protobuf_c_message_free_unpacked ((ProtobufCMessage*)message, allocator);
 }
+void   saved_globals__init
+                     (SavedGlobals         *message)
+{
+  static const SavedGlobals init_value = SAVED_GLOBALS__INIT;
+  *message = init_value;
+}
+size_t saved_globals__get_packed_size
+                     (const SavedGlobals *message)
+{
+  assert(message->base.descriptor == &saved_globals__descriptor);
+  return protobuf_c_message_get_packed_size ((const ProtobufCMessage*)(message));
+}
+size_t saved_globals__pack
+                     (const SavedGlobals *message,
+                      uint8_t       *out)
+{
+  assert(message->base.descriptor == &saved_globals__descriptor);
+  return protobuf_c_message_pack ((const ProtobufCMessage*)message, out);
+}
+size_t saved_globals__pack_to_buffer
+                     (const SavedGlobals *message,
+                      ProtobufCBuffer *buffer)
+{
+  assert(message->base.descriptor == &saved_globals__descriptor);
+  return protobuf_c_message_pack_to_buffer ((const ProtobufCMessage*)message, buffer);
+}
+SavedGlobals *
+       saved_globals__unpack
+                     (ProtobufCAllocator  *allocator,
+                      size_t               len,
+                      const uint8_t       *data)
+{
+  return (SavedGlobals *)
+     protobuf_c_message_unpack (&saved_globals__descriptor,
+                                allocator, len, data);
+}
+void   saved_globals__free_unpacked
+                     (SavedGlobals *message,
+                      ProtobufCAllocator *allocator)
+{
+  if(!message)
+    return;
+  assert(message->base.descriptor == &saved_globals__descriptor);
+  protobuf_c_message_free_unpacked ((ProtobufCMessage*)message, allocator);
+}
 static const ProtobufCFieldDescriptor saved_rect__field_descriptors[4] =
 {
   {
@@ -812,6 +857,44 @@ const ProtobufCMessageDescriptor saved_preset__descriptor =
   saved_preset__field_indices_by_name,
   1,  saved_preset__number_ranges,
   (ProtobufCMessageInit) saved_preset__init,
+  NULL,NULL,NULL    /* reserved[123] */
+};
+static const ProtobufCFieldDescriptor saved_globals__field_descriptors[1] =
+{
+  {
+    "disclaimer",
+    1,
+    PROTOBUF_C_LABEL_NONE,
+    PROTOBUF_C_TYPE_STRING,
+    0,   /* quantifier_offset */
+    offsetof(SavedGlobals, disclaimer),
+    NULL,
+    &protobuf_c_empty_string,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+};
+static const unsigned saved_globals__field_indices_by_name[] = {
+  0,   /* field[0] = disclaimer */
+};
+static const ProtobufCIntRange saved_globals__number_ranges[1 + 1] =
+{
+  { 1, 0 },
+  { 0, 1 }
+};
+const ProtobufCMessageDescriptor saved_globals__descriptor =
+{
+  PROTOBUF_C__MESSAGE_DESCRIPTOR_MAGIC,
+  "SavedGlobals",
+  "SavedGlobals",
+  "SavedGlobals",
+  "",
+  sizeof(SavedGlobals),
+  1,
+  saved_globals__field_descriptors,
+  saved_globals__field_indices_by_name,
+  1,  saved_globals__number_ranges,
+  (ProtobufCMessageInit) saved_globals__init,
   NULL,NULL,NULL    /* reserved[123] */
 };
 static const ProtobufCEnumValue saved_node_type__enum_values_by_number[12] =

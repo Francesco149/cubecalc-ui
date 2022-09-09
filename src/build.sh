@@ -5,7 +5,6 @@ ts=$(date +%s)
 
 flags="-sALLOW_MEMORY_GROWTH  -sWASM_BIGINT -lidbfs.js"
 flags="$flags -sEXPORTED_FUNCTIONS=_main,_storageAfterInit"
-#flags="$flags -pthread"
 buildflags="-O0 -DCUBECALC_DEBUG" # ~1s build time
 units=compilation-units/monolith.c
 cc=emcc
