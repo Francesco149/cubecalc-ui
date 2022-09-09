@@ -5,17 +5,11 @@
 #include "nuklear.c"
 #include "utils.c"
 
-#include <ctype.h>
-#include <float.h>
-#include <inttypes.h>
-#include <stdatomic.h>
-#include <errno.h>
-
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
 #include <sys/stat.h>
-#include <stdarg.h>
+#include <stdatomic.h>
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
