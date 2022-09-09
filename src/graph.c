@@ -119,7 +119,7 @@ void treeResultClear(Result* r) {
 // NSOME_NODE_NAME -> Some Node Name
 static void treeInitNodeNames() {
   for (size_t i = 0; i < ArrayLength(nodeNames); ++i) {
-    char* p = nodeNames[i];
+    char* p = nodeNames[i] = strdup(nodeNames[i]);
     size_t len = strlen(p + 1);
     memmove(p, p + 1, len + 1);
     for (size_t j = 1; j < len; ++j) {

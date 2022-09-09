@@ -10,7 +10,7 @@ units=compilation-units/monolith.c
 
 for x in $@; do
   case "$x" in
-    rel*) flags="$flags -O3" ;; # ~6s build time
+    rel*) flags="$flags -O3 -flto" ;; # ~6s build time
     san*) flags="$flags -O3 -g -fsanitize=address,undefined,leak -DCUBECALC_DEBUG" ;;
 
     # optionally build as separate compilation units to test that
