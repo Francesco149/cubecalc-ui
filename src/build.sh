@@ -6,11 +6,25 @@ ts=$(date +%s)
 flags="-sALLOW_MEMORY_GROWTH  -sWASM_BIGINT -lidbfs.js -sEXPORTED_FUNCTIONS=_main,_storageAfterInit"
 #flags="$flags -pthread"
 fastbuild="-O0 -DCUBECALC_DEBUG" # ~1s build time
-case "$1" in
-  rel*) flags="$flags -O3" ;; # ~6s build time
-  san*) flags="$flags -O3 -g -fsanitize=address,undefined,leak -DCUBECALC_DEBUG" ;;
-  *) flags="$flags $fastbuild" ;;
-esac
+units=compilation-units/monolith.c
+
+for x in $@; do
+  case "$x" in
+    rel*) flags="$flags -O3" ;; # ~6s build time
+    san*) flags="$flags -O3 -g -fsanitize=address,undefined,leak -DCUBECALC_DEBUG" ;;
+
+    # optionally build as separate compilation units to test that
+    # they are not referencing each other in unintended ways.
+    # monolith build is usually faster and lets the compiler optimize harder
+    # on my machine, monolith build is ~12% faster
+    unit*)
+      units=compilation-units/*_impl.c
+      units="$units main.c"
+      ;;
+
+    *) flags="$flags $fastbuild" ;;
+  esac
+done
 
 echo "flags: $flags"
 
@@ -19,7 +33,7 @@ protoc -I ./thirdparty/ -I . --c_out=./proto ./cubecalc.proto &&
 time emcc \
   -I ./thirdparty/ \
   -DTS=$ts \
-  -o main.js main.c -lGL \
+  -o main.js $units -lGL \
   -s USE_WEBGL2=1 \
   -s USE_GLFW=3 \
   -s FULL_ES2 \

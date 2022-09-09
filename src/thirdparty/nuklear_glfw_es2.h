@@ -36,6 +36,11 @@ NK_API void                 nk_glfw3_shutdown(void);
 NK_API void                 nk_glfw3_char_callback(GLFWwindow *win, unsigned int codepoint);
 NK_API void                 nk_gflw3_scroll_callback(GLFWwindow *win, double xoff, double yoff);
 
+NK_API float nk_glfw3_scale_factor();
+NK_API float nk_glfw3_set_scale_factor(float new_val);
+NK_API int nk_glfw3_left_button();
+NK_API int nk_glfw3_set_left_button(int new_val);
+
 #endif
 
 /*
@@ -97,6 +102,26 @@ static struct nk_glfw {
     float scale_factor;
     int left_button;
 } glfw;
+
+NK_API float nk_glfw3_scale_factor() {
+  return glfw.scale_factor;
+}
+
+NK_API float nk_glfw3_set_scale_factor(float new_val) {
+  float res = glfw.scale_factor;
+  glfw.scale_factor = NK_MAX(1, new_val);
+  return res;
+}
+
+NK_API int nk_glfw3_left_button() {
+  return glfw.left_button;
+}
+
+NK_API int nk_glfw3_set_left_button(int new_val) {
+  int res = glfw.left_button;
+  glfw.left_button = new_val;
+  return res;
+}
 
 #define NK_SHADER_VERSION "#version 100\n"
 
