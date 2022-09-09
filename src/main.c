@@ -1348,7 +1348,7 @@ static u8* storageReadSync(char* path) {
 }
 
 #define GLOBALS_FILE "/data/.globals.bin"
-#define EXTENSION ".cubecalc"
+#define EXTENSION ".maplecalc"
 #define AUTOSAVE_FILE "/data/autosave" EXTENSION
 
 int storageSaveGlobalsSync() {
