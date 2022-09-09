@@ -80,7 +80,7 @@ int flags = SHOW_INFO | SHOW_GRID | SHOW_DISCLAIMER | UPDATE_SIZE
 | DEBUG
 #endif
 ;
-struct nk_vec2 pan = {.x = -210, .y = 0};
+struct nk_vec2 pan;
 int linkNode;
 int resizeNode;
 int selectedNode = -1;
@@ -1077,18 +1077,16 @@ int uiTreeAddComment(struct nk_vec2 start, int x, int y, int w, int h, char* tex
   return ncomment;
 }
 
-void examplesInit() {
-  int succ = 1;
-
+int examplesCommon(int* succ) {
   struct nk_vec2 s = nk_vec2(20, 20);
-  int ncategory = uiTreeAddChk(s, NCATEGORY, 0, 0, &succ);
-  int ncube = uiTreeAddChk(s, NCUBE, 320, 0, &succ);
-  int ntier = uiTreeAddChk(s, NTIER, 540, 0, &succ);
-  int nlevel = uiTreeAddChk(s, NLEVEL, 750, 0, &succ);
-  int nregion = uiTreeAddChk(s, NREGION, 750, 90, &succ);
-  int nsplit = uiTreeAddChk(s, NSPLIT, 670, 90, &succ);
+  int ncategory = uiTreeAddChk(s, NCATEGORY, 0, 0, succ);
+  int ncube = uiTreeAddChk(s, NCUBE, 310, 0, succ);
+  int ntier = uiTreeAddChk(s, NTIER, 520, 0, succ);
+  int nlevel = uiTreeAddChk(s, NLEVEL, 730, 0, succ);
+  int nregion = uiTreeAddChk(s, NREGION, 940, 0, succ);
+  int nsplit = uiTreeAddChk(s, NSPLIT, 650, 90, succ);
 
-  if (succ) {
+  if (*succ) {
     uiTreeDataByNode(nsplit)->value = ntier;
     uiTreeDataByNode(nlevel)->value = 200;
     uiTreeLink(ncategory, ncube);
@@ -1097,9 +1095,16 @@ void examplesInit() {
     uiTreeLink(nlevel, nregion);
   }
 
+  return nsplit;
+}
+
+void examplesBasicUsage() {
+  struct nk_vec2 s = nk_vec2(20, 20);
+  int succ = 1;
   int nprevres;
+  int nsplit = examplesCommon(&succ);
   {
-    s = nk_vec2(20 - 210, 130);
+    s.y += 150;
     int ncomment = uiTreeAddComment(s, 0, 0, 410, 310, "example: 23+ %att", &succ);
     int nstat = uiTreeAddChk(s, NSTAT, 0, 50, &succ);
     int namt = uiTreeAddChk(s, NAMOUNT, 0, 140, &succ);
@@ -1116,23 +1121,8 @@ void examplesInit() {
   }
 
   {
-    s = nk_vec2(20, 480);
-    int ncomment = uiTreeAddComment(s, 0, 0, 200, 220, "example: bpot 23+ %att", &succ);
-    int nbpot = uiTreeAddChk(s, NCUBE, 0, 50, &succ);
-    int nres = uiTreeAddChk(s, NRESULT, 0, 140, &succ);
-    int nsplit2 = uiTreeAddChk(s, NSPLIT, -100, -20, &succ);
-
-    if (succ) {
-      uiTreeDataByNode(nbpot)->value = BONUS;
-      uiTreeDataByNode(nsplit2)->value = nprevres;
-      uiTreeLink(nbpot, nsplit2);
-      uiTreeLink(nbpot, nres);
-    }
-  }
-
-  {
-    s = nk_vec2(260, 130);
-    int ncomment = uiTreeAddComment(s, 0, 0, 410, 310, "example: 20+ %att and 30+ %boss", &succ);
+    s.x += 450;
+    int ncomment = uiTreeAddComment(s, 0, 0, 410, 310, "example: 20+ %att and 35+ %boss", &succ);
     int nstat2 = uiTreeAddChk(s, NSTAT, 0, 50, &succ);
     int namt2 = uiTreeAddChk(s, NAMOUNT, 0, 140, &succ);
     int nstat = uiTreeAddChk(s, NSTAT, 210, 50, &succ);
@@ -1152,7 +1142,23 @@ void examplesInit() {
   }
 
   {
-    s = nk_vec2(260, 480);
+    s.x = 230;
+    s.y += 350;
+    int ncomment = uiTreeAddComment(s, 0, 0, 200, 220, "example: bpot 23+ %att", &succ);
+    int nbpot = uiTreeAddChk(s, NCUBE, 0, 50, &succ);
+    int nres = uiTreeAddChk(s, NRESULT, 0, 140, &succ);
+    int nsplit2 = uiTreeAddChk(s, NSPLIT, -100, -20, &succ);
+
+    if (succ) {
+      uiTreeDataByNode(nbpot)->value = BONUS;
+      uiTreeDataByNode(nsplit2)->value = nprevres;
+      uiTreeLink(nbpot, nsplit2);
+      uiTreeLink(nbpot, nres);
+    }
+  }
+
+  {
+    s.x += 240;
     int ncomment = uiTreeAddComment(s, 0, 0, 410, 310,
         "example: any 3l combo of %att or %boss", &succ);
     int nstat2 = uiTreeAddChk(s, NSTAT, 0, 50, &succ);
@@ -1172,9 +1178,15 @@ void examplesInit() {
       uiTreeLink(namt2, nres);
     }
   }
+}
+
+void examplesOperators() {
+  int succ;
+  struct nk_vec2 s = nk_vec2(20, 20);
+  int nsplit = examplesCommon(&succ);
 
   {
-    s = nk_vec2(260, 830);
+    s = nk_vec2(20, 130);
     struct nk_vec2 s0 = s;
     int nmeso = uiTreeAddChk(s, NSTAT, 0, 50, &succ);
     int ndrop = uiTreeAddChk(s, NSTAT, 210, 50, &succ);
@@ -1217,9 +1229,13 @@ void examplesInit() {
       uiTreeLink(ncat, nres);
     }
   }
+}
+
+void examplesFamiliars() {
+  struct nk_vec2 s = nk_vec2(20, 20);
+  int succ, nprevres;
 
   {
-    s = nk_vec2(710, 220);
     int ncomment = uiTreeAddComment(s, 0, 0, 410, 400, "example: unique fam 30+ boss reveal", &succ);
     int nfamcat = uiTreeAddChk(s, NCATEGORY, 0, 50, &succ);
     int nstat = uiTreeAddChk(s, NSTAT, 0, 140, &succ);
@@ -1243,7 +1259,7 @@ void examplesInit() {
   }
 
   {
-    s = nk_vec2(710, 660);
+    s.x += 430;
     int ncomment = uiTreeAddComment(s, 0, 0, 410, 310, "example: red cards 40+ boss", &succ);
     int nstat = uiTreeAddChk(s, NSTAT, 0, 50, &succ);
     int namt = uiTreeAddChk(s, NAMOUNT, 0, 140, &succ);
@@ -1265,6 +1281,16 @@ void examplesInit() {
       uiTreeLink(nfamcube, nres);
     }
   }
+}
+
+void storageCommit() {
+#ifdef __EMSCRIPTEN__
+  EM_ASM(
+    FS.syncfs(function (err) {
+      assert(!err);
+    });
+  );
+#endif
 }
 
 int storageSaveSync(char* path) {
@@ -1329,14 +1355,28 @@ int storageLoadSync(char* path) {
     error("failed to load preset, possibly corrupt file?");
   }
 
+  storageCommit();
+
   return res;
 }
 
+int storageExists(char* path) {
+  struct stat st;
+  return stat(path, &st) == 0;
+}
+
 void storageAfterInit() {
-  if (!storageLoadSync("/autosave.cubecalc")) {
-    examplesInit();
-    storageSaveSync("/autosave.cubecalc");
-    storageLoadSync("/autosave.cubecalc");
+#define examplesFile(x) \
+  if (!storageExists("/data/" #x ".cubecalc")) { \
+    examples##x(); \
+    storageSaveSync("/data/" #x ".cubecalc"); \
+  }
+  examplesFile(BasicUsage)
+  examplesFile(Operators)
+  examplesFile(Familiars)
+
+  if (!storageLoadSync("/data/autosave.cubecalc")) {
+    storageLoadSync("/data/BasicUsage.cubecalc");
   }
   status("");
   atomic_store(&storageReady, 1);
@@ -1355,16 +1395,6 @@ void storageInit() {
   );
 #else
   storageAfterInit();
-#endif
-}
-
-void storageSave() {
-#ifdef __EMSCRIPTEN__
-  EM_ASM(
-    FS.syncfs(function (err) {
-      assert(!err);
-    });
-  );
 #endif
 }
 
