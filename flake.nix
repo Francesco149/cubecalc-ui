@@ -20,6 +20,7 @@
             unzip
             zip
             emscripten
+            mold
             protobuf
             protobufc
           ];

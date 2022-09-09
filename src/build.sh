@@ -3,10 +3,12 @@
 # prevent browser from caching by appending timestamp to urls
 ts=$(date +%s)
 
-flags="-sALLOW_MEMORY_GROWTH  -sWASM_BIGINT -lidbfs.js -sEXPORTED_FUNCTIONS=_main,_storageAfterInit"
+flags="-sALLOW_MEMORY_GROWTH  -sWASM_BIGINT -lidbfs.js"
+flags="$flags -sEXPORTED_FUNCTIONS=_main,_storageAfterInit"
 #flags="$flags -pthread"
 fastbuild="-O0 -DCUBECALC_DEBUG" # ~1s build time
 units=compilation-units/monolith.c
+cc=emcc
 
 for x in $@; do
   case "$x" in
@@ -28,9 +30,12 @@ done
 
 echo "flags: $flags"
 
+# NOTE: mold does nothing when building for emscripten
+# it will be useful when I build a desktop version
+
 ./generate_c.py > generated.c &&
 protoc -I ./thirdparty/ -I . --c_out=./proto ./cubecalc.proto &&
-time emcc \
+time mold -run $cc \
   -I ./thirdparty/ \
   -DTS=$ts \
   -o main.js $units -lGL \
