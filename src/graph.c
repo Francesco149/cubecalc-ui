@@ -86,6 +86,7 @@ void treeLink(TreeData* g, int from, int to);
 void treeUnlink(TreeData* g, int from, int to);
 NodeData* treeDataByNode(TreeData* g, int node);
 Result* treeResultByNode(TreeData* g, int node);
+void treeResultClear(Result* r);
 
 #endif
 #if defined(GRAPH_IMPLEMENTATION) && !defined(GRAPH_UNIT)
@@ -106,9 +107,11 @@ char* nodeNames[nodeNamesCount] = { nodeTypes(StringifyComma) };
 
 // TODO: avoid the extra pointers, this is not good for the cpu cache
 // ideally cache 1 page worth of lines into the struct for performance at draw time
-static void ResultFree(Result* r) {
+void treeResultClear(Result* r) {
   BufFree(&r->line);
+  BufFreeClear((void**)r->value);
   BufFree(&r->value);
+  BufFreeClear((void**)r->prob);
   BufFree(&r->prob);
   BufFree(&r->prime);
 }
@@ -134,10 +137,17 @@ void treeGlobalInit() {
 }
 
 void treeClear(TreeData* g) {
+  BufEach(Node, g->tree, n) {
+    BufFree(&n->connections);
+  }
+  BufClear(g->tree);
   for (size_t i = 0; i < NLAST; ++i) {
     BufClear(g->data[i]);
   }
   BufClear(g->commentData);
+  BufEach(Result, g->resultData, r) {
+    treeResultClear(r);
+  }
   BufClear(g->resultData);
 }
 
@@ -187,7 +197,7 @@ nextId:
 
 int treeAdd(TreeData* g, int type, int x, int y) {
   int id = treeNextId(g); // important: do this BEFORE allocating the node
-  NodeData* d = BufAlloc(&g->data[type]);
+  NodeData* d = BufAllocZero(&g->data[type]);
   Node* n;
   int chars;
 
@@ -286,7 +296,7 @@ void treeDel(TreeData* g, int nodeIndex) {
       BufDel(g->commentData, index);
       break;
     case NRESULT:
-      ResultFree(&g->resultData[index]);
+      treeResultClear(&g->resultData[index]);
       BufDel(g->resultData, index);
       break;
   }

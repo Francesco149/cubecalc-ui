@@ -336,114 +336,113 @@ void treeCalc(TreeData* g, int maxCombos) {
   for (size_t i = 0; i < BufLen(g->tree); ++i) {
     Node* n = &g->tree[i];
     // TODO: more type of result nodes (median, 75%, 85%, etc)
-    if (n->type == NRESULT) {
-      NodeData* d = &g->data[n->type][n->data];
-      dbg("treeCalc %s\n", d->name);
-      pyCalcFree(n->id);
+    if (n->type != NRESULT) {
+      continue;
+    }
 
-      // initialize wants array so that it doesn't happen when traversing a tree
-      // (we don't want it to count as an operand or stuff like that)
-      pyCalcWantPush(n->id);
+    NodeData* d = &g->data[n->type][n->data];
+    dbg("treeCalc %s\n", d->name);
+    pyCalcFree(n->id);
 
-      int values[NLAST];
-      for (size_t j = 0; j < NLAST; ++j) {
-        values[j] = -1;
+    // initialize wants array so that it doesn't happen when traversing a tree
+    // (we don't want it to count as an operand or stuff like that)
+    pyCalcWantPush(n->id);
+
+    int values[NLAST];
+    for (size_t j = 0; j < NLAST; ++j) {
+      values[j] = -1;
+    }
+
+    int* seen = 0;
+    BufReserve(&seen, BufLen(g->tree));
+    BufZero(seen);
+    int elementsOnStack = treeCalcBranch(g, n->id, values, i, seen);
+    BufFree(&seen);
+
+    for (size_t j = NINVALID + 1; j < NLAST; ++j) {
+      switch (j) {
+        case NSTAT:
+        case NAMOUNT:
+        case NRESULT:
+        case NCOMMENT:
+        case NSPLIT:
+        case NOR:
+        case NAND:
+          // these are handled separately, or are not relevant
+          continue;
       }
-
-      int* seen = 0;
-      BufReserve(&seen, BufLen(g->tree));
-      BufZero(seen);
-      int elementsOnStack = treeCalcBranch(g, n->id, values, i, seen);
-      BufFree(&seen);
-
-      for (size_t j = NINVALID + 1; j < NLAST; ++j) {
-        switch (j) {
-          case NSTAT:
-          case NAMOUNT:
-          case NRESULT:
-          case NCOMMENT:
-          case NSPLIT:
-          case NOR:
-          case NAND:
-            // these are handled separately, or are not relevant
-            continue;
-        }
-        if (values[j] == -1) {
-          values[j] = treeDefaultValue(j, values[CATEGORY]);
-          dbg("(assumed) ");
-        }
-        char const* svalue = valueName(j, values[j]);
-        char* valueName = nodeNames[j - 1];
-        if (svalue) {
-          dbg("%s = %s\n", valueName, svalue);
-        } else {
-          dbg("%s = %d\n", valueName, values[j]);
-        }
-        int param = treeTypeToCalcParam(j);
-        i64 value = valueToCalc(j, values[j]);
-        if (param) {
-          pyCalcSet(n->id, param, value);
-        } else {
-          dbg("unknown calc param %zu = %d = %" PRId64 "\n", j, values[j], value);
-        }
+      if (values[j] == -1) {
+        values[j] = treeDefaultValue(j, values[CATEGORY]);
+        dbg("(assumed) ");
       }
-
-      // if the wants stack is completely empty, append the default value.
-      // also complete any pending stats
-      treeCalcFinalizeWants(n->id, values, !pyCalcWantLen(n->id));
-
-      // terminate with an AND in case we have multiple sets of stats
-      elementsOnStack += pyCalcWantPush(n->id);
-
-      if (elementsOnStack > 1) {
-        pyCalcWantOp(n->id, treeTypeToCalcOperator(NAND), -1);
+      char const* svalue = valueName(j, values[j]);
+      char* valueName = nodeNames[j - 1];
+      if (svalue) {
+        dbg("%s = %s\n", valueName, svalue);
+      } else {
+        dbg("%s = %d\n", valueName, values[j]);
       }
+      int param = treeTypeToCalcParam(j);
+      i64 value = valueToCalc(j, values[j]);
+      if (param) {
+        pyCalcSet(n->id, param, value);
+      } else {
+        dbg("unknown calc param %zu = %d = %" PRId64 "\n", j, values[j], value);
+      }
+    }
 
-      float chance = pyCalc(n->id);
-      Result* resd = &g->resultData[n->data];
-      if (chance > 0) {
+    // if the wants stack is completely empty, append the default value.
+    // also complete any pending stats
+    treeCalcFinalizeWants(n->id, values, !pyCalcWantLen(n->id));
+
+    // terminate with an AND in case we have multiple sets of stats
+    elementsOnStack += pyCalcWantPush(n->id);
+
+    if (elementsOnStack > 1) {
+      pyCalcWantOp(n->id, treeTypeToCalcOperator(NAND), -1);
+    }
+
+    float chance = pyCalc(n->id);
+    Result* resd = &g->resultData[n->data];
+    if (chance > 0) {
 #define fmt(x, y) humanize(resd->x, sizeof(resd->x), y)
 #define quant(n, ...) fmt(within##n, ProbToGeoDistrQuantileDingle(chance, n))
-        fmt(average, ProbToOneIn(chance));
-        quant(50);
-        quant(75);
-        quant(95);
-        quant(99);
+      fmt(average, ProbToOneIn(chance));
+      quant(50);
+      quant(75);
+      quant(95);
+      quant(99);
 
-        BufClear(resd->line);
-        BufFreeClear((void**)resd->value);
-        BufFreeClear((void**)resd->prob);
-        BufClear(resd->prime);
+      treeResultClear(resd);
 
-        pyCalcMatchingLoad(n->id, maxCombos);
-        resd->numCombos = pyCalcMatchingNumCombos(n->id);
-        fmt(numCombosStr, resd->numCombos);
+      pyCalcMatchingLoad(n->id, maxCombos);
+      resd->numCombos = pyCalcMatchingNumCombos(n->id);
+      fmt(numCombosStr, resd->numCombos);
 
 #undef fmt
 #undef quant
 
-        int comboLen = pyCalcMatchingComboLen(n->id);
-        resd->comboLen = comboLen;
-        for (int i = 0; i < pyCalcMatchingLen(n->id); ++i) {
-          float comboProbability = 0;
-          for (int j = 0; j < comboLen; ++j) {
-            *BufAlloc(&resd->line) = pyCalcMatchingLine(n->id, i, j);
-            BufAllocStrf(&resd->value, "%d", pyCalcMatchingValue(n->id, i, j));
-            float prob = pyCalcMatchingProbability(n->id, i, j);
-            BufAllocStrf(&resd->prob, "%.02f", prob);
-            *BufAlloc(&resd->prime) = pyCalcMatchingIsPrime(n->id, i, j);
-            comboProbability += prob;
-          }
+      int comboLen = pyCalcMatchingComboLen(n->id);
+      resd->comboLen = comboLen;
+      for (int i = 0; i < pyCalcMatchingLen(n->id); ++i) {
+        float comboProbability = 0;
+        for (int j = 0; j < comboLen; ++j) {
+          *BufAlloc(&resd->line) = pyCalcMatchingLine(n->id, i, j);
+          BufAllocStrf(&resd->value, "%d", pyCalcMatchingValue(n->id, i, j));
+          float prob = pyCalcMatchingProbability(n->id, i, j);
+          BufAllocStrf(&resd->prob, "%.02f", prob);
+          *BufAlloc(&resd->prime) = pyCalcMatchingIsPrime(n->id, i, j);
+          comboProbability += prob;
         }
-      } else {
-        resd->average[0] = resd->within50[0] = resd->within75[0] = resd->within95[0] =
-          resd->within99[0] = 0;
-        resd->page = 0;
-        resd->comboLen = 0;
       }
-
-      pyCalcFree(n->id);
+    } else {
+      resd->average[0] = resd->within50[0] = resd->within75[0] = resd->within95[0] =
+        resd->within99[0] = 0;
+      resd->page = 0;
+      resd->comboLen = 0;
     }
+
+    pyCalcFree(n->id);
   }
 }
 #endif

@@ -195,13 +195,6 @@ int unpackTree(TreeData* g, u8* rawData) {
     int const savedToNodeType[] = { nodeTypes(savedToNodeTypeEntry) };
     int type = savedToNodeType[buck->type];
 
-    BufReserveZero(&g->data[type], buck->n_nodes);
-
-    switch (type) {
-      case NCOMMENT: BufReserveZero(&g->commentData, buck->n_nodes); break;
-      case NRESULT: BufReserveZero(&g->resultData, buck->n_nodes); break;
-    }
-
     for (size_t j = 0; j < buck->n_nodes; ++j) {
       SavedNode* sn = buck->nodes[j];
 

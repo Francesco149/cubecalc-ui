@@ -1317,6 +1317,7 @@ int storageLoadSync(char* path) {
     perror("fread");
   } else {
     res = unpackTree(&graph, rawData);
+    flags |= UPDATE_CONNECTIONS | DIRTY;
   }
 
   fclose(f);
