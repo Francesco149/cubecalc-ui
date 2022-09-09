@@ -867,7 +867,8 @@ terminateNode:
   if (flags & SHOW_INFO) {
     if (nk_begin(nk, INFO_NAME, infoBounds, OTHERWND)) {
       if (flags & PORTRAIT) {
-        nk_layout_row_static(nk, 20, NK_MAX(360, nk_widget_width(nk)), 5);
+        int pw = (int)nk_window_get_panel(nk)->bounds.w;
+        nk_layout_row_static(nk, 20, NK_MAX(150, pw/5), 5);
       } else {
         nk_layout_row_dynamic(nk, 20, 1);
       }
