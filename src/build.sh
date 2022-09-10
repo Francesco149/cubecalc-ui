@@ -3,7 +3,7 @@
 # prevent browser from caching by appending timestamp to urls
 ts=$(date +%s)
 
-flags="-sALLOW_MEMORY_GROWTH  -sWASM_BIGINT -lidbfs.js"
+flags="-sALLOW_MEMORY_GROWTH  -sWASM_BIGINT -s LEGALIZE_JS_FFI=0 -lidbfs.js"
 flags="$flags -sEXPORTED_FUNCTIONS=_main,_storageAfterInit,_storageAfterCommit"
 buildflags="-O0 -DCUBECALC_DEBUG" # ~1s build time
 units=compilation-units/monolith.c
@@ -58,6 +58,8 @@ unzip -l ./cubecalc.zip
 
 sed -i "s/main\.wasm/main.wasm?ts=$ts/g" main.js
 sed -i "s/main\.js\(?ts=[0-9]\+\)\?/main.js?ts=$ts/g" index.html
+sed -i "/buildflags =/c\
+  const buildflags =\"$flags\"" index.html
 
 #xdg-open "http://0.0.0.0:6969/"
 python -m http.server 6969
