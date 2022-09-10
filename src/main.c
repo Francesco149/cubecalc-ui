@@ -566,6 +566,7 @@ int storageSaveGlobalsSync();
 void storageAutoSave();
 int presetLoad(char* path);
 int presetSave(char* path);
+int presetSaveNoCommit(char* path);
 int presetExists(char* path);
 void presetList();
 void presetDelete(char* path);
@@ -888,7 +889,30 @@ terminateNode:
 
   if (flags & DIRTY) {
     treeCalc(&graph, maxCombos);
-    storageAutoSave();
+
+    // ensure autosaves happens on 1st frame
+    static double autosaveTimer30 = -10000;
+    static double autosaveTimer5  = -10000;
+    static double autosaveTimer1  = -10000;
+
+    double t = glfwGetTime();
+
+    if (t - autosaveTimer5 > 30 * 60) {
+      presetSaveNoCommit("autosave_30mins");
+      autosaveTimer30 = t;
+    }
+
+    if (t - autosaveTimer5 > 5 * 60) {
+      presetSaveNoCommit("autosave_5mins");
+      autosaveTimer5 = t;
+    }
+
+    if (t - autosaveTimer1 > 1 * 60) {
+      presetSaveNoCommit("autosave_1min");
+      autosaveTimer1 = t;
+    }
+
+    storageAutoSave(); // this also commits
     flags &= ~DIRTY;
   }
 
@@ -1505,10 +1529,15 @@ int storageExists(char* path) {
   return stat(path, &st) == 0;
 }
 
-int presetSave(char* path) {
+int presetSaveNoCommit(char* path) {
   char* s = presetPath(path);
   int res = storageSaveSync(s);
   BufFree(&s);
+  return res;
+}
+
+int presetSave(char* path) {
+  int res = presetSaveNoCommit(path);
   storageCommit();
   return res;
 }
@@ -1611,6 +1640,7 @@ void storageAfterInit() {
 void storageAutoSave() {
   // TODO: make async
   storageSaveSync(AUTOSAVE_FILE);
+  storageCommit();
 }
 
 void storageInit() {
