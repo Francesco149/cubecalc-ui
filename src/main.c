@@ -322,6 +322,11 @@ int uiBeginNode(int type, int i, int h) {
     nkAdjustDragBounds(nk, &nodeBounds, &dragBounds);
   }
 
+  if (!nk_input_is_mouse_hovering_rect(in, parentPanel->bounds)) {
+    // no dragging if we're clicking on the info window
+    return res;
+  }
+
   // HACK: nuklear's built in drag movement is janky when multiple windows overlap because of
   // the stateless nature of it so I make my own slight adjustments
   int leftMouseDown = in->mouse.buttons[NK_BUTTON_LEFT].down;
