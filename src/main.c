@@ -10,6 +10,8 @@
 #include <math.h>
 #include <sys/stat.h>
 #include <threads.h>
+#include <stdlib.h> // qsort
+#include <dirent.h> // opendir readdir
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
@@ -54,6 +56,8 @@ enum {
   PORTRAIT = 1<<11,
   FULL_INFO = 1<<12,
   DEBUG = 1<<13,
+  SAVE_OVERWRITE_PROMPT = 1<<14,
+  DELETE_PROMPT = 1<<15,
 };
 
 #define MUTEX_FLAGS ( \
@@ -549,8 +553,27 @@ void uiEmptyNode(int type) {
   }
 }
 
+char** presetFiles;
+char presetFile[FILENAME_MAX + 1];
+int presetIndex;
+
 int storageSaveGlobalsSync();
 void storageAutoSave();
+int presetLoad(char* path);
+int presetSave(char* path);
+int presetExists(char* path);
+void presetList();
+void presetDelete(char* path);
+
+nk_bool presetFilter(const struct nk_text_edit *box, nk_rune unicode) {
+  NK_UNUSED(box);
+  if ((unicode >= 'A' && unicode <= 'Z') ||
+      (unicode >= 'a' && unicode <= 'z') ||
+      (unicode >= '0' && unicode <= '9') ||
+      unicode == '_')
+    return nk_true;
+  return nk_false;
+}
 
 void loop() {
   glfwPollEvents();
@@ -870,30 +893,75 @@ terminateNode:
   }
 
   if (flags & SHOW_INFO) {
-    if (nk_begin(nk, INFO_NAME, infoBounds, OTHERWND)) {
+    if (nk_begin(nk, INFO_NAME, infoBounds, NK_WINDOW_BORDER)) {
       if (flags & PORTRAIT) {
-        int pw = (int)nk_window_get_panel(nk)->bounds.w;
-        nk_layout_row_static(nk, 20, NK_MAX(150, pw/5), 5);
+        nk_layout_row_template_begin(nk, 20);
+        nk_layout_row_template_push_dynamic(nk);
+        nk_layout_row_template_push_static(nk, 90);
+        nk_layout_row_template_push_static(nk, 90);
+        nk_layout_row_template_end(nk);
       } else {
         nk_layout_row_dynamic(nk, 20, 1);
       }
-      float currentSf = nk_glfw3_scale_factor();
-      float sf = nk_propertyf(nk, "Scale", 1, currentSf, 2, 0.1, 0.02);
-      if (sf != currentSf) {
-        nk_glfw3_set_scale_factor(sf);
-        flags |= UPDATE_SIZE;
+
+      // TODO: DRY
+      static double overwriteTimer, deleteTimer;
+
+      if (glfwGetTime() - overwriteTimer > 5) {
+        flags &= ~SAVE_OVERWRITE_PROMPT;
       }
-      int newMaxCombos = nk_propertyi(nk, "Max Combos", 0, maxCombos, 500, 100, 0.02);
-      if (newMaxCombos != maxCombos) {
-        maxCombos = newMaxCombos;
-        flags |= DIRTY;
+
+      if (glfwGetTime() - deleteTimer > 5) {
+        flags &= ~DELETE_PROMPT;
       }
-      nk_label(nk, *statusText ? statusText : "Idle", NK_TEXT_LEFT);
+
+      if (BufLen(presetFiles)) {
+        presetIndex = NK_MIN(presetIndex, BufLen(presetFiles));
+        int newValue = nk_combo(nk, (char const**)presetFiles, BufLen(presetFiles), presetIndex,
+          25, nk_vec2(nk_widget_width(nk), 100));
+        if (newValue != presetIndex) {
+          snprintf(presetFile, FILENAME_MAX, "%s", presetFiles[newValue]);
+          presetIndex = newValue;
+          flags &= ~SAVE_OVERWRITE_PROMPT;
+        }
+
+        if (nk_button_label(nk, "load")) {
+          if (!presetLoad(presetFiles[presetIndex])) {
+            error("failed to load preset (corrupt?)");
+          }
+        }
+
+        if (nk_button_label(nk, (flags & DELETE_PROMPT) ? "/!\\ delete? /!\\" : "delete")) {
+          if (flags & DELETE_PROMPT) {
+            presetDelete(presetFiles[presetIndex]);
+          }
+          deleteTimer = glfwGetTime();
+          flags ^= DELETE_PROMPT;
+        }
+      }
+
+      nk_edit_string_zero_terminated(nk, NK_EDIT_FIELD, presetFile, FILENAME_MAX, presetFilter);
+
+      if (nk_button_label(nk, (flags & SAVE_OVERWRITE_PROMPT) ? "/!\\ overwrite? /!\\" : "save")) {
+        if (presetExists(presetFile)) {
+          if (flags & SAVE_OVERWRITE_PROMPT) {
+            if (!presetSave(presetFile)) {
+              error("failed to overwrite preset (disk full?)");
+            }
+          }
+          overwriteTimer = glfwGetTime();
+          flags ^= SAVE_OVERWRITE_PROMPT;
+        } else {
+          if (!presetSave(presetFile)) {
+            error("failed to save preset (disk full?)");
+          }
+        }
+        presetList();
+      }
+
       if (flags & FULL_INFO) {
         if (flags & PORTRAIT) {
           nk_layout_row_static(nk, 20, NK_MAX(180, nk_widget_width(nk) / 2), 2);
-        } else {
-          nk_spacer(nk);
         }
         nk_label(nk, "pan: middle drag", NK_TEXT_LEFT);
         nk_label(nk, "move nodes: left drag", NK_TEXT_LEFT);
@@ -944,7 +1012,7 @@ terminateNode:
 
 #define showFlag(x) \
       if (flags & x) { \
-        nk_label(nk, #x "...", NK_TEXT_CENTERED); \
+        if (flags & FULL_INFO) nk_label(nk, #x "...", NK_TEXT_CENTERED); \
         activeFlags |= x; \
       }
 
@@ -952,7 +1020,7 @@ terminateNode:
       showFlag(UNLINKING)
       showFlag(RESIZING)
 
-      if (!activeFlags) {
+      if ((flags & FULL_INFO) && !activeFlags) {
         nk_value_int(nk, "FPS", fps);
         nk_value_int(nk, "Nodes", BufLen(graph.tree));
         nk_value_int(nk, "Links", BufLen(links));
@@ -964,10 +1032,30 @@ terminateNode:
 
       if (activeFlags && (
             glfwGetKey(win, GLFW_KEY_ESCAPE) == GLFW_PRESS ||
-            nk_button_label(nk, "esc/ctx to cancel")
+            ((flags & FULL_INFO) && nk_button_label(nk, "esc/ctx to cancel"))
           )) {
         flags &= ~activeFlags;
       }
+
+      if (flags & PORTRAIT) {
+        int pw = (int)nk_window_get_panel(nk)->bounds.w;
+        nk_layout_row_static(nk, 20, NK_MAX(150, pw/5), 5);
+      } else {
+        nk_layout_row_dynamic(nk, 20, 1);
+      }
+      float currentSf = nk_glfw3_scale_factor();
+      float sf = nk_propertyf(nk, "Scale", 1, currentSf, 2, 0.1, 0.02);
+      if (sf != currentSf) {
+        nk_glfw3_set_scale_factor(sf);
+        flags |= UPDATE_SIZE;
+      }
+      int newMaxCombos = nk_propertyi(nk, "Max Combos", 0, maxCombos, 500, 100, 0.02);
+      if (newMaxCombos != maxCombos) {
+        maxCombos = newMaxCombos;
+        flags |= DIRTY;
+      }
+      nk_label(nk, *statusText ? statusText : "Idle", NK_TEXT_LEFT);
+
     } else {
       flags &= ~SHOW_INFO;
       flags |= UPDATE_SIZE;
@@ -1046,7 +1134,7 @@ dontShowCalc:
       infoBounds.x = 0;
       infoBounds.y = calcBounds.h;
       infoBounds.w = calcBounds.w;
-      infoBounds.h = (flags & FULL_INFO) ? 200 : 120;
+      infoBounds.h = (flags & FULL_INFO) ? 210 : 120;
       flags |= PORTRAIT;
     }
     nk_window_set_bounds(nk, CALC_NAME, calcBounds);
@@ -1083,7 +1171,7 @@ int uiTreeAddComment(struct nk_vec2 start, int x, int y, int w, int h, char* tex
   return ncomment;
 }
 
-int examplesCommon(int* succ) {
+int examplesCommon(int* succ, int category) {
   struct nk_vec2 s = nk_vec2(20, 20);
   int ncategory = uiTreeAddChk(s, NCATEGORY, 0, 0, succ);
   int ncube = uiTreeAddChk(s, NCUBE, 310, 0, succ);
@@ -1093,6 +1181,7 @@ int examplesCommon(int* succ) {
   int nsplit = uiTreeAddChk(s, NSPLIT, 650, 90, succ);
 
   if (*succ) {
+    uiTreeDataByNode(ncategory)->value = category;
     uiTreeDataByNode(nsplit)->value = ntier;
     uiTreeDataByNode(nlevel)->value = 200;
     uiTreeLink(ncategory, ncube);
@@ -1108,7 +1197,7 @@ void examplesBasicUsage() {
   struct nk_vec2 s = nk_vec2(20, 20);
   int succ = 1;
   int nprevres;
-  int nsplit = examplesCommon(&succ);
+  int nsplit = examplesCommon(&succ, WEAPON);
   {
     s.y += 150;
     int ncomment = uiTreeAddComment(s, 0, 0, 410, 310, "example: 23+ %att", &succ);
@@ -1187,9 +1276,9 @@ void examplesBasicUsage() {
 }
 
 void examplesOperators() {
-  int succ;
+  int succ = 1;
   struct nk_vec2 s = nk_vec2(20, 20);
-  int nsplit = examplesCommon(&succ);
+  int nsplit = examplesCommon(&succ, FACE_EYE_RING_EARRING_PENDANT);
 
   {
     s = nk_vec2(20, 130);
@@ -1207,7 +1296,6 @@ void examplesOperators() {
     int nor2 = uiTreeAddChk(s, NOR, 210 - 80 / 2, 0, &succ);
     s.y += 60;
     int nres = uiTreeAddChk(s, NRESULT, 210/2, 0, &succ);
-    int ncat = uiTreeAddChk(s, NCATEGORY, -340, 0, &succ);
     s.y += 90;
     int ncomment = uiTreeAddComment(s0, 0, 0, 410, s.y - s0.y,
         "example: ((meso or drop) and 10+ stat) or 23+ stat", &succ);
@@ -1218,7 +1306,6 @@ void examplesOperators() {
       uiTreeDataByNode(n9amt)->value = 10;
       uiTreeDataByNode(ndrop)->value = DROP;
       uiTreeDataByNode(nmeso)->value = MESO;
-      uiTreeDataByNode(ncat)->value = FACE_EYE_RING_EARRING_PENDANT;
 
       uiTreeLink(ndrop, nor);
       uiTreeLink(nmeso, nor);
@@ -1231,15 +1318,14 @@ void examplesOperators() {
 
       uiTreeLink(nor2, nres);
 
-      uiTreeLink(nsplit, ncat);
-      uiTreeLink(ncat, nres);
+      uiTreeLink(nsplit, nres);
     }
   }
 }
 
 void examplesFamiliars() {
   struct nk_vec2 s = nk_vec2(20, 20);
-  int succ, nprevres;
+  int succ = 1, nprevres;
 
   {
     int ncomment = uiTreeAddComment(s, 0, 0, 410, 400, "example: unique fam 30+ boss reveal", &succ);
@@ -1248,15 +1334,17 @@ void examplesFamiliars() {
     int namt = uiTreeAddChk(s, NAMOUNT, 0, 230, &succ);
     int nfamtier = uiTreeAddChk(s, NTIER, 210, 140, &succ);
     int nfamcube = uiTreeAddChk(s, NCUBE, 210, 230, &succ);
-    int nres = nprevres = uiTreeAddChk(s, NRESULT, 0, 320, &succ);
+    int nres = uiTreeAddChk(s, NRESULT, 0, 320, &succ);
+    int nsplit = nprevres = uiTreeAddChk(s, NSPLIT, 330, 50, &succ);
 
     if (succ) {
+      uiTreeDataByNode(nsplit)->value = nfamcat;
       uiTreeDataByNode(namt)->value = 30;
       uiTreeDataByNode(nfamcat)->value = FAMILIAR_STATS;
       uiTreeDataByNode(nfamcube)->value = FAMILIAR;
       uiTreeDataByNode(nfamtier)->value = UNIQUE;
       uiTreeDataByNode(nstat)->value = BOSS;
-      uiTreeLink(nfamcat, nstat);
+      uiTreeLink(nsplit, nfamtier);
       uiTreeLink(nstat, namt);
       uiTreeLink(nfamcube, namt);
       uiTreeLink(nfamtier, nfamcube);
@@ -1265,22 +1353,20 @@ void examplesFamiliars() {
   }
 
   {
-    s.x += 430;
+    s.x += 450;
     int ncomment = uiTreeAddComment(s, 0, 0, 410, 310, "example: red cards 40+ boss", &succ);
     int nstat = uiTreeAddChk(s, NSTAT, 0, 50, &succ);
     int namt = uiTreeAddChk(s, NAMOUNT, 0, 140, &succ);
     int nfamtier = uiTreeAddChk(s, NTIER, 210, 50, &succ);
     int nfamcube = uiTreeAddChk(s, NCUBE, 210, 140, &succ);
     int nres = uiTreeAddChk(s, NRESULT, 0, 230, &succ);
-    int nsplit = uiTreeAddChk(s, NSPLIT, 290, -100, &succ);
 
     if (succ) {
       uiTreeDataByNode(namt)->value = 40;
       uiTreeDataByNode(nfamcube)->value = RED_FAM_CARD;
       uiTreeDataByNode(nfamtier)->value = LEGENDARY;
       uiTreeDataByNode(nstat)->value = BOSS;
-      uiTreeDataByNode(nsplit)->value = nprevres;
-      uiTreeLink(nsplit, nstat);
+      uiTreeLink(nprevres, nstat);
       uiTreeLink(nstat, namt);
       uiTreeLink(nfamcube, namt);
       uiTreeLink(nfamtier, nfamcube);
@@ -1289,11 +1375,17 @@ void examplesFamiliars() {
   }
 }
 
+void storageAfterCommit() {
+  dbg("storage committed\n");
+  presetList();
+}
+
 void storageCommit() {
 #ifdef __EMSCRIPTEN__
   EM_ASM(
     FS.syncfs(function (err) {
       assert(!err);
+      ccall('storageAfterCommit', 'v');
     });
   );
 #endif
@@ -1316,7 +1408,6 @@ static int storageWriteSync(char* path, u8* buf) {
     fclose(f);
   }
 
-  storageCommit();
   return res;
 }
 
@@ -1347,9 +1438,10 @@ static u8* storageReadSync(char* path) {
   return rawData;
 }
 
-#define GLOBALS_FILE "/data/.globals.bin"
+#define DATADIR "/data/"
+#define GLOBALS_FILE DATADIR ".globals.bin"
 #define EXTENSION ".maplecalc"
-#define AUTOSAVE_FILE "/data/autosave" EXTENSION
+#define AUTOSAVE_FILE DATADIR "autosave" EXTENSION
 
 int storageSaveGlobalsSync() {
   u8* out = packGlobals(disclaimer);
@@ -1374,6 +1466,14 @@ int storageSaveSync(char* path) {
   return res;
 }
 
+char* presetPath(char* path) {
+  char* s = 0;
+  size_t len = snprintf(0, 0, "%s%s%s", DATADIR, path, EXTENSION);
+  BufReserve(&s, len + 1);
+  snprintf(s, len + 1, "%s%s%s", DATADIR, path, EXTENSION);
+  return s;
+}
+
 int storageLoadSync(char* path) {
   int res = 0;
   u8* rawData = storageReadSync(path);
@@ -1387,9 +1487,94 @@ int storageLoadSync(char* path) {
   return res;
 }
 
+void storageDeleteSync(char* path) {
+  dbg("deleting %s\n", path);
+  if (remove(path)) {
+    perror("remove");
+  }
+  storageCommit();
+}
+
 int storageExists(char* path) {
   struct stat st;
   return stat(path, &st) == 0;
+}
+
+int presetSave(char* path) {
+  char* s = presetPath(path);
+  int res = storageSaveSync(s);
+  BufFree(&s);
+  storageCommit();
+  return res;
+}
+
+int presetLoad(char* path) {
+  char* s = presetPath(path);
+  int res = storageLoadSync(s);
+  BufFree(&s);
+  return res;
+}
+
+void presetDelete(char* path) {
+  char* s = presetPath(path);
+  storageDeleteSync(s);
+  BufFree(&s);
+}
+
+int presetExists(char* path) {
+  char* s = presetPath(path);
+  int res = storageExists(s);
+  BufFree(&s);
+  return res;
+}
+
+static int qsortStrcmp(void const *a, void const *b) {
+  char const** aa = (char const**)a;
+  char const** bb = (char const**)b;
+  return strcmp(*aa, *bb);
+}
+
+void presetList() {
+  DIR* dir = opendir(DATADIR);
+  if (!dir) {
+    perror("opendir");
+    return;
+  }
+
+  BufFreeClear((void**)presetFiles);
+
+  struct dirent* data;
+  while ((data = readdir(dir))) {
+    if (*data->d_name == '.') {
+      continue;
+    }
+
+    // remove file extension
+    char* nameEnd = data->d_name + strlen(data->d_name);
+    char* end = nameEnd - 1;
+
+    for (; end > data->d_name && *end != '.'; --end);
+
+    // no dot found
+    if (end == data->d_name) {
+      end = nameEnd;
+    }
+
+    *BufAlloc(&presetFiles) = strndup(data->d_name, end - data->d_name);
+  }
+
+  qsort(presetFiles, BufLen(presetFiles), sizeof(*presetFiles), qsortStrcmp);
+}
+
+#define examplesFile(x) \
+  examplesFile_(DATADIR #x EXTENSION, examples##x)
+
+void examplesFile_(char* path, void (* func)()) {
+  if (!storageExists(path)) {
+    uiTreeClear();
+    func();
+    storageSaveSync(path);
+  }
 }
 
 // as far as I know, this is always called from the same thread as main so it should be fine
@@ -1402,17 +1587,18 @@ void storageAfterInit() {
     flags &= ~SHOW_DISCLAIMER;
   }
 
-#define examplesFile(x) \
-  if (!storageExists("/data/" #x EXTENSION)) { \
-    examples##x(); \
-    storageSaveSync("/data/" #x EXTENSION); \
-  }
-  examplesFile(BasicUsage)
-  examplesFile(Operators)
-  examplesFile(Familiars)
+  examplesFile(BasicUsage);
+  examplesFile(Operators);
+  examplesFile(Familiars);
+  examplesFile_(DATADIR "zzz_Preset1" EXTENSION, examplesBasicUsage);
+  examplesFile_(DATADIR "zzz_Preset2" EXTENSION, examplesBasicUsage);
+  examplesFile_(DATADIR "zzz_Preset3" EXTENSION, examplesBasicUsage);
+  examplesFile_(DATADIR "zzz_Preset4" EXTENSION, examplesBasicUsage);
+  examplesFile_(DATADIR "zzz_Preset5" EXTENSION, examplesBasicUsage);
+  storageCommit();
 
   if (!storageLoadSync(AUTOSAVE_FILE)) {
-    storageLoadSync("/data/BasicUsage" EXTENSION);
+    storageLoadSync(DATADIR "BasicUsage" EXTENSION);
   }
   status("");
 }
@@ -1439,6 +1625,7 @@ void storageInit() {
 }
 
 int main() {
+  snprintf(presetFile, FILENAME_MAX, "autosave");
   treeGlobalInit();
   treeCalcGlobalInit(TS);
   storageInit();
