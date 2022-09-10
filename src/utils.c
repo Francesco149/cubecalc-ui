@@ -376,8 +376,8 @@ void BufClear(void* b) {
 
 void BufFreeClear(void** b) {
   if (b) {
-    BufEach(void*, b, p) {
-      free(p);
+    BufEach(void*, b, pp) {
+      free(*pp);
     }
     BufClear(b);
   }
