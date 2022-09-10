@@ -3,7 +3,7 @@
 # prevent browser from caching by appending timestamp to urls
 ts=$(date +%s)
 
-flags="-sALLOW_MEMORY_GROWTH  -sWASM_BIGINT -s LEGALIZE_JS_FFI=0 -lidbfs.js"
+flags="-sALLOW_MEMORY_GROWTH  -sWASM_BIGINT -lidbfs.js"
 flags="$flags -sEXPORTED_FUNCTIONS=_main,_storageAfterInit,_storageAfterCommit"
 buildflags="-O0 -DCUBECALC_DEBUG" # ~1s build time
 units=compilation-units/monolith.c
