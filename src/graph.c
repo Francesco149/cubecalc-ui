@@ -1,6 +1,11 @@
 #ifndef GRAPH_H
 #define GRAPH_H
 
+#include <stdint.h>
+typedef uint8_t u8;
+typedef int64_t i64;
+typedef uint64_t u64;
+
 #include "nuklear.h"
 #include "utils.c"
 
