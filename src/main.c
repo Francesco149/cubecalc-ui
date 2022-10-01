@@ -581,23 +581,6 @@ nk_bool presetFilter(const struct nk_text_edit *box, nk_rune unicode) {
   return nk_false;
 }
 
-static
-int Log2i64(u64 n) {
-  const int table[64] = {
-    0, 58, 1, 59, 47, 53, 2, 60, 39, 48, 27, 54, 33, 42, 3, 61,
-    51, 37, 40, 49, 18, 28, 20, 55, 30, 34, 11, 43, 14, 22, 4, 62,
-    57, 46, 52, 38, 26, 32, 41, 50, 36, 17, 19, 29, 10, 13, 21, 56,
-    45, 25, 31, 35, 16, 9, 12, 44, 24, 15, 8, 23, 7, 6, 5, 63
-  };
-  n |= n >> 1;
-  n |= n >> 2;
-  n |= n >> 4;
-  n |= n >> 8;
-  n |= n >> 16;
-  n |= n >> 32;
-  return table[(n * UINT64_C(0x03f6eaf2cd271461)) >> 58];
-}
-
 void loop() {
   glfwPollEvents();
   nk_glfw3_new_frame();
@@ -653,8 +636,8 @@ void loop() {
   BufEachi(graph.data[type], i) { \
     if (uiBeginNode(type, i, 25)) { \
       NodeData* d = &graph.data[type][i]; \
-      int newValue = nk_combo(nk, enumName##Names, NK_LEN(enumName##Names), d->value, \
-        25, nk_vec2(nk_widget_width(nk), 100)); \
+      int newValue = nk_combo(nk, (const char**)enumName##Names, NK_LEN(enumName##Names), \
+        d->value, 25, nk_vec2(nk_widget_width(nk), 100)); \
       uiTreeSetValue(d, newValue); \
       uiEndNode(type, i); \
     } \
@@ -709,7 +692,7 @@ void loop() {
     comboNode(NCUBE, cube);
     comboNode(NTIER, tier);
     comboNode(NCATEGORY, category);
-    comboNode(NSTAT, line);
+    comboNode(NSTAT, allLine);
     comboNode(NREGION, region);
     propNode(NAMOUNT, i);
     propNode(NLEVEL, i);
@@ -782,7 +765,7 @@ void loop() {
             static char const* primestr[2] = { "", "P" };
             nk_label(nk, primestr[r->prime[k]], NK_TEXT_LEFT);
             nk_label(nk, r->value[k], NK_TEXT_RIGHT);
-            nk_label(nk, allLineNames[Log2i64(r->line[k])], NK_TEXT_LEFT);
+            nk_label(nk, r->line[k], NK_TEXT_LEFT);
             nk_label(nk, r->prob[k], NK_TEXT_RIGHT);
           }
 
@@ -875,10 +858,7 @@ terminateNode:
       flag(SHOW_INFO, "Info", UPDATE_SIZE);
       flag(SHOW_GRID, "Grid", 0);
       flag(SHOW_DISCLAIMER, "Disclaimer", 0);
-
-      if (flag(DEBUG, "Debug in Console", 0)) {
-        treeCalcDebug(flags & DEBUG);
-      }
+      flag(DEBUG, "Debug in Console", 0);
 
       if (nk_contextual_item_label(nk, "I'm Lost", NK_TEXT_CENTERED)) {
         if (BufLen(graph.tree)) {
@@ -1122,8 +1102,9 @@ dontShowCalc:
       if (disclaimerLen < 0) {
         disclaimerLen = strlen(disclaimer);
       }
+      // NOTE: since it's not editable it should hopefully never touch that memory
       nk_edit_string(nk, NK_EDIT_BOX | NK_EDIT_READ_ONLY,
-                     disclaimer, &disclaimerLen, disclaimerLen + 1, 0);
+                     (char*)disclaimer, &disclaimerLen, disclaimerLen + 1, 0);
     } else {
       flags &= ~SHOW_DISCLAIMER;
     }
@@ -1243,7 +1224,7 @@ void examplesBasicUsage() {
   struct nk_vec2 s = nk_vec2(20, 20);
   int succ = 1;
   int nprevres;
-  int nsplit = examplesCommon(&succ, WEAPON);
+  int nsplit = examplesCommon(&succ, WEAPON_IDX);
   {
     s.y += 150;
     int ncomment = uiTreeAddComment(s, 0, 0, 410, 310, "example: 23+ %att", &succ);
@@ -1271,8 +1252,8 @@ void examplesBasicUsage() {
     int nres = uiTreeAddChk(s, NRESULT, 210, 230, &succ);
 
     if (succ) {
-      uiTreeDataByNode(nstat2)->value = BOSS;
-      uiTreeDataByNode(namt2)->value = treeDefaultValue(NAMOUNT, BOSS);
+      uiTreeDataByNode(nstat2)->value = BOSS_IDX;
+      uiTreeDataByNode(namt2)->value = treeDefaultValue(NAMOUNT, BOSS_IDX);
       uiTreeDataByNode(namt)->value = 20;
       uiTreeLink(nsplit, nstat);
       uiTreeLink(nstat, namt);
@@ -1291,7 +1272,7 @@ void examplesBasicUsage() {
     int nsplit2 = uiTreeAddChk(s, NSPLIT, -100, -20, &succ);
 
     if (succ) {
-      uiTreeDataByNode(nbpot)->value = BONUS;
+      uiTreeDataByNode(nbpot)->value = BONUS_IDX;
       uiTreeDataByNode(nsplit2)->value = nprevres;
       uiTreeLink(nbpot, nsplit2);
       uiTreeLink(nbpot, nres);
@@ -1309,8 +1290,8 @@ void examplesBasicUsage() {
     int nres = uiTreeAddChk(s, NRESULT, 210, 230, &succ);
 
     if (succ) {
-      uiTreeDataByNode(nstat2)->value = BOSS_ONLY;
-      uiTreeDataByNode(nstat3)->value = LINES;
+      uiTreeDataByNode(nstat2)->value = BOSS_ONLY_IDX;
+      uiTreeDataByNode(nstat3)->value = LINES_IDX;
       uiTreeDataByNode(namt2)->value = 3;
       uiTreeLink(nsplit, nstat);
       uiTreeLink(nstat, nstat3);
@@ -1324,7 +1305,7 @@ void examplesBasicUsage() {
 void examplesOperators() {
   int succ = 1;
   struct nk_vec2 s = nk_vec2(20, 20);
-  int nsplit = examplesCommon(&succ, FACE_EYE_RING_EARRING_PENDANT);
+  int nsplit = examplesCommon(&succ, FACE_EYE_RING_EARRING_PENDANT_IDX);
 
   {
     s = nk_vec2(20, 130);
@@ -1347,11 +1328,11 @@ void examplesOperators() {
         "example: ((meso or drop) and 10+ stat) or 23+ stat", &succ);
 
     if (succ) {
-      uiTreeDataByNode(n23stat)->value = uiTreeDataByNode(n9stat)->value = STAT;
+      uiTreeDataByNode(n23stat)->value = uiTreeDataByNode(n9stat)->value = STAT_IDX;
       uiTreeDataByNode(n23amt)->value = 23;
       uiTreeDataByNode(n9amt)->value = 10;
-      uiTreeDataByNode(ndrop)->value = DROP;
-      uiTreeDataByNode(nmeso)->value = MESO;
+      uiTreeDataByNode(ndrop)->value = DROP_IDX;
+      uiTreeDataByNode(nmeso)->value = MESO_IDX;
 
       uiTreeLink(ndrop, nor);
       uiTreeLink(nmeso, nor);
@@ -1386,10 +1367,10 @@ void examplesFamiliars() {
     if (succ) {
       uiTreeDataByNode(nsplit)->value = nfamcat;
       uiTreeDataByNode(namt)->value = 30;
-      uiTreeDataByNode(nfamcat)->value = FAMILIAR_STATS;
-      uiTreeDataByNode(nfamcube)->value = FAMILIAR;
-      uiTreeDataByNode(nfamtier)->value = UNIQUE;
-      uiTreeDataByNode(nstat)->value = BOSS;
+      uiTreeDataByNode(nfamcat)->value = FAMILIAR_STATS_IDX;
+      uiTreeDataByNode(nfamcube)->value = FAMILIAR_IDX;
+      uiTreeDataByNode(nfamtier)->value = UNIQUE_IDX;
+      uiTreeDataByNode(nstat)->value = BOSS_IDX;
       uiTreeLink(nsplit, nfamtier);
       uiTreeLink(nstat, namt);
       uiTreeLink(nfamcube, namt);
@@ -1409,9 +1390,9 @@ void examplesFamiliars() {
 
     if (succ) {
       uiTreeDataByNode(namt)->value = 40;
-      uiTreeDataByNode(nfamcube)->value = RED_FAM_CARD;
-      uiTreeDataByNode(nfamtier)->value = LEGENDARY;
-      uiTreeDataByNode(nstat)->value = BOSS;
+      uiTreeDataByNode(nfamcube)->value = RED_FAM_CARD_IDX;
+      uiTreeDataByNode(nfamtier)->value = LEGENDARY_IDX;
+      uiTreeDataByNode(nstat)->value = BOSS_IDX;
       uiTreeLink(nprevres, nstat);
       uiTreeLink(nstat, namt);
       uiTreeLink(nfamcube, namt);
@@ -1437,7 +1418,7 @@ void storageCommit() {
 #endif
 }
 
-static int storageWriteSync(char* path, u8* buf) {
+static int storageWriteSync(char* path, char* buf) {
   int res = 0;
 
   dbg("saving %s\n", path);
@@ -1457,7 +1438,7 @@ static int storageWriteSync(char* path, u8* buf) {
   return res;
 }
 
-static u8* storageReadSync(char* path) {
+static char* storageReadSync(char* path) {
   dbg("reading %s\n", path);
 
   struct stat st;
@@ -1473,7 +1454,7 @@ static u8* storageReadSync(char* path) {
   }
 
   int res = 0;
-  u8* rawData = 0;
+  char* rawData = 0;
   BufReserve(&rawData, st.st_size);
   if (fread(rawData, 1, st.st_size, f) != st.st_size) {
     perror("fread");
@@ -1486,18 +1467,18 @@ static u8* storageReadSync(char* path) {
 
 #define DATADIR "/data/"
 #define GLOBALS_FILE DATADIR ".globals.bin"
-#define EXTENSION ".maplecalc"
+#define EXTENSION ".maplecalcv2"
 #define AUTOSAVE_FILE DATADIR "autosave" EXTENSION
 
 int storageSaveGlobalsSync() {
-  u8* out = packGlobals(disclaimer);
+  char* out = packGlobals(disclaimer);
   int res = storageWriteSync(GLOBALS_FILE, out);
   BufFree(&out);
   return res;
 }
 
 char* storageLoadGlobalsSync() {
-  u8* out = storageReadSync(GLOBALS_FILE);
+  char* out = storageReadSync(GLOBALS_FILE);
   char* res = unpackGlobals(out);
   BufFree(&out);
   return res;
@@ -1506,7 +1487,7 @@ char* storageLoadGlobalsSync() {
 int storageSaveSync(char* path) {
   Arena* arena = ArenaInit();
   Allocator allocatorArena = ArenaAllocator(arena);
-  u8* out = packTree(&allocatorArena, &graph);
+  char* out = packTree(&allocatorArena, &graph);
   int res = storageWriteSync(path, out);
   ArenaFree(arena);
   return res;
@@ -1522,7 +1503,7 @@ char* presetPath(char* path) {
 
 int storageLoadSync(char* path) {
   int res = 0;
-  u8* rawData = storageReadSync(path);
+  char* rawData = storageReadSync(path);
   if (rawData) {
     res = unpackTree(&graph, rawData);
     flags |= UPDATE_CONNECTIONS | DIRTY;
@@ -1679,7 +1660,7 @@ void storageInit() {
 int main() {
   snprintf(presetFile, FILENAME_MAX, "autosave");
   treeGlobalInit();
-  treeCalcGlobalInit(TS);
+  treeCalcGlobalInit();
   storageInit();
 
   glfwSetErrorCallback(errorCallback);
@@ -1704,7 +1685,7 @@ int main() {
 
   disclaimerHeight = 0;
   int rowHeight = nk->style.font->height + nk->style.edit.row_padding;
-  for (char* p = disclaimer; *p; ++p) {
+  for (char const* p = disclaimer; *p; ++p) {
     if (*p == '\n') {
       disclaimerHeight += rowHeight;
     }

@@ -6,16 +6,16 @@
 
 // returns a Buf. all allocations use allocator and it's up to the caller to free them.
 // designed to be used with the Arena allocator
-u8* packTree(Allocator const* allocator, TreeData* g);
+char* packTree(Allocator const* allocator, TreeData* g);
 
 // deserialize tree from rawData into g.
 // rawData is a Buf
-int unpackTree(TreeData* g, u8* rawData);
+int unpackTree(TreeData* g, char* rawData);
 
-u8* packGlobals(char* disclaimer);
+char* packGlobals(char const* disclaimer);
 
 // returns Buf containing disclaimer text
-char* unpackGlobals(u8* rawData);
+char* unpackGlobals(char* rawData);
 
 #endif
 
@@ -35,7 +35,7 @@ static int SavedConnectionEqual(SavedConnection* a, SavedConnection* b) {
   );
 }
 
-u8* packTree(Allocator const* allocator, TreeData* g) {
+char* packTree(Allocator const* allocator, TreeData* g) {
 // override default allocator to use this memory arena so I don't have to manually free
 // all the arrays
 
@@ -76,16 +76,14 @@ u8* packTree(Allocator const* allocator, TreeData* g) {
     saved_node_data__init(sd);
     sd->bounds = sr;
 
-    if (n->type == NSPLIT) {
-      sd->value = g->tree[d->value].id;
-    } else {
-      sd->value = d->value;
-    }
-
     SavedNode* sn = &savedTree[i];
     saved_node__init(sn);
     sn->id = n->id;
     sn->data = sd;
+
+    // we want to store the actual values of the enums rather than indices.
+    // values are assumed to be stable, indices might change if we add new things ad it's
+    // sorted in a specific way
 
     switch (n->type) {
       case NCOMMENT: {
@@ -97,6 +95,28 @@ u8* packTree(Allocator const* allocator, TreeData* g) {
         sn->commentdata = sc;
         break;
       }
+      case NCUBE: {
+        sd->valuelo = cubeValues[d->value];
+        break;
+      }
+      case NTIER: {
+        sd->valuelo = tierValues[d->value];
+        break;
+      }
+      case NCATEGORY: {
+        sd->valuelo = categoryValues[d->value];
+        break;
+      }
+      case NSTAT: {
+        sd->valuehi = allLinesHi[d->value];
+        sd->valuelo = allLinesLo[d->value];
+        break;
+      }
+      case NAMOUNT:
+      case NLEVEL: {
+        sd->valuelo = d->value;
+        break;
+      }
       case NRESULT: {
         Result* r = &g->resultData[n->data];
         SavedResult* sr = &savedResultData[n->data];
@@ -104,6 +124,15 @@ u8* packTree(Allocator const* allocator, TreeData* g) {
         sr->page = r->page;
         sr->perpage = r->perPage;
         sn->resultdata = sr;
+        break;
+      }
+      case NSPLIT: {
+        // for nodes, we store the node id to look it back up later
+        sd->valuelo = g->tree[d->value].id;
+        break;
+      }
+      case NREGION: {
+        sd->valuelo = regionValues[d->value];
         break;
       }
     }
@@ -168,9 +197,9 @@ nextConn:;
   BufToProto(&preset, buckets, buckets);
   BufToProto(&preset, connections, uniqueConnections);
 
-  u8* out = 0;
+  char* out = 0;
   BufReserve(&out, saved_preset__get_packed_size(&preset));
-  saved_preset__pack(&preset, out);
+  saved_preset__pack(&preset, (unsigned char*)out);
 
 // restore default allocator
 #undef allocatorDefault
@@ -179,14 +208,26 @@ nextConn:;
   return out;
 }
 
-int unpackTree(TreeData* g, u8* rawData) {
+#define enumValueToIndex(d, id, name, vals, val) \
+  _enumValueToIndex(d, id, name, vals, ArrayLength(vals), val)
+int _enumValueToIndex(NodeData* d, int id, char const* name, int const* vals, size_t n, int val) {
+  intmax_t i = _ArrayFindInt(vals, n, val);
+  if (i < 0 || i > 0x7FFFFFFF) {
+    fprintf(stderr, "node id %d has invalid %s index %jd, value 0x%08x\n", id, name, i, val);
+    return 0;
+  }
+  d->value = (int)i;
+  return 1;
+}
+
+int unpackTree(TreeData* g, char* rawData) {
   int res = 0;
   SavedPreset* preset = 0;
   int* treeById = 0;
 
   treeClear(g);
 
-  preset = saved_preset__unpack(0, BufLen(rawData), rawData);
+  preset = saved_preset__unpack(0, BufLen(rawData), (unsigned char*)rawData);
 
   if (!preset) {
     fprintf(stderr, "missing preset\n");
@@ -230,7 +271,6 @@ int unpackTree(TreeData* g, u8* rawData) {
 
       NodeData* d = &g->data[type][n->data];
       d->bounds = nk_rect(r->x, r->y, r->w, r->h);
-      d->value = sd->value;
 
       switch (type) {
         case NCOMMENT: {
@@ -242,6 +282,46 @@ int unpackTree(TreeData* g, u8* rawData) {
           Comment* c = &g->commentData[n->data];
           snprintf(c->buf, sizeof(c->buf), "%s", sc->text);
           c->len = strlen(sc->text);
+          break;
+        }
+        case NCUBE: {
+          if (!enumValueToIndex(d, n->id, "cube", cubeValues, sd->valuelo)) goto cleanup;
+          break;
+        }
+        case NTIER: {
+          if (!enumValueToIndex(d, n->id, "tier", tierValues, sd->valuelo)) goto cleanup;
+          break;
+        }
+        case NCATEGORY: {
+          if (!enumValueToIndex(d, n->id, "category", categoryValues, sd->valuelo)) goto cleanup;
+          break;
+        }
+        case NSTAT: {
+          int idx = -1;
+          ArrayEachi(allLinesLo, i) {
+            if (allLinesLo[i] == sd->valuelo && allLinesHi[i] == sd->valuehi) {
+              if (i > 0x7FFFFFFF) {
+                fprintf(stderr, "index %jd out of range for stat index\n", i);
+              } else {
+                idx = (int)i;
+              }
+            }
+          }
+          if (idx < 0) {
+            fprintf(stderr, "no stat match for lo: %08x hi: %08x\n", sd->valuelo, sd->valuehi);
+            goto cleanup;
+          }
+          d->value = idx;
+          break;
+        }
+        case NSPLIT: // for nsplit, the node id is looked up later
+        case NAMOUNT:
+        case NLEVEL: {
+          d->value = sd->valuelo;
+          break;
+        }
+        case NREGION: {
+          if (!enumValueToIndex(d, n->id, "region", regionValues, sd->valuelo)) goto cleanup;
           break;
         }
         case NRESULT: {
@@ -256,7 +336,6 @@ int unpackTree(TreeData* g, u8* rawData) {
           break;
         }
       }
-
     }
   }
 
@@ -281,19 +360,20 @@ cleanup:
   return res;
 }
 
-u8* packGlobals(char* disclaimer) {
+char* packGlobals(char const* disclaimer) {
   SavedGlobals glob;
   saved_globals__init(&glob);
-  glob.disclaimer = disclaimer;
+  // NOTE: hopefully it doesn't try to modify it
+  glob.disclaimer = (char*)disclaimer;
 
-  u8* out = 0;
+  char* out = 0;
   BufReserve(&out, saved_globals__get_packed_size(&glob));
-  saved_globals__pack(&glob, out);
+  saved_globals__pack(&glob, (unsigned char*)out);
   return out;
 }
 
-char* unpackGlobals(u8* rawData) {
-  SavedGlobals* glob = saved_globals__unpack(0, BufLen(rawData), rawData);
+char* unpackGlobals(char* rawData) {
+  SavedGlobals* glob = saved_globals__unpack(0, BufLen(rawData), (unsigned char*)rawData);
   char* res = BufStrDup(glob->disclaimer);
   saved_globals__free_unpacked(glob, 0);
   return res;

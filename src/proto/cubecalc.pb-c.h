@@ -63,11 +63,12 @@ struct  _SavedNodeData
 {
   ProtobufCMessage base;
   SavedRect *bounds;
-  int32_t value;
+  int32_t valuelo;
+  int32_t valuehi;
 };
 #define SAVED_NODE_DATA__INIT \
  { PROTOBUF_C_MESSAGE_INIT (&saved_node_data__descriptor) \
-    , NULL, 0 }
+    , NULL, 0, 0 }
 
 
 struct  _SavedComment

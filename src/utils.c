@@ -109,6 +109,10 @@ size_t _ArrayBitSize(size_t elementBitSize, size_t elementSize, size_t nbits);
 #define ArrayBitElements(arr, nbits) \
   (ArrayBitSize(arr, nbits) / ArrayElementSize(arr))
 
+// see BufFindInt
+#define ArrayFindInt(arr, value) _ArrayFindInt(arr, ArrayLength(arr), value)
+intmax_t _ArrayFindInt(int const* arr, size_t n, int value);
+
 // array bitmask macros used internally
 #define ArrayElementBitSize(array) (ArrayElementSize(array) << 3)
 #define ArrayBitSlot(array, bit) (array)[(bit) / ArrayElementBitSize(array)]
@@ -218,10 +222,10 @@ void nofree(void* param, void* p);
 void BufDel(void* b, intmax_t i);
 
 // index of value (-1 if it can't be found)
-int BufFindInt(int* b, int value);
+#define BufFindInt(b, value) _ArrayFindInt(b, BufLen(b), value)
 
 // delete value if it can be found and return its index (-1 if it can't be found)
-int BufDelFindInt(int* b, int value);
+intmax_t BufDelFindInt(int* b, int value);
 
 // empty without freeing memory
 void BufClear(void* b);
@@ -575,6 +579,15 @@ size_t _ArrayBitSize(size_t elementBitSize, size_t elementSize, size_t count) {
   return elements * elementSize;
 }
 
+intmax_t _ArrayFindInt(int const* arr, size_t n, int value) {
+  RangeBefore(n, i) {
+    if (arr[i] == value) {
+      return i;
+    }
+  }
+  return -1;
+}
+
 //
 // Allocator
 //
@@ -675,17 +688,8 @@ void BufDel(void* b, intmax_t i) {
   }
 }
 
-int BufFindInt(int* b, int value) {
-  BufEachi(b, i) {
-    if (b[i] == value) {
-      return i;
-    }
-  }
-  return -1;
-}
-
-int BufDelFindInt(int* b, int value) {
-  int i = BufFindInt(b, value);
+intmax_t BufDelFindInt(int* b, int value) {
+  intmax_t i = BufFindInt(b, value);
   if (i >= 0) {
     BufDel(b, i);
   }

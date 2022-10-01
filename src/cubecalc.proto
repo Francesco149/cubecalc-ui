@@ -9,7 +9,8 @@ message SavedRect {
 
 message SavedNodeData {
   SavedRect bounds = 1;
-  int32 value = 2;
+  int32 valueLo = 2;
+  int32 valueHi = 3;
 }
 
 message SavedComment {

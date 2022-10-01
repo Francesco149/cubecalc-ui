@@ -1,11 +1,6 @@
 #ifndef GRAPH_H
 #define GRAPH_H
 
-#include <stdint.h>
-typedef uint8_t u8;
-typedef int64_t i64;
-typedef uint64_t u64;
-
 #include "nuklear.h"
 #include "utils.c"
 
@@ -67,11 +62,10 @@ typedef struct _Result {
   char within95[22];
   char within99[22];
   int comboLen;
-  i64* line;
+  char** line;
   char** value;
   char** prob;
-  int* prime;
-  i64 numCombos;
+  intmax_t* prime;
   char numCombosStr[22];
 } Result;
 
@@ -84,7 +78,7 @@ typedef struct _TreeData {
 
 void treeGlobalInit();
 void treeClear(TreeData* g);
-int treeDefaultValue(int type, i64 stat);
+int treeDefaultValue(int type, int stat);
 int treeAdd(TreeData* g, int type, int x, int y);
 void treeDel(TreeData* g, int nodeIndex);
 void treeLink(TreeData* g, int from, int to);
@@ -156,33 +150,36 @@ void treeClear(TreeData* g) {
   BufClear(g->resultData);
 }
 
-int treeDefaultValue(int type, i64 stat) {
+int treeDefaultValue(int type, int statIndex) {
   switch (type) {
-    case NCUBE: return RED;
-    case NTIER: return LEGENDARY;
-    case NCATEGORY: return WEAPON;
-    case NSTAT: return ATT;
+    case NCUBE: return RED_IDX;
+    case NTIER: return LEGENDARY_IDX;
+    case NCATEGORY: return WEAPON_IDX;
+    case NSTAT: return ATT_IDX;
     case NAMOUNT: {
-      i64 val = lineValues[stat];
-      if ((val & lineValues[COOLDOWN]) || val == lineValues[INVIN]) {
-        return 2;
-      }
-      if (val & lineValues[DECENTS]) {
-        return 1;
-      }
-      switch (stat) {
-        case CRITDMG: return 8;
-        case MESO:
-        case DROP: return 20;
-        case BOSS:
-        case IED: return 30;
-        case FLAT_ATT: return 10;
+      switch (statIndex) {
+        case COOLDOWN_IDX:
+        case INVIN_IDX:
+          return 2;
+        case DECENTS_IDX:
+          return 1;
+        case CRITDMG_IDX:
+          return 8;
+        case MESO_IDX:
+        case DROP_IDX:
+          return 20;
+        case BOSS_ONLY_IDX:
+        case BOSS_IDX:
+        case IED_IDX:
+          return 30;
+        case FLAT_ATT_IDX:
+          return 10;
       }
       return 21;
     }
     case NSPLIT: return -1;
     case NLEVEL: return 150;
-    case NREGION: return GMS;
+    case NREGION: return GMS_IDX;
   }
   return 0;
 }
@@ -218,7 +215,7 @@ int treeAdd(TreeData* g, int type, int x, int y) {
     default:
       d->bounds = nk_rect(x, y, 200, 80);
   }
-  d->value = treeDefaultValue(type, ATT);
+  d->value = treeDefaultValue(type, ATT_IDX);
   chars = snprintf(d->name, sizeof(d->name), "%s %d", nodeNames[type - 1], id);
   if (chars >= sizeof(d->name)) {
     BufDel(g->data[type], -1);

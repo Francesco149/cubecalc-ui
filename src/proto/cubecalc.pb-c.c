@@ -489,7 +489,7 @@ const ProtobufCMessageDescriptor saved_rect__descriptor =
   (ProtobufCMessageInit) saved_rect__init,
   NULL,NULL,NULL    /* reserved[123] */
 };
-static const ProtobufCFieldDescriptor saved_node_data__field_descriptors[2] =
+static const ProtobufCFieldDescriptor saved_node_data__field_descriptors[3] =
 {
   {
     "bounds",
@@ -504,12 +504,24 @@ static const ProtobufCFieldDescriptor saved_node_data__field_descriptors[2] =
     0,NULL,NULL    /* reserved1,reserved2, etc */
   },
   {
-    "value",
+    "valueLo",
     2,
     PROTOBUF_C_LABEL_NONE,
     PROTOBUF_C_TYPE_INT32,
     0,   /* quantifier_offset */
-    offsetof(SavedNodeData, value),
+    offsetof(SavedNodeData, valuelo),
+    NULL,
+    NULL,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+  {
+    "valueHi",
+    3,
+    PROTOBUF_C_LABEL_NONE,
+    PROTOBUF_C_TYPE_INT32,
+    0,   /* quantifier_offset */
+    offsetof(SavedNodeData, valuehi),
     NULL,
     NULL,
     0,             /* flags */
@@ -518,12 +530,13 @@ static const ProtobufCFieldDescriptor saved_node_data__field_descriptors[2] =
 };
 static const unsigned saved_node_data__field_indices_by_name[] = {
   0,   /* field[0] = bounds */
-  1,   /* field[1] = value */
+  2,   /* field[2] = valueHi */
+  1,   /* field[1] = valueLo */
 };
 static const ProtobufCIntRange saved_node_data__number_ranges[1 + 1] =
 {
   { 1, 0 },
-  { 0, 2 }
+  { 0, 3 }
 };
 const ProtobufCMessageDescriptor saved_node_data__descriptor =
 {
@@ -533,7 +546,7 @@ const ProtobufCMessageDescriptor saved_node_data__descriptor =
   "SavedNodeData",
   "",
   sizeof(SavedNodeData),
-  2,
+  3,
   saved_node_data__field_descriptors,
   saved_node_data__field_indices_by_name,
   1,  saved_node_data__number_ranges,

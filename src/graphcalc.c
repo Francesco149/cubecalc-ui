@@ -3,9 +3,8 @@
 
 #include "graph.c"
 
-void treeCalcGlobalInit(int ts);
+void treeCalcGlobalInit();
 void treeCalc(TreeData* g, int maxCombos);
-void treeCalcDebug(int enable);
 
 #endif
 
@@ -15,6 +14,7 @@ void treeCalcDebug(int enable);
 #include "humanize.c"
 #include "generated.c"
 #include "utils.c"
+#include "cubecalc.c"
 
 #include <string.h>
 
@@ -22,128 +22,33 @@ void treeCalcDebug(int enable);
 #include <inttypes.h>
 extern void dbg(char* fmt, ...);
 
-// TODO: figure out a way to embed numpy + python for non-browser version?
-// ... or just port the calculator to C
-
-#ifdef __EMSCRIPTEN__
-#include <emscripten.h>
-
-EM_ASYNC_JS(void, pyInit, (int ts), {
-  py = await loadPyodide();
-  await py.loadPackage("numpy");
-
-  // the easiest way to install my cubecalc into pyodide is to zip it and extract it in the
-  // virtual file system
-  let zipResponse = await fetch("cubecalc.zip?ts=" + ts);
-  let zipBinary = await zipResponse.arrayBuffer();
-  py.unpackArchive(zipBinary, "zip");
-
-  // install pip packages, init glue code etc
-  Module.pyFunc = (x) => py.runPython(`
-      import sys; sys.path.append("cubecalc/");
-      from glue import ${x}; ${x}
-  `);
-
-  Module.numCombos = {};
-  Module.comboLen = {};
-  Module.matchingLine = {};
-  Module.matchingProbability = {};
-  Module.matchingValue = {};
-  Module.matchingIsPrime = {};
-});
-
-EM_JS(void, pyCalcDebug, (int enable), {
-  return Module.pyFunc("calc_debug")(enable != 0);
-});
-
-EM_JS(void, pyCalcFree, (int calcIdx), {
-  return Module.pyFunc("calc_free")(calcIdx);
-});
-
-EM_JS(void, pyCalcSet, (int calcIdx, int key, i64 value), {
-  return Module.pyFunc("calc_set")(calcIdx, key, value);
-});
-
-EM_JS(void, pyCalcWant, (int calcIdx, i64 key, int value), {
-  return Module.pyFunc("calc_want")(calcIdx, key, value);
-});
-
-EM_JS(void, pyCalcWantOp, (int calcIdx, int op, int n), {
-  return Module.pyFunc("calc_want_op")(calcIdx, op, n);
-});
-
-EM_JS(int, pyCalcWantPush, (int calcIdx), {
-  return Module.pyFunc("calc_want_push")(calcIdx);
-});
-
-EM_JS(int, pyCalcWantLen, (int calcIdx), {
-  return Module.pyFunc("calc_want_len")(calcIdx);
-});
-
-EM_JS(int, pyCalcWantCurrentLen, (int calcIdx), {
-  return Module.pyFunc("calc_want_current_len")(calcIdx);
-});
-
-EM_JS(float, pyCalc, (int calcIdx), {
-  return Module.pyFunc("calc")(calcIdx);
-});
-
-EM_JS(int, pyCalcMatchingLen, (int calcIdx), {
-  return Module.matchingLine[calcIdx].length;
-});
-
-EM_JS(int, pyCalcMatchingComboLen, (int calcIdx), {
-  return Module.comboLen[calcIdx];
-});
-
-EM_JS(i64, pyCalcMatchingNumCombos, (int calcIdx), {
-  return BigInt(Module.numCombos[calcIdx]);
-});
-
-EM_JS(void, pyCalcMatchingLoad, (int calcIdx, int maxCombos), {
-  Module.numCombos[calcIdx] = Module.pyFunc("calc_matching_len")(calcIdx);
-  if (Module.numCombos[calcIdx] > maxCombos) {
-    Module.matchingLine[calcIdx] =
-    Module.matchingProbability[calcIdx] =
-    Module.matchingValue[calcIdx] =
-    Module.matchingIsPrime[calcIdx] = [];
-    Module.comboLen[calcIdx] = 0;
-    return;
-  }
-  Module.matchingLine[calcIdx] = Module.pyFunc("calc_matching_lines")(calcIdx);
-  Module.matchingProbability[calcIdx] = Module.pyFunc("calc_matching_probabilities")(calcIdx);
-  Module.matchingValue[calcIdx] = Module.pyFunc("calc_matching_values")(calcIdx);
-  Module.matchingIsPrime[calcIdx] = Module.pyFunc("calc_matching_is_primes")(calcIdx);
-  Module.comboLen[calcIdx] = Module.matchingLine[calcIdx][0].length;
-});
-
-EM_JS(i64, pyCalcMatchingLine, (int calcIdx, int i, int j), {
-  return BigInt(Module.matchingLine[calcIdx][i][j]);
-});
-
-EM_JS(int, pyCalcMatchingValue, (int calcIdx, int i, int j), {
-  return Module.matchingValue[calcIdx][i][j];
-});
-
-EM_JS(float, pyCalcMatchingProbability, (int calcIdx, int i, int j), {
-  return Module.matchingProbability[calcIdx][i][j];
-});
-
-EM_JS(float, pyCalcMatchingIsPrime, (int calcIdx, int i, int j), {
-  return Module.matchingIsPrime[calcIdx][i][j];
-});
-#endif
-
-void treeCalcGlobalInit(int ts) {
-  pyInit(ts);
+void treeCalcGlobalInit() {
+  CubeGlobalInit();
 }
 
-void treeCalcDebug(int enable) {
-  pyCalcDebug(enable);
-}
+// we want to be able to override stats
+//
+// for example:
+//
+// (30 boss)---(20 boss)---(result)
+//
+// means 20 boss
+//
+// note that something like
+//
+// (30 boss)--(or)--(21 att)--+--(result)
+// (20 boss)------------------'
+//
+// still means ((30+ boss or 21+ att) and 20+ boss)
+//
+// to achieve this, for every operator we collect all stats in a sparse array and we don't
+// push them to the wants stack until we encounter an operator
 
+static const size_t numLines = ArrayLength(allLinesHi);
+
+// returns non-zero if it didn't override a previously set value
 static
-void treeCalcAppendWants(int id, int* values) {
+int treeCalcAppendWants(int statMap[numLines], int* values) {
   int key, value;
   // TODO: DRY
   if (values[NSTAT] == -1) {
@@ -152,7 +57,7 @@ void treeCalcAppendWants(int id, int* values) {
   } else {
     key = values[NSTAT];
   }
-  dbg("%s = ", lineNames[key]);
+  dbg("%s = ", allLineNames[key]);
   if (values[NAMOUNT] == -1) {
     value = treeDefaultValue(NAMOUNT, key);
     dbg("(assumed) ");
@@ -162,15 +67,16 @@ void treeCalcAppendWants(int id, int* values) {
   dbg("%d\n", value);
   values[NSTAT] = -1;
   values[NAMOUNT] = -1;
-  pyCalcWant(id, lineValues[key], value);
+  int res = statMap[key] < 0;
+  statMap[key] = value;
+  return res;
 }
 
 static
-int treeCalcFinalizeWants(int id, int* values, int optionalCondition) {
+int treeCalcFinalizeWants(int statMap[numLines], int* values, int optionalCondition) {
   // append complete any pending line to wants, or just the default line
   if (optionalCondition || values[NSTAT] != -1 || values[NAMOUNT] != -1) {
-    treeCalcAppendWants(id, values);
-    return 1;
+    return treeCalcAppendWants(statMap, values);
   }
   return 0;
 }
@@ -178,14 +84,32 @@ int treeCalcFinalizeWants(int id, int* values, int optionalCondition) {
 static
 int treeTypeToCalcOperator(int type) {
   switch (type) {
-    case NOR: return calcoperatorValues[OR];
-    case NAND: return calcoperatorValues[AND];
+    case NOR: return WANT_OR;
+    case NAND: return WANT_AND;
   }
   return 0;
 }
 
+// flush the statMap and push everything to the stack
 static
-int treeCalcBranch(TreeData* g, int id, int* values, int node, int* seen) {
+void treeCalcPushStats(Want** pwants, int statMap[numLines]) {
+  RangeBefore(numLines, i) {
+    if (statMap[i] >= 0) {
+      *BufAlloc(pwants) = (Want){
+        .type = WANT_STAT,
+        .lineLo = allLinesLo[i],
+        .lineHi = allLinesHi[i],
+        .value = statMap[i],
+      };
+      statMap[i] = -1;
+    }
+  }
+}
+
+static
+int treeCalcBranch(TreeData* g, Want** pwants,
+    int statMap[numLines], int* values, int node, int* seen)
+{
   if (seen[node]) {
     // it's important to not visit the same node twice so we don't get into a loop
     return 0;
@@ -201,7 +125,7 @@ int treeCalcBranch(TreeData* g, int id, int* values, int node, int* seen) {
     if (d->value >= 0) {
       // in the case of a split, we only take the parent so that we don't traverse the other
       // branches. that's the whole point of this node. to allow reusing common nodes
-      return treeCalcBranch(g, id, values, d->value, seen);
+      return treeCalcBranch(g, pwants, statMap, values, d->value, seen);
     }
     return 0;
   }
@@ -214,8 +138,7 @@ int treeCalcBranch(TreeData* g, int id, int* values, int node, int* seen) {
     break;
   }
 
-  // we implicitly AND all the stats in a branch. usually this is trivial since we just keep
-  // adding them to a dict which gets pushed on the stack when we hit an operator. but if you
+  // we implicitly AND all the stats in a branch. usually this is trivial but if you
   // have nested operators, you end up having to actually emit an AND operator since you will
   // end up with multiple values on the stack
   //
@@ -233,33 +156,37 @@ int treeCalcBranch(TreeData* g, int id, int* values, int node, int* seen) {
   int elementsOnStack = 0;
 
   for (size_t i = 0; i < BufLen(n->connections); ++i) {
-    int branchElementsOnStack = treeCalcBranch(g, id, values, n->connections[i], seen);
+    int branchElementsOnStack =
+      treeCalcBranch(g, pwants, statMap, values, n->connections[i], seen);
+
     elementsOnStack += branchElementsOnStack;
 
     // operators. for every branch, finish pending stats and push the parameters to the stack
     // we don't want default value if there's no stats in this branch, otherwise we would get
     // a bunch of 21 att's for each branch that doesn't have stats.
-    // that's why WantPush only pushes and returns 1 if the current stats dict is not empty.
+    // that's why FinalizeWants only returns 1 if it actually adds anything to the wants buf
     if (isOperator) {
-      treeCalcFinalizeWants(id, values, 0);
-
-      int pushed = pyCalcWantPush(id);
+      int extraStackElements = treeCalcFinalizeWants(statMap, values, 0);
 
       if (branchElementsOnStack > 0) {
-        pyCalcWantOp(id, treeTypeToCalcOperator(NAND), branchElementsOnStack + 1);
-        pyCalcWantPush(id);
+        treeCalcPushStats(pwants, statMap);
+        *BufAlloc(pwants) = WantOp(AND, branchElementsOnStack + extraStackElements);
         ++numOperands;
         dbg("%d emitting AND\n", node);
       } else {
-        numOperands += pushed;
-        dbg("%d pushed: %d\n", node, pushed);
+        numOperands += extraStackElements;
+        dbg("%d extraStackElements=%d\n", node, extraStackElements);
       }
     }
   }
   if (isOperator) {
     if (numOperands) {
-      pyCalcWantOp(id, treeTypeToCalcOperator(n->type), numOperands);
-      pyCalcWantPush(id);
+      treeCalcPushStats(pwants, statMap);
+      *BufAlloc(pwants) = (Want){
+        .type = WANT_OP,
+        .op = treeTypeToCalcOperator(n->type),
+        .opCount = numOperands,
+      };
     }
     return 1;
   }
@@ -279,14 +206,15 @@ int treeCalcBranch(TreeData* g, int id, int* values, int node, int* seen) {
       dbg("error visiting node %d, unk type %d\n", node, n->type);
   }
 
-  // every time we counter either stat or amount:
+  // every time we encounter either stat or amount:
   // - if it's amount, the desired stat pair is complete and we append either the default line
-  //   or the upstream line to the wants array
+  //   or the upstream line to the stat map
   // - if it's a line, we save it but we don't do anything until either an amount is found
   //   downstream, another line is found or we're done visiting the graph
 
   if (n->type == NAMOUNT || (n->type == NSTAT && values[NSTAT] != -1)) {
-    treeCalcAppendWants(id, values); // add either default line or upstream line
+    elementsOnStack += treeCalcAppendWants(statMap, values);
+    // add either default line or upstream line
   }
 
   if (n->type == NSTAT) {
@@ -302,61 +230,36 @@ char const* valueName(int type, int value) {
     case NCUBE: return cubeNames[value];
     case NTIER: return tierNames[value];
     case NCATEGORY: return categoryNames[value];
-    case NSTAT: return lineNames[value];
+    case NSTAT: return allLineNames[value];
     case NREGION: return regionNames[value];
   }
   return 0;
 }
 
-static
-i64 valueToCalc(int type, int value) {
-  switch (type) {
-    case NCUBE: return cubeValues[value];
-    case NTIER: return tierValues[value];
-    case NCATEGORY: return categoryValues[value];
-    case NSTAT: return lineValues[value];
-    case NREGION: return regionValues[value];
-  }
-  return value;
-}
-
-static
-int treeTypeToCalcParam(int type) {
-  switch (type) {
-    case NCUBE: return calcparamValues[CUBE];
-    case NTIER: return calcparamValues[TIER];
-    case NCATEGORY: return calcparamValues[CATEGORY];
-    case NLEVEL: return calcparamValues[LEVEL];
-    case NREGION: return calcparamValues[REGION];
-  }
-  return 0;
-}
-
+void WantPrint(Want const* wantBuf);
 void treeCalc(TreeData* g, int maxCombos) {
+  Want* wants = 0;
   for (size_t i = 0; i < BufLen(g->tree); ++i) {
     Node* n = &g->tree[i];
-    // TODO: more type of result nodes (median, 75%, 85%, etc)
+
     if (n->type != NRESULT) {
       continue;
     }
 
     NodeData* d = &g->data[n->type][n->data];
     dbg("treeCalc %s\n", d->name);
-    pyCalcFree(n->id);
-
-    // initialize wants array so that it doesn't happen when traversing a tree
-    // (we don't want it to count as an operand or stuff like that)
-    pyCalcWantPush(n->id);
 
     int values[NLAST];
-    for (size_t j = 0; j < NLAST; ++j) {
-      values[j] = -1;
-    }
+    int statMap[numLines];
+
+    ArrayEach(int, values, x) { *x = -1; }
+    ArrayEach(int, statMap, x) { *x = -1; }
 
     int* seen = 0;
     BufReserve(&seen, BufLen(g->tree));
     BufZero(seen);
-    int elementsOnStack = treeCalcBranch(g, n->id, values, i, seen);
+    BufClear(wants);
+    int elementsOnStack = treeCalcBranch(g, &wants, statMap, values, i, seen);
     BufFree(&seen);
 
     for (size_t j = NINVALID + 1; j < NLAST; ++j) {
@@ -372,7 +275,7 @@ void treeCalc(TreeData* g, int maxCombos) {
           continue;
       }
       if (values[j] == -1) {
-        values[j] = treeDefaultValue(j, values[CATEGORY]);
+        values[j] = treeDefaultValue(j, values[NCATEGORY]);
         dbg("(assumed) ");
       }
       char const* svalue = valueName(j, values[j]);
@@ -382,67 +285,36 @@ void treeCalc(TreeData* g, int maxCombos) {
       } else {
         dbg("%s = %d\n", valueName, values[j]);
       }
-      int param = treeTypeToCalcParam(j);
-      i64 value = valueToCalc(j, values[j]);
-      if (param) {
-        pyCalcSet(n->id, param, value);
-      } else {
-        dbg("unknown calc param %zu = %d = %" PRId64 "\n", j, values[j], value);
-      }
     }
 
-    // if the wants stack is completely empty, append the default value.
-    // also complete any pending stats
-    treeCalcFinalizeWants(n->id, values, !pyCalcWantLen(n->id));
+    // complete any pending stats and push all the stats to the stack
+    elementsOnStack += treeCalcFinalizeWants(statMap, values, 0);
+    treeCalcPushStats(&wants, statMap);
 
-    // terminate with an AND in case we have multiple sets of stats
-    elementsOnStack += pyCalcWantPush(n->id);
+    if (BufLen(wants)) {
+      // terminate with an AND since we always want an operator
+      *BufAlloc(&wants) = WantOp(AND, elementsOnStack);
 
-    if (elementsOnStack > 1) {
-      pyCalcWantOp(n->id, treeTypeToCalcOperator(NAND), -1);
+      puts("===========================================");
+      printf("# %s\n", g->data[n->type][n->data].name);
+      WantPrint(wants);
+      puts("===========================================");
+
+      Category category = categoryValues[values[NCATEGORY]];
+      Cube cube = cubeValues[values[NCUBE]];
+      Tier tier = tierValues[values[NTIER]];
+      Region region = regionValues[values[NREGION]];
+
+      Lines combos = {0};
+
+      // TODO: call CubeCalc
+      float p = CubeCalc(wants, category, cube, tier, values[NLEVEL], region, &combos);
+
+      printf("p: %f\n", p);
+
+      //LinesFree(&combos);
     }
-
-    float chance = pyCalc(n->id);
-    Result* resd = &g->resultData[n->data];
-    if (chance > 0) {
-#define fmt(x, y) humanize(resd->x, sizeof(resd->x), y)
-#define quant(n, ...) fmt(within##n, ProbToGeoDistrQuantileDingle(chance, n))
-      fmt(average, ProbToOneIn(chance));
-      quant(50);
-      quant(75);
-      quant(95);
-      quant(99);
-
-      treeResultClear(resd);
-
-      pyCalcMatchingLoad(n->id, maxCombos);
-      resd->numCombos = pyCalcMatchingNumCombos(n->id);
-      fmt(numCombosStr, resd->numCombos);
-
-#undef fmt
-#undef quant
-
-      int comboLen = pyCalcMatchingComboLen(n->id);
-      resd->comboLen = comboLen;
-      for (int i = 0; i < pyCalcMatchingLen(n->id); ++i) {
-        float comboProbability = 0;
-        for (int j = 0; j < comboLen; ++j) {
-          *BufAlloc(&resd->line) = pyCalcMatchingLine(n->id, i, j);
-          BufAllocStrf(&resd->value, "%d", pyCalcMatchingValue(n->id, i, j));
-          float prob = pyCalcMatchingProbability(n->id, i, j);
-          BufAllocStrf(&resd->prob, "%.02f", prob);
-          *BufAlloc(&resd->prime) = pyCalcMatchingIsPrime(n->id, i, j);
-          comboProbability += prob;
-        }
-      }
-    } else {
-      resd->average[0] = resd->within50[0] = resd->within75[0] = resd->within95[0] =
-        resd->within99[0] = 0;
-      resd->page = 0;
-      resd->comboLen = 0;
-    }
-
-    pyCalcFree(n->id);
   }
+  BufFree(&wants);
 }
 #endif
