@@ -236,7 +236,10 @@ char const* valueName(int type, int value) {
   return 0;
 }
 
+#ifdef CUBECALC_DEBUG
 void WantPrint(Want const* wantBuf);
+#endif
+
 void treeCalc(TreeData* g, int maxCombos) {
   Want* wants = 0;
   for (size_t i = 0; i < BufLen(g->tree); ++i) {
@@ -295,10 +298,12 @@ void treeCalc(TreeData* g, int maxCombos) {
       // terminate with an AND since we always want an operator
       *BufAlloc(&wants) = WantOp(AND, elementsOnStack);
 
+#ifdef CUBECALC_DEBUG
       dbg("===========================================");
       dbg("# %s\n", g->data[n->type][n->data].name);
       WantPrint(wants);
       dbg("===========================================");
+#endif
 
       Category category = categoryValues[values[NCATEGORY]];
       Cube cube = cubeValues[values[NCUBE]];
@@ -310,7 +315,7 @@ void treeCalc(TreeData* g, int maxCombos) {
       // TODO: call CubeCalc
       float p = CubeCalc(wants, category, cube, tier, values[NLEVEL], region, &combos);
 
-      printf("p: %f\n", p);
+      dbg("p: %f\n", p);
 
       LinesFree(&combos);
     }
