@@ -314,10 +314,23 @@ void treeCalc(TreeData* g, int maxCombos) {
 
       // TODO: call CubeCalc
       float p = CubeCalc(wants, category, cube, tier, values[NLEVEL], region, &combos);
-
       dbg("p: %f\n", p);
+      Result* resd = &g->resultData[n->data];
+      if (p > 0) {
 
-      LinesFree(&combos);
+#define fmt(x, y) humanize(resd->x, sizeof(resd->x), y)
+#define quant(n, ...) fmt(within##n, ProbToGeoDistrQuantileDingle(p, n))
+        fmt(average, ProbToOneIn(p));
+        quant(50);
+        quant(75);
+        quant(95);
+        quant(99);
+
+        treeResultClear(resd);
+        // TODO: fmt combos
+
+        LinesFree(&combos);
+      }
     }
   }
   BufFree(&wants);
