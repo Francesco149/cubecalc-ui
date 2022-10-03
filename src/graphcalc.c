@@ -295,10 +295,10 @@ void treeCalc(TreeData* g, int maxCombos) {
       // terminate with an AND since we always want an operator
       *BufAlloc(&wants) = WantOp(AND, elementsOnStack);
 
-      puts("===========================================");
-      printf("# %s\n", g->data[n->type][n->data].name);
+      dbg("===========================================");
+      dbg("# %s\n", g->data[n->type][n->data].name);
       WantPrint(wants);
-      puts("===========================================");
+      dbg("===========================================");
 
       Category category = categoryValues[values[NCATEGORY]];
       Cube cube = cubeValues[values[NCUBE]];
@@ -312,7 +312,7 @@ void treeCalc(TreeData* g, int maxCombos) {
 
       printf("p: %f\n", p);
 
-      //LinesFree(&combos);
+      LinesFree(&combos);
     }
   }
   BufFree(&wants);
