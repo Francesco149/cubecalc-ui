@@ -2,12 +2,12 @@ a simple GUI to use the [[https://github.com/Francesco149/cubecalc][average cubi
 
 * usage
 just use the [[https://francesco149.github.io/maple/cube][hosted version here]] .
-the idea is that through the graph you can configure it for any complicated stat combination you're looking for as well as have multiple calculations for different combinations on screen. right now it's only ANDing all the stats you link, but I am planning to add a node that OR's groups of lines
+the idea is that through the graph you can configure it for any complicated stat combination you're looking for as well as have multiple calculations for different combinations on screen.
 
 * navigating the code (for developers)
-this is a quite unusual stack. the UI is written in C using [[https://github.com/Immediate-Mode-UI/Nuklear][nuklear]], the cubing calculator is written in python, and it's all running in a browser.
+this is a quite unusual stack. the UI is written in C using [[https://github.com/Immediate-Mode-UI/Nuklear][nuklear]], the cubing calculator is also written in C, and it's all running in a browser. a lot of the code is generated from the python proof-of-concept of the cubing calc that I initially wrote. I am planning to make a desktop build for this now that I got rid of all python code
 
-emscripten is used to compile the C ui to wasm. see ~src/build.sh~. python is embedded through [[https://github.com/pyodide/pyodide#what-is-pyodide][pyodide]] and called from C through some js glue code. there's also a python script that generates ~#define~ 's and stuff like that for enums into ~generated.c~
+emscripten is used to compile the C ui to wasm. see ~src/build.sh~. 
 
 to set up the dev environment, [[https://nix.dev/tutorials/install-nix][install the nix package manager]] and run ~nix develop~, you will be put into a shell with all the dependencies installed.
 
