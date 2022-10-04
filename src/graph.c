@@ -113,6 +113,7 @@ void treeResultClear(Result* r) {
   BufFreeClear((void**)r->prob);
   BufFree(&r->prob);
   BufFree(&r->prime);
+  r->comboLen = 0;
 }
 
 // NSOME_NODE_NAME -> Some Node Name
