@@ -762,8 +762,8 @@ void loop() {
         for (int pi = pagei; pi < NK_MIN(pagei + r->perPage, totalCombos); ++pi) {
           for (int j = 0; j < r->comboLen; ++j) {
             int k = pi * r->comboLen + j;
-            static char const* primestr[2] = { "", "P" };
-            nk_label(nk, primestr[r->prime[k]], NK_TEXT_LEFT);
+            static char const* const primestr[2] = { "", "P" };
+            nk_label(nk, primestr[ArrayBitVal(r->prime, k)], NK_TEXT_LEFT);
             nk_label(nk, r->value[k], NK_TEXT_RIGHT);
             nk_label(nk, r->line[k], NK_TEXT_LEFT);
             nk_label(nk, r->prob[k], NK_TEXT_RIGHT);

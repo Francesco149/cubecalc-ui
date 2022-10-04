@@ -299,10 +299,10 @@ void treeCalc(TreeData* g, int maxCombos) {
       *BufAlloc(&wants) = WantOp(AND, elementsOnStack);
 
 #ifdef CUBECALC_DEBUG
-      dbg("===========================================");
+      dbg("===========================================\n");
       dbg("# %s\n", g->data[n->type][n->data].name);
       WantPrint(wants);
-      dbg("===========================================");
+      dbg("===========================================\n");
 #endif
 
       Category category = categoryValues[values[NCATEGORY]];
@@ -327,8 +327,20 @@ void treeCalc(TreeData* g, int maxCombos) {
         quant(99);
 
         treeResultClear(resd);
-        // TODO: fmt combos
 
+        size_t numCombos = BufLen(combos.onein) / combos.comboSize;
+        fmt(numCombosStr, numCombos);
+
+        if (numCombos <= maxCombos) {
+          BufEachi(combos.onein, i) {
+            *BufAlloc(&resd->line) = LineToStr(combos.lineHi[i], combos.lineLo[i]);
+            BufAllocStrf(&resd->value, "%d", combos.value[i]);
+            BufAllocStrf(&resd->prob, "%.02f", 1/combos.onein[i]);
+          }
+
+          BufCpy(&resd->prime, combos.prime);
+          resd->comboLen = combos.comboSize;
+        }
         LinesFree(&combos);
       }
     }

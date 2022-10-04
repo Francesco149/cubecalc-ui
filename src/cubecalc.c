@@ -908,7 +908,9 @@ float CubeCalc(
 #ifdef CUBECALC_DEBUG
   puts("");
   puts("# combos");
+#ifdef CUBECALC_PRINTCOMBOS
   LinesPrint(&combos);
+#endif
   printf("%zu total combos\n", BufLen(combos.lineHi) / combos.comboSize);
 #endif
 

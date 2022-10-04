@@ -265,6 +265,10 @@ void _BufAllocZero(void* pp, size_t count, size_t elementSize, Allocator const* 
 // append other (Buf ptr) to pp (ptr to Buf ptr) in place. return *pp
 void* BufCat(void* pp, void const* other);
 
+#define BufCpy(pdst, src) \
+  BufReserve(pdst, BufLen(src)), \
+  memcpy(*(pdst), src, BufLen(src) * BufHdr(src)->elementSize)
+
 //
 // shortcut to loop over every element
 //
