@@ -1615,22 +1615,19 @@ void examplesTopOverall() {
   {
     s.x += 450;
     int ncomment = uiTreeAddComment(s, 0, 0, 410, 310,
-        "example: 2+s invincibility and 10+ %stat top/overall", &succ);
+      "example: 2+s invincibility top/overall", &succ);
     int nstat = uiTreeAddChk(s, NSTAT, 0, 50, &succ);
     int namt = uiTreeAddChk(s, NAMOUNT, 0, 140, &succ);
-    int ndrop = uiTreeAddChk(s, NSTAT, 0, 230, &succ);
     int nres = nprevres = uiTreeAddChk(s, NRESULT, 210, 50, &succ);
 
     if (succ) {
-      uiTreeDataByNode(nstat)->value = STAT_IDX;
-      uiTreeDataByNode(ndrop)->value = INVIN_IDX;
-      uiTreeDataByNode(namt)->value = 10;
+      uiTreeDataByNode(nstat)->value = INVIN_IDX;
+      uiTreeDataByNode(namt)->value = 2;
       uiTreeDataByNode(nres)->bounds.h = 260;
       uiTreeResultByNode(nres)->perPage = 100;
       uiTreeLink(nsplit, nstat);
       uiTreeLink(nstat, namt);
       uiTreeLink(namt, nres);
-      uiTreeLink(ndrop, nres);
     }
   }
 }
