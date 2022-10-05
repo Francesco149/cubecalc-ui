@@ -474,6 +474,12 @@ intmax_t ProbToOneIn(double p);
 intmax_t ProbToGeoDistrQuantileDingle(double p, double percent);
 
 //
+// Humanize: write numbers in a human friendly form (for example 2.14b instead of 2147483647
+//
+
+void Humanize(char* buf, size_t sz, intmax_t value);
+
+//
 // Memory arena
 //
 // this allocator is inteded for cases when you will free all allocations at once and no resizing
@@ -922,6 +928,61 @@ intmax_t ProbToOneIn(double p) {
 intmax_t ProbToGeoDistrQuantileDingle(double p, double percent) {
   if (p <= 0) return 0;
   return round(log(1 - percent / 100) / log(1 - p));
+}
+
+//
+// Humanize
+//
+
+static
+int HumanizeSnprintf(intmax_t x, char* buf, size_t sz, char const* suff) {
+  return snprintf(buf, sz, "%jd%s ", x, suff);
+}
+
+static
+int HumanizeSnprintfWithDot(double x, char* buf, size_t sz, char const* suff) {
+  intmax_t mod = (intmax_t)(x * 10) % 10;
+  if (mod) {
+    return snprintf(buf, sz, "%jd.%jd%s ", (intmax_t)x, mod, suff);
+  }
+  return HumanizeSnprintf((intmax_t)x, buf, sz, suff);
+}
+
+static
+int HumanizeStepWithDot(intmax_t mag, char const* suff, char* buf, size_t sz, int value) {
+  if (value >= mag) {
+    double x = value / (double)mag;
+    int n = HumanizeSnprintfWithDot(x, 0, 0, suff);
+    if (n >= sz) {
+      snprintf(buf, sz, "...");
+    } else {
+      HumanizeSnprintfWithDot(x, buf, sz, suff);
+    }
+    return n;
+  }
+  return 0;
+}
+
+void Humanize(char* buf, size_t sz, intmax_t value) {
+  const intmax_t k = 1000;
+  const intmax_t m = k * k;
+  const intmax_t b = k * m;
+
+  if (value < 0) {
+    int n = snprintf(buf, sz, "-");
+    buf += n;
+    sz -= n;
+    value *= -1;
+  }
+
+  if (value < k) {
+    snprintf(buf, sz, "%jd", value);
+    return;
+  }
+
+  HumanizeStepWithDot(b, "b", buf, sz, value) ||
+  HumanizeStepWithDot(m, "m", buf, sz, value) ||
+  HumanizeStepWithDot(k, "k", buf, sz, value);
 }
 
 //

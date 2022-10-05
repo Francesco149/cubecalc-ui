@@ -56,17 +56,17 @@ typedef struct _Comment {
 typedef struct _Result {
   int page, perPage;
 
-  char average[22];
-  char within50[22];
-  char within75[22];
-  char within95[22];
-  char within99[22];
+  char average[8];
+  char within50[8];
+  char within75[8];
+  char within95[8];
+  char within99[8];
   int comboLen;
   char** line;
   char** value;
   char** prob;
   intmax_t* prime;
-  char numCombosStr[22];
+  char numCombosStr[8];
 } Result;
 
 typedef struct _TreeData {

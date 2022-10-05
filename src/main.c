@@ -1420,6 +1420,8 @@ void storageCommit() {
       ccall('storageAfterCommit', 'v');
     });
   );
+#else
+  storageAfterCommit();
 #endif
 }
 

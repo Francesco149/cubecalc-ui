@@ -337,69 +337,6 @@ sint32_size(int32_t v)
 }
 
 /**
- * Return the number of bytes required to store a 64-bit unsigned integer in
- * base-128 varint encoding.
- *
- * \param v
- *      Value to encode.
- * \return
- *      Number of bytes required.
- */
-static inline size_t
-uint64_size(uint64_t v)
-{
-	uint32_t upper_v = (uint32_t) (v >> 32);
-
-	if (upper_v == 0) {
-		return uint32_size((uint32_t) v);
-	} else if (upper_v < (1UL << 3)) {
-		return 5;
-	} else if (upper_v < (1UL << 10)) {
-		return 6;
-	} else if (upper_v < (1UL << 17)) {
-		return 7;
-	} else if (upper_v < (1UL << 24)) {
-		return 8;
-	} else if (upper_v < (1UL << 31)) {
-		return 9;
-	} else {
-		return 10;
-	}
-}
-
-/**
- * Return the ZigZag-encoded 64-bit unsigned integer form of a 64-bit signed
- * integer.
- *
- * \param v
- *      Value to encode.
- * \return
- *      ZigZag encoded integer.
- */
-static inline uint64_t
-zigzag64(int64_t v)
-{
-	// Note:  Using unsigned types prevents undefined behavior
-	return ((uint64_t)v << 1) ^ -((uint64_t)v >> 63);
-}
-
-/**
- * Return the number of bytes required to store a signed 64-bit integer,
- * converted to an unsigned 64-bit integer with ZigZag encoding, using base-128
- * varint encoding.
- *
- * \param v
- *      Value to encode.
- * \return
- *      Number of bytes required.
- */
-static inline size_t
-sint64_size(int64_t v)
-{
-	return uint64_size(zigzag64(v));
-}
-
-/**
  * Calculate the serialized size of a single required message field, including
  * the space needed by the preceding tag.
  *
@@ -424,11 +361,6 @@ required_field_get_packed_size(const ProtobufCFieldDescriptor *field,
 		return rv + int32_size(*(const int32_t *) member);
 	case PROTOBUF_C_TYPE_UINT32:
 		return rv + uint32_size(*(const uint32_t *) member);
-	case PROTOBUF_C_TYPE_SINT64:
-		return rv + sint64_size(*(const int64_t *) member);
-	case PROTOBUF_C_TYPE_INT64:
-	case PROTOBUF_C_TYPE_UINT64:
-		return rv + uint64_size(*(const uint64_t *) member);
 	case PROTOBUF_C_TYPE_SFIXED32:
 	case PROTOBUF_C_TYPE_FIXED32:
 		return rv + 4;
@@ -455,6 +387,8 @@ required_field_get_packed_size(const ProtobufCFieldDescriptor *field,
 		size_t subrv = msg ? protobuf_c_message_get_packed_size(msg) : 0;
 		return rv + uint32_size(subrv) + subrv;
 	}
+	default:
+		break;
 	}
 	PROTOBUF_C__ASSERT_NOT_REACHED();
 	return 0;
@@ -541,13 +475,6 @@ field_is_zeroish(const ProtobufCFieldDescriptor *field,
 	case PROTOBUF_C_TYPE_SFIXED32:
 	case PROTOBUF_C_TYPE_FIXED32:
 		ret = (0 == *(const uint32_t *) member);
-		break;
-	case PROTOBUF_C_TYPE_SINT64:
-	case PROTOBUF_C_TYPE_INT64:
-	case PROTOBUF_C_TYPE_UINT64:
-	case PROTOBUF_C_TYPE_SFIXED64:
-	case PROTOBUF_C_TYPE_FIXED64:
-		ret = (0 == *(const uint64_t *) member);
 		break;
 	case PROTOBUF_C_TYPE_FLOAT:
 		ret = (0 == *(const float *) member);
@@ -636,24 +563,10 @@ repeated_field_get_packed_size(const ProtobufCFieldDescriptor *field,
 		for (i = 0; i < count; i++)
 			rv += uint32_size(((uint32_t *) array)[i]);
 		break;
-	case PROTOBUF_C_TYPE_SINT64:
-		for (i = 0; i < count; i++)
-			rv += sint64_size(((int64_t *) array)[i]);
-		break;
-	case PROTOBUF_C_TYPE_INT64:
-	case PROTOBUF_C_TYPE_UINT64:
-		for (i = 0; i < count; i++)
-			rv += uint64_size(((uint64_t *) array)[i]);
-		break;
 	case PROTOBUF_C_TYPE_SFIXED32:
 	case PROTOBUF_C_TYPE_FIXED32:
 	case PROTOBUF_C_TYPE_FLOAT:
 		rv += 4 * count;
-		break;
-	case PROTOBUF_C_TYPE_SFIXED64:
-	case PROTOBUF_C_TYPE_FIXED64:
-	case PROTOBUF_C_TYPE_DOUBLE:
-		rv += 8 * count;
 		break;
 	case PROTOBUF_C_TYPE_BOOL:
 		rv += count;
@@ -676,6 +589,8 @@ repeated_field_get_packed_size(const ProtobufCFieldDescriptor *field,
 				((ProtobufCMessage **) array)[i]);
 			rv += uint32_size(len) + len;
 		}
+		break;
+	default:
 		break;
 	}
 
@@ -846,63 +761,6 @@ sint32_pack(int32_t value, uint8_t *out)
 }
 
 /**
- * Pack a 64-bit unsigned integer using base-128 varint encoding and return the
- * number of bytes written.
- *
- * \param value
- *      Value to encode.
- * \param[out] out
- *      Packed value.
- * \return
- *      Number of bytes written to `out`.
- */
-static size_t
-uint64_pack(uint64_t value, uint8_t *out)
-{
-	uint32_t hi = (uint32_t) (value >> 32);
-	uint32_t lo = (uint32_t) value;
-	unsigned rv;
-
-	if (hi == 0)
-		return uint32_pack((uint32_t) lo, out);
-	out[0] = (lo) | 0x80;
-	out[1] = (lo >> 7) | 0x80;
-	out[2] = (lo >> 14) | 0x80;
-	out[3] = (lo >> 21) | 0x80;
-	if (hi < 8) {
-		out[4] = (hi << 4) | (lo >> 28);
-		return 5;
-	} else {
-		out[4] = ((hi & 7) << 4) | (lo >> 28) | 0x80;
-		hi >>= 3;
-	}
-	rv = 5;
-	while (hi >= 128) {
-		out[rv++] = hi | 0x80;
-		hi >>= 7;
-	}
-	out[rv++] = hi;
-	return rv;
-}
-
-/**
- * Pack a 64-bit signed integer in ZigZag encoding and return the number of
- * bytes written.
- *
- * \param value
- *      Value to encode.
- * \param[out] out
- *      Packed value.
- * \return
- *      Number of bytes written to `out`.
- */
-static inline size_t
-sint64_pack(int64_t value, uint8_t *out)
-{
-	return uint64_pack(zigzag64(value), out);
-}
-
-/**
  * Pack a 32-bit quantity in little-endian byte order. Used for protobuf wire
  * types fixed32, sfixed32, float. Similar to "htole32".
  *
@@ -927,33 +785,6 @@ fixed32_pack(uint32_t value, void *out)
 	buf[3] = value >> 24;
 #endif
 	return 4;
-}
-
-/**
- * Pack a 64-bit quantity in little-endian byte order. Used for protobuf wire
- * types fixed64, sfixed64, double. Similar to "htole64".
- *
- * \todo The big-endian impl is really only good for 32-bit machines, a 64-bit
- * version would be appreciated, plus a way to decide to use 64-bit math where
- * convenient.
- *
- * \param value
- *      Value to encode.
- * \param[out] out
- *      Packed value.
- * \return
- *      Number of bytes written to `out`.
- */
-static inline size_t
-fixed64_pack(uint64_t value, void *out)
-{
-#if !defined(WORDS_BIGENDIAN)
-	memcpy(out, &value, 8);
-#else
-	fixed32_pack(value, out);
-	fixed32_pack(value >> 32, ((char *) out) + 4);
-#endif
-	return 8;
 }
 
 /**
@@ -1070,8 +901,9 @@ tag_pack(uint32_t id, uint8_t *out)
 {
 	if (id < (1UL << (32 - 3)))
 		return uint32_pack(id << 3, out);
-	else
-		return uint64_pack(((uint64_t) id) << 3, out);
+	else {
+		PROTOBUF_C__ASSERT_NOT_REACHED();
+	}
 }
 
 /**
@@ -1103,23 +935,11 @@ required_field_pack(const ProtobufCFieldDescriptor *field,
 	case PROTOBUF_C_TYPE_UINT32:
 		out[0] |= PROTOBUF_C_WIRE_TYPE_VARINT;
 		return rv + uint32_pack(*(const uint32_t *) member, out + rv);
-	case PROTOBUF_C_TYPE_SINT64:
-		out[0] |= PROTOBUF_C_WIRE_TYPE_VARINT;
-		return rv + sint64_pack(*(const int64_t *) member, out + rv);
-	case PROTOBUF_C_TYPE_INT64:
-	case PROTOBUF_C_TYPE_UINT64:
-		out[0] |= PROTOBUF_C_WIRE_TYPE_VARINT;
-		return rv + uint64_pack(*(const uint64_t *) member, out + rv);
 	case PROTOBUF_C_TYPE_SFIXED32:
 	case PROTOBUF_C_TYPE_FIXED32:
 	case PROTOBUF_C_TYPE_FLOAT:
 		out[0] |= PROTOBUF_C_WIRE_TYPE_32BIT;
 		return rv + fixed32_pack(*(const uint32_t *) member, out + rv);
-	case PROTOBUF_C_TYPE_SFIXED64:
-	case PROTOBUF_C_TYPE_FIXED64:
-	case PROTOBUF_C_TYPE_DOUBLE:
-		out[0] |= PROTOBUF_C_WIRE_TYPE_64BIT;
-		return rv + fixed64_pack(*(const uint64_t *) member, out + rv);
 	case PROTOBUF_C_TYPE_BOOL:
 		out[0] |= PROTOBUF_C_WIRE_TYPE_VARINT;
 		return rv + boolean_pack(*(const protobuf_c_boolean *) member, out + rv);
@@ -1132,6 +952,8 @@ required_field_pack(const ProtobufCFieldDescriptor *field,
 	case PROTOBUF_C_TYPE_MESSAGE:
 		out[0] |= PROTOBUF_C_WIRE_TYPE_LENGTH_PREFIXED;
 		return rv + prefixed_message_pack(*(ProtobufCMessage * const *) member, out + rv);
+	default:
+		break;
 	}
 	PROTOBUF_C__ASSERT_NOT_REACHED();
 	return 0;
@@ -1288,29 +1110,6 @@ copy_to_little_endian_32(void *out, const void *in, const unsigned n)
 }
 
 /**
- * Pack an array of 64-bit quantities.
- *
- * \param[out] out
- *      Destination.
- * \param[in] in
- *      Source.
- * \param[in] n
- *      Number of elements in the source array.
- */
-static void
-copy_to_little_endian_64(void *out, const void *in, const unsigned n)
-{
-#if !defined(WORDS_BIGENDIAN)
-	memcpy(out, in, n * 8);
-#else
-	unsigned i;
-	const uint64_t *ini = in;
-	for (i = 0; i < n; i++)
-		fixed64_pack(ini[i], (uint64_t *) out + i);
-#endif
-}
-
-/**
  * Get the minimum number of bytes required to pack a field value of a
  * particular type.
  *
@@ -1385,12 +1184,6 @@ repeated_field_pack(const ProtobufCFieldDescriptor *field,
 			copy_to_little_endian_32(payload_at, array, count);
 			payload_at += count * 4;
 			break;
-		case PROTOBUF_C_TYPE_SFIXED64:
-		case PROTOBUF_C_TYPE_FIXED64:
-		case PROTOBUF_C_TYPE_DOUBLE:
-			copy_to_little_endian_64(payload_at, array, count);
-			payload_at += count * 8;
-			break;
 		case PROTOBUF_C_TYPE_ENUM:
 		case PROTOBUF_C_TYPE_INT32: {
 			const int32_t *arr = (const int32_t *) array;
@@ -1404,23 +1197,10 @@ repeated_field_pack(const ProtobufCFieldDescriptor *field,
 				payload_at += sint32_pack(arr[i], payload_at);
 			break;
 		}
-		case PROTOBUF_C_TYPE_SINT64: {
-			const int64_t *arr = (const int64_t *) array;
-			for (i = 0; i < count; i++)
-				payload_at += sint64_pack(arr[i], payload_at);
-			break;
-		}
 		case PROTOBUF_C_TYPE_UINT32: {
 			const uint32_t *arr = (const uint32_t *) array;
 			for (i = 0; i < count; i++)
 				payload_at += uint32_pack(arr[i], payload_at);
-			break;
-		}
-		case PROTOBUF_C_TYPE_INT64:
-		case PROTOBUF_C_TYPE_UINT64: {
-			const uint64_t *arr = (const uint64_t *) array;
-			for (i = 0; i < count; i++)
-				payload_at += uint64_pack(arr[i], payload_at);
 			break;
 		}
 		case PROTOBUF_C_TYPE_BOOL: {
@@ -1568,29 +1348,11 @@ required_field_pack_to_buffer(const ProtobufCFieldDescriptor *field,
 		rv += uint32_pack(*(const uint32_t *) member, scratch + rv);
 		buffer->append(buffer, rv, scratch);
 		break;
-	case PROTOBUF_C_TYPE_SINT64:
-		scratch[0] |= PROTOBUF_C_WIRE_TYPE_VARINT;
-		rv += sint64_pack(*(const int64_t *) member, scratch + rv);
-		buffer->append(buffer, rv, scratch);
-		break;
-	case PROTOBUF_C_TYPE_INT64:
-	case PROTOBUF_C_TYPE_UINT64:
-		scratch[0] |= PROTOBUF_C_WIRE_TYPE_VARINT;
-		rv += uint64_pack(*(const uint64_t *) member, scratch + rv);
-		buffer->append(buffer, rv, scratch);
-		break;
 	case PROTOBUF_C_TYPE_SFIXED32:
 	case PROTOBUF_C_TYPE_FIXED32:
 	case PROTOBUF_C_TYPE_FLOAT:
 		scratch[0] |= PROTOBUF_C_WIRE_TYPE_32BIT;
 		rv += fixed32_pack(*(const uint32_t *) member, scratch + rv);
-		buffer->append(buffer, rv, scratch);
-		break;
-	case PROTOBUF_C_TYPE_SFIXED64:
-	case PROTOBUF_C_TYPE_FIXED64:
-	case PROTOBUF_C_TYPE_DOUBLE:
-		scratch[0] |= PROTOBUF_C_WIRE_TYPE_64BIT;
-		rv += fixed64_pack(*(const uint64_t *) member, scratch + rv);
 		buffer->append(buffer, rv, scratch);
 		break;
 	case PROTOBUF_C_TYPE_BOOL:
@@ -1774,19 +1536,6 @@ get_packed_payload_length(const ProtobufCFieldDescriptor *field,
 			rv += uint32_size(arr[i]);
 		break;
 	}
-	case PROTOBUF_C_TYPE_SINT64: {
-		const int64_t *arr = (const int64_t *) array;
-		for (i = 0; i < count; i++)
-			rv += sint64_size(arr[i]);
-		break;
-	}
-	case PROTOBUF_C_TYPE_INT64:
-	case PROTOBUF_C_TYPE_UINT64: {
-		const uint64_t *arr = (const uint64_t *) array;
-		for (i = 0; i < count; i++)
-			rv += uint64_size(arr[i]);
-		break;
-	}
 	case PROTOBUF_C_TYPE_BOOL:
 		return count;
 	default:
@@ -1833,20 +1582,6 @@ pack_buffer_packed_payload(const ProtobufCFieldDescriptor *field,
 		}
 		break;
 #endif
-	case PROTOBUF_C_TYPE_SFIXED64:
-	case PROTOBUF_C_TYPE_FIXED64:
-	case PROTOBUF_C_TYPE_DOUBLE:
-#if !defined(WORDS_BIGENDIAN)
-		rv = count * 8;
-		goto no_packing_needed;
-#else
-		for (i = 0; i < count; i++) {
-			unsigned len = fixed64_pack(((uint64_t *) array)[i], scratch);
-			buffer->append(buffer, len, scratch);
-			rv += len;
-		}
-		break;
-#endif
 	case PROTOBUF_C_TYPE_ENUM:
 	case PROTOBUF_C_TYPE_INT32:
 		for (i = 0; i < count; i++) {
@@ -1865,21 +1600,6 @@ pack_buffer_packed_payload(const ProtobufCFieldDescriptor *field,
 	case PROTOBUF_C_TYPE_UINT32:
 		for (i = 0; i < count; i++) {
 			unsigned len = uint32_pack(((uint32_t *) array)[i], scratch);
-			buffer->append(buffer, len, scratch);
-			rv += len;
-		}
-		break;
-	case PROTOBUF_C_TYPE_SINT64:
-		for (i = 0; i < count; i++) {
-			unsigned len = sint64_pack(((int64_t *) array)[i], scratch);
-			buffer->append(buffer, len, scratch);
-			rv += len;
-		}
-		break;
-	case PROTOBUF_C_TYPE_INT64:
-	case PROTOBUF_C_TYPE_UINT64:
-		for (i = 0; i < count; i++) {
-			unsigned len = uint64_pack(((uint64_t *) array)[i], scratch);
 			buffer->append(buffer, len, scratch);
 			rv += len;
 		}
@@ -2442,46 +2162,6 @@ parse_fixed_uint32(const uint8_t *data)
 #endif
 }
 
-static uint64_t
-parse_uint64(unsigned len, const uint8_t *data)
-{
-	unsigned shift, i;
-	uint64_t rv;
-
-	if (len < 5)
-		return parse_uint32(len, data);
-	rv = ((uint64_t) (data[0] & 0x7f)) |
-		((uint64_t) (data[1] & 0x7f) << 7) |
-		((uint64_t) (data[2] & 0x7f) << 14) |
-		((uint64_t) (data[3] & 0x7f) << 21);
-	shift = 28;
-	for (i = 4; i < len; i++) {
-		rv |= (((uint64_t) (data[i] & 0x7f)) << shift);
-		shift += 7;
-	}
-	return rv;
-}
-
-static inline int64_t
-unzigzag64(uint64_t v)
-{
-	// Note:  Using unsigned types prevents undefined behavior
-	return (int64_t)((v >> 1) ^ -(v & 1));
-}
-
-static inline uint64_t
-parse_fixed_uint64(const uint8_t *data)
-{
-#if !defined(WORDS_BIGENDIAN)
-	uint64_t t;
-	memcpy(&t, data, 8);
-	return t;
-#else
-	return (uint64_t) parse_fixed_uint32(data) |
-		(((uint64_t) parse_fixed_uint32(data + 4)) << 32);
-#endif
-}
-
 static protobuf_c_boolean
 parse_boolean(unsigned len, const uint8_t *data)
 {
@@ -2525,24 +2205,6 @@ parse_required_member(ScannedMember *scanned_member,
 		if (wire_type != PROTOBUF_C_WIRE_TYPE_32BIT)
 			return FALSE;
 		*(uint32_t *) member = parse_fixed_uint32(data);
-		return TRUE;
-	case PROTOBUF_C_TYPE_INT64:
-	case PROTOBUF_C_TYPE_UINT64:
-		if (wire_type != PROTOBUF_C_WIRE_TYPE_VARINT)
-			return FALSE;
-		*(uint64_t *) member = parse_uint64(len, data);
-		return TRUE;
-	case PROTOBUF_C_TYPE_SINT64:
-		if (wire_type != PROTOBUF_C_WIRE_TYPE_VARINT)
-			return FALSE;
-		*(int64_t *) member = unzigzag64(parse_uint64(len, data));
-		return TRUE;
-	case PROTOBUF_C_TYPE_SFIXED64:
-	case PROTOBUF_C_TYPE_FIXED64:
-	case PROTOBUF_C_TYPE_DOUBLE:
-		if (wire_type != PROTOBUF_C_WIRE_TYPE_64BIT)
-			return FALSE;
-		*(uint64_t *) member = parse_fixed_uint64(data);
 		return TRUE;
 	case PROTOBUF_C_TYPE_BOOL:
 		*(protobuf_c_boolean *) member = parse_boolean(len, data);
@@ -2625,6 +2287,8 @@ parse_required_member(ScannedMember *scanned_member,
 			return FALSE;
 		return TRUE;
 	}
+	default:
+		break;
 	}
 	return FALSE;
 }
@@ -2770,19 +2434,6 @@ parse_packed_repeated_member(ScannedMember *scanned_member,
 		}
 		break;
 #endif
-	case PROTOBUF_C_TYPE_SFIXED64:
-	case PROTOBUF_C_TYPE_FIXED64:
-	case PROTOBUF_C_TYPE_DOUBLE:
-		count = (scanned_member->len - scanned_member->length_prefix_len) / 8;
-#if !defined(WORDS_BIGENDIAN)
-		goto no_unpacking_needed;
-#else
-		for (i = 0; i < count; i++) {
-			((uint64_t *) array)[i] = parse_fixed_uint64(at);
-			at += 8;
-		}
-		break;
-#endif
 	case PROTOBUF_C_TYPE_ENUM:
 	case PROTOBUF_C_TYPE_INT32:
 		while (rem > 0) {
@@ -2821,31 +2472,6 @@ parse_packed_repeated_member(ScannedMember *scanned_member,
 		}
 		break;
 
-	case PROTOBUF_C_TYPE_SINT64:
-		while (rem > 0) {
-			unsigned s = scan_varint(rem, at);
-			if (s == 0) {
-				PROTOBUF_C_UNPACK_ERROR("bad packed-repeated sint64 value");
-				return FALSE;
-			}
-			((int64_t *) array)[count++] = unzigzag64(parse_uint64(s, at));
-			at += s;
-			rem -= s;
-		}
-		break;
-	case PROTOBUF_C_TYPE_INT64:
-	case PROTOBUF_C_TYPE_UINT64:
-		while (rem > 0) {
-			unsigned s = scan_varint(rem, at);
-			if (s == 0) {
-				PROTOBUF_C_UNPACK_ERROR("bad packed-repeated int64/uint64 value");
-				return FALSE;
-			}
-			((int64_t *) array)[count++] = parse_uint64(s, at);
-			at += s;
-			rem -= s;
-		}
-		break;
 	case PROTOBUF_C_TYPE_BOOL:
 		while (rem > 0) {
 			unsigned s = scan_varint(rem, at);
@@ -3148,14 +2774,6 @@ protobuf_c_message_unpack(const ProtobufCMessageDescriptor *desc,
 			tmp.len = i + 1;
 			break;
 		}
-		case PROTOBUF_C_WIRE_TYPE_64BIT:
-			if (rem < 8) {
-				PROTOBUF_C_UNPACK_ERROR("too short after 64bit wiretype at offset %u",
-							(unsigned) (at - data));
-				goto error_cleanup_during_scan;
-			}
-			tmp.len = 8;
-			break;
 		case PROTOBUF_C_WIRE_TYPE_LENGTH_PREFIXED: {
 			size_t pref_len;
 

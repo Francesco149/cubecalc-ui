@@ -11,7 +11,6 @@ void treeCalc(TreeData* g, int maxCombos);
 #if defined(GRAPHCALC_IMPLEMENTATION) && !defined(GRAPHCALC_UNIT)
 #define GRAPHCALC_UNIT
 
-#include "humanize.c"
 #include "generated.c"
 #include "utils.c"
 #include "cubecalc.c"
@@ -318,8 +317,8 @@ void treeCalc(TreeData* g, int maxCombos) {
       Result* resd = &g->resultData[n->data];
       if (p > 0) {
 
-#define fmt(x, y) humanize(resd->x, sizeof(resd->x), y)
-#define quant(n, ...) fmt(within##n, ProbToGeoDistrQuantileDingle(p, n))
+#define fmt(x, y) Humanize(resd->x, sizeof(resd->x), y)
+#define quant(n, ...) fmt(within##n, (int)(intmax_t)ProbToGeoDistrQuantileDingle(p, n))
         fmt(average, ProbToOneIn(p));
         quant(50);
         quant(75);
