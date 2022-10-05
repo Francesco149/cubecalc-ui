@@ -34,6 +34,12 @@ EM_JS(float, deviceScaleFactor, (), {
 EM_JS(float, pinchDelta, (), {
   return Module.deltaDist;
 });
+
+EM_JS(int, isTouch, (), {
+  return (('ontouchstart' in window) ||
+     (navigator.maxTouchPoints > 0) ||
+     (navigator.msMaxTouchPoints > 0)) ? 1 : 0;
+});
 #endif
 
 #define WINDOW_WIDTH 800
@@ -1738,6 +1744,11 @@ int main() {
   }
   disclaimerHeight = NK_MAX(rowHeight, disclaimerHeight);
   disclaimerHeight += nk->style.edit.padding.y * 2 + nk->style.edit.border * 2;
+
+  if (isTouch()) {
+    tool = PAN;
+    nk_glfw3_set_left_button(toolToMouseButton[tool]);
+  }
 
 #ifdef __EMSCRIPTEN__
   resizeCanvas();
