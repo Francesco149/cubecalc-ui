@@ -28,7 +28,11 @@ EM_JS(void, resizeCanvas, (), {
 });
 
 EM_JS(float, deviceScaleFactor, (), {
-  return js_deviceScaleFactor();
+  return Window.devicePixelRatio || 1;
+});
+
+EM_JS(float, pinchDelta, (), {
+  return Module.deltaDist;
 });
 #endif
 
@@ -588,6 +592,14 @@ nk_bool presetFilter(const struct nk_text_edit *box, nk_rune unicode) {
 }
 
 void loop() {
+#ifdef __EMSCRIPTEN__
+  float pd = pinchDelta();
+  if (pd != 0) {
+    nk_glfw3_set_scale_factor(nk_glfw3_scale_factor() * (1 + pd * 0.002));
+    flags |= UPDATE_SIZE;
+  }
+#endif
+
   glfwPollEvents();
   nk_glfw3_new_frame();
 

@@ -90,7 +90,8 @@ fi
 
 #xdg-open "http://0.0.0.0:6969/"
 if [ "$compiler" = "emcc" ]; then
-  python -m http.server 6969
+  ln -fsv . test
+  python -m http.server --directory test 6969
 else
   # I can't get asan to work with glfw. it makes glx fail for some reason
   ./cubecalc

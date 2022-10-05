@@ -101,6 +101,7 @@ static struct nk_glfw {
     struct nk_vec2 double_click_pos;
     float scale_factor;
     int left_button;
+    int was_dragging;
 } glfw;
 
 NK_API float nk_glfw3_scale_factor() {
@@ -407,6 +408,7 @@ nk_glfw3_init(GLFWwindow *win, enum nk_glfw_init_state init_state)
     glfw.is_double_click_down = nk_false;
     glfw.double_click_pos = nk_vec2(0, 0);
     glfw.left_button = NK_BUTTON_LEFT;
+    glfw.was_dragging = 0;
 
     return &glfw.ctx;
 }
@@ -429,6 +431,42 @@ nk_glfw3_font_stash_end(void)
     if (glfw.atlas.default_font)
         nk_style_set_font(&glfw.ctx, &glfw.atlas.default_font->handle);
 }
+
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+
+EM_JS(float, dragX, (), {
+  return Module.X || 0;
+});
+
+EM_JS(float, dragY, (), {
+  return Module.Y || 0;
+});
+
+EM_JS(float, dragPrevX, (), {
+  return Module.prevX || 0;
+});
+
+EM_JS(float, dragPrevY, (), {
+  return Module.prevY || 0;
+});
+
+EM_JS(void, dragReset, (), {
+  Module.deltaX = Module.deltaY = 0;
+});
+
+EM_JS(float, dragDeltaX, (), {
+  return Module.deltaX || 0;
+});
+
+EM_JS(float, dragDeltaY, (), {
+  return Module.deltaY || 0;
+});
+
+EM_JS(int, hasClick, (int button), {
+  return (button < 0 || button == Module.clickButton) ? 1 : 0;
+});
+#endif
 
 NK_API void
 nk_glfw3_new_frame(void)
@@ -488,9 +526,28 @@ nk_glfw3_new_frame(void)
         nk_input_key(ctx, NK_KEY_SHIFT, 0);
     }
 
+#ifdef __EMSCRIPTEN__
+    if (hasClick(-1)) {
+      x = dragX();
+      y = dragY();
+    } else
+#endif
     glfwGetCursorPos(win, &x, &y);
     x /= glfw.scale_factor;
     y /= glfw.scale_factor;
+
+#ifdef __EMSCRIPTEN__
+    if (hasClick(-1)) {
+      ctx->input.mouse.pos.x = x;
+      ctx->input.mouse.pos.y = y;
+      ctx->input.mouse.prev.x = dragPrevX() / glfw.scale_factor;
+      ctx->input.mouse.prev.y = dragPrevY() / glfw.scale_factor;
+      ctx->input.mouse.delta.x = dragDeltaX() / glfw.scale_factor;
+      ctx->input.mouse.delta.y = dragDeltaY() / glfw.scale_factor;
+      dragReset();
+    } else
+#endif
+
     nk_input_motion(ctx, (int)x, (int)y);
     if (ctx->input.mouse.grabbed) {
         glfwSetCursorPos(glfw.win, (double)ctx->input.mouse.prev.x, (double)ctx->input.mouse.prev.y);
@@ -498,12 +555,25 @@ nk_glfw3_new_frame(void)
         ctx->input.mouse.pos.y = ctx->input.mouse.prev.y;
     }
 
+#ifdef __EMSCRIPTEN__
+    nk_input_button(ctx, NK_BUTTON_LEFT, (int)x, (int)y, hasClick(1));
+    nk_input_button(ctx, NK_BUTTON_MIDDLE, (int)x, (int)y, hasClick(4));
+    nk_input_button(ctx, NK_BUTTON_RIGHT, (int)x, (int)y, hasClick(2));
+    if (glfw.left_button != NK_BUTTON_LEFT) {
+      nk_input_button(ctx, glfw.left_button, (int)x, (int)y, hasClick(1));
+    }
+#else
     nk_input_button(ctx, NK_BUTTON_LEFT, (int)x, (int)y, glfwGetMouseButton(win, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS);
     nk_input_button(ctx, NK_BUTTON_MIDDLE, (int)x, (int)y, glfwGetMouseButton(win, GLFW_MOUSE_BUTTON_MIDDLE) == GLFW_PRESS);
     nk_input_button(ctx, NK_BUTTON_RIGHT, (int)x, (int)y, glfwGetMouseButton(win, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS);
-    nk_input_button(ctx, glfw.left_button, (int)x, (int)y, glfwGetMouseButton(win, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS);
+    if (glfw.left_button != NK_BUTTON_LEFT) {
+      nk_input_button(ctx, glfw.left_button, (int)x, (int)y, glfwGetMouseButton(win, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS);
+    }
+#endif
+
     nk_input_button(ctx, NK_BUTTON_DOUBLE, (int)glfw.double_click_pos.x, (int)glfw.double_click_pos.y, glfw.is_double_click_down);
     nk_input_scroll(ctx, glfw.scroll);
+
     nk_input_end(&glfw.ctx);
     glfw.text_len = 0;
     glfw.scroll = nk_vec2(0,0);

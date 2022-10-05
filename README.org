@@ -13,6 +13,6 @@ to set up the dev environment, [[https://nix.dev/tutorials/install-nix][install 
 
 to build the project, cd into ~src~ and type ~./build.sh~
 
-you should be able to see the result at http://0.0.0.0:6969
+you should be able to see the result at [[http://0.0.0.0:6969/test]]
 
 for an optimized release build, do ~./build.sh release~
