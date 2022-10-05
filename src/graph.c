@@ -109,6 +109,7 @@ char* nodeNames[nodeNamesCount] = { nodeTypes(StringifyComma) };
 // TODO: avoid the extra pointers, this is not good for the cpu cache
 // ideally cache 1 page worth of lines into the struct for performance at draw time
 void treeResultClear(Result* r) {
+  int perPage = r->perPage;
   BufFree(&r->line);
   BufFreeClear((void**)r->value);
   BufFree(&r->value);
@@ -116,6 +117,7 @@ void treeResultClear(Result* r) {
   BufFree(&r->prob);
   BufFree(&r->prime);
   memset(r, 0, sizeof(*r));
+  r->perPage = perPage;
 }
 
 // NSOME_NODE_NAME -> Some Node Name
