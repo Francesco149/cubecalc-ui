@@ -319,7 +319,7 @@ void treeCalc(TreeData* g, int maxCombos) {
       if (p > 0) {
 
 #define fmt(x, y) Humanize(resd->x, sizeof(resd->x), y)
-#define quant(n, ...) fmt(within##n, (int)(intmax_t)ProbToGeoDistrQuantileDingle(p, n))
+#define quant(n, ...) fmt(within##n, ProbToGeoDistrQuantileDingle(p, n))
         fmt(average, ProbToOneIn(p));
         quant(50);
         quant(75);
