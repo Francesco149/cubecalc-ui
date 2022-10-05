@@ -20,6 +20,7 @@
             mold
             protobuf
             protobufc
+            python310 # for the web server
 
             # for desktop
             libGL
