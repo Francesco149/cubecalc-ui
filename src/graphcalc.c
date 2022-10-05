@@ -4,6 +4,7 @@
 #include "graph.c"
 
 void treeCalcGlobalInit();
+void treeCalcGlobalFree();
 void treeCalc(TreeData* g, int maxCombos);
 
 #endif
@@ -23,6 +24,10 @@ extern void dbg(char* fmt, ...);
 
 void treeCalcGlobalInit() {
   CubeGlobalInit();
+}
+
+void treeCalcGlobalFree() {
+  CubeGlobalFree();
 }
 
 // we want to be able to override stats

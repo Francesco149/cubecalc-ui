@@ -33,7 +33,7 @@
     </script>
 
     <script type='text/javascript'>
-    const buildflags ="-I ./thirdparty/ -DTS=1664973173 compilation-units/monolith.c -o main.js -s USE_WEBGL2=1 -s USE_GLFW=3 -s FULL_ES2 -s WASM=1 --cache ./emcc-cache -sALLOW_MEMORY_GROWTH -lidbfs.js -sEXPORTED_FUNCTIONS=_main,_storageAfterInit,_storageAfterCommit -fdiagnostics-color=always -lGL -O3 -flto"
+    const buildflags ="-I ./thirdparty/ -DTS=1664981226 compilation-units/monolith.c -o main.js -s USE_WEBGL2=1 -s USE_GLFW=3 -s FULL_ES2 -s WASM=1 --cache ./emcc-cache -sALLOW_MEMORY_GROWTH -lidbfs.js -sEXPORTED_FUNCTIONS=_main,_storageAfterInit,_storageAfterCommit -fdiagnostics-color=always -lGL -DCUBECALC_DEBUG -DUTILS_STDIO -O0 -g -fsanitize=leak"
       console.log("built with flags: " + buildflags);
     </script>
 
@@ -64,6 +64,6 @@
         return Window.devicePixelRatio || 1;
       }
     </script>
-    <script async type="text/javascript" src="main.js?ts=1664973173"></script>
+    <script async type="text/javascript" src="main.js?ts=1664981226"></script>
   </body>
 </html>

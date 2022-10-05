@@ -2,29 +2,11 @@
 #define UTILS_H
 
 #include <stddef.h> // size_t
-#include <limits.h>
-#include <stdarg.h>
-#include <stdio.h>
-
-#ifndef UTILS_NO_STDINT
 #include <stdint.h> // intmax_t
-#elif defined(LLONG_MAX)
-typedef long long intmax_t;
-typedef unsigned long long uintmax_t;
-#ifndef SIZE_MAX
-#define SIZE_MAX LLONG_MAX
-#endif
-#else
-typedef long intmax_t;
-typedef unsigned long uintmax_t;
-#ifndef SIZE_MAX
-#define SIZE_MAX LONG_MAX
-#endif
-#endif
-
-#ifdef UTILS_NO_STDINT
-typedef intmax_t intptr_t; // TODO: more robust fallback
-typedef uintmax_t uintptr_t;
+#include <limits.h> // SIZE_MAX and others
+#include <stdarg.h>
+#ifdef UTILS_STDIO
+#include <stdio.h>
 #endif
 
 //
@@ -540,6 +522,7 @@ size_t BitCount(void* data, size_t bytes);
 // hash functions
 unsigned HashInt(unsigned x);
 
+#ifdef UTILS_STDIO
 //
 // Align: right justifies a group of lines
 //
@@ -568,6 +551,7 @@ Align* _AlignInit(Allocator const* allocator);
 void _AlignFeed(Align* al, char* alignFmt, char* fmt, ...);
 void AlignPrint(Align* al, FILE* f);
 void AlignFree(Align* al);
+#endif
 
 #endif
 
@@ -1232,6 +1216,7 @@ unsigned HashInt(unsigned x) {
   return x;
 }
 
+#ifdef UTILS_STDIO
 //
 // Align
 //
@@ -1280,5 +1265,6 @@ void AlignFree(Align* al) {
 }
 #undef allocatorDefault
 #define allocatorDefault allocatorDefault_
+#endif
 
 #endif

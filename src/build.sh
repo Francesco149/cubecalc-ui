@@ -19,8 +19,8 @@ platformflags="
   -sEXPORTED_FUNCTIONS=_main,_storageAfterInit,_storageAfterCommit
 "
 
-flags="-fdiagnostics-color=always -lGL"
-buildflags="-O0 -DCUBECALC_DEBUG" # ~1s build time
+flags="-fdiagnostics-color=always -lGL -DCUBECALC_DEBUG -DUTILS_STDIO"
+buildflags="-O0" # ~1s build time
 units=compilation-units/monolith.c
 if which emcc >/dev/null 2>&1; then
   cc=emcc
@@ -31,7 +31,7 @@ fi
 for x in $@; do
   case "$x" in
     rel*) buildflags="-O3 -flto" ;; # ~6s build time
-    san*) buildflags="-O3 -g -fsanitize=address,undefined,leak -DCUBECALC_DEBUG" ;;
+    san*) buildflags="-O0 -g -fsanitize=leak" ;;
     gen*)
       protoc -I ./thirdparty/ -I . --c_out=./proto ./cubecalc.proto || exit
       ;;
@@ -92,7 +92,6 @@ fi
 if [ "$compiler" = "emcc" ]; then
   python -m http.server 6969
 else
-  ASAN_OPTIONS=use_sigaltstack=false,symbolize=1 \
-  ASAN_SYMBOLIZER_PATH=$(which addr2line) \
+  # I can't get asan to work with glfw. it makes glx fail for some reason
   ./cubecalc
 fi

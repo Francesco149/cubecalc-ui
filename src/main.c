@@ -161,6 +161,13 @@ void uiTreeClear() {
   flags |= UPDATE_CONNECTIONS;
 }
 
+void uiTreeFree() {
+  treeClear(&graph);
+  treeFree(&graph);
+  BufFree(&removeNodes);
+  BufFree(&links);
+}
+
 int uiTreeAdd(int type, int x, int y) {
   int res = treeAdd(&graph, type, x, y);
   if (type == NRESULT) {
@@ -1609,6 +1616,8 @@ void presetList() {
     s[len] = 0;
   }
 
+  closedir(dir);
+
   qsort(presetFiles, BufLen(presetFiles), sizeof(*presetFiles), qsortStrcmp);
 }
 
@@ -1632,6 +1641,7 @@ void storageAfterInit() {
   } else {
     flags &= ~SHOW_DISCLAIMER;
   }
+  BufFree(&disc);
 
   examplesFile(BasicUsage);
   examplesFile(Operators);
@@ -1672,6 +1682,8 @@ void storageInit() {
 }
 
 int main() {
+  int res = 0;
+
   snprintf(presetFile, FILENAME_MAX, "autosave");
   treeGlobalInit();
   treeCalcGlobalInit();
@@ -1680,13 +1692,18 @@ int main() {
   glfwSetErrorCallback(errorCallback);
   if (!glfwInit()) {
     puts("[GFLW] failed to init!");
-    return 1;
+    res = 1;
+    goto cleanup;
   }
   glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_ES_API);
   glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 2);
   glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
-  glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+  glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_ANY_PROFILE);
   win = glfwCreateWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "MapleStory Average Cubing Cost", 0, 0);
+  if (!win) {
+    res = 1;
+    goto cleanup;
+  }
   glfwMakeContextCurrent(win);
   glfwGetWindowSize(win, &width, &height);
 
@@ -1723,5 +1740,13 @@ int main() {
   }
 #endif
 
-  return 0;
+cleanup:
+  uiTreeFree();
+  BufFreeClear((void**)presetFiles);
+  BufFree(&presetFiles);
+  BufFree(&errors);
+  treeCalcGlobalFree();
+  treeGlobalFree();
+  if (win) nk_glfw3_shutdown();
+  return res;
 }

@@ -77,7 +77,9 @@ typedef struct _TreeData {
 } TreeData;
 
 void treeGlobalInit();
+void treeGlobalFree();
 void treeClear(TreeData* g);
+void treeFree(TreeData* g); // call treeClear before this
 int treeDefaultValue(int type, int stat);
 int treeAdd(TreeData* g, int type, int x, int y);
 void treeDel(TreeData* g, int nodeIndex);
@@ -136,6 +138,12 @@ void treeGlobalInit() {
   treeInitNodeNames();
 }
 
+void treeGlobalFree() {
+  ArrayEach(char*, nodeNames, x) {
+    free(*x);
+  }
+}
+
 void treeClear(TreeData* g) {
   BufEach(Node, g->tree, n) {
     BufFree(&n->connections);
@@ -149,6 +157,15 @@ void treeClear(TreeData* g) {
     treeResultClear(r);
   }
   BufClear(g->resultData);
+}
+
+void treeFree(TreeData* g) {
+  BufFree(&g->tree);
+  BufFree(&g->commentData);
+  BufFree(&g->resultData);
+  for (size_t i = 0; i < NLAST; ++i) {
+    BufFree(&g->data[i]);
+  }
 }
 
 int treeDefaultValue(int type, int statIndex) {
