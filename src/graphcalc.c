@@ -315,6 +315,7 @@ void treeCalc(TreeData* g, int maxCombos) {
       float p = CubeCalc(wants, category, cube, tier, values[NLEVEL], region, &combos);
       dbg("p: %f\n", p);
       Result* resd = &g->resultData[n->data];
+      treeResultClear(resd);
       if (p > 0) {
 
 #define fmt(x, y) Humanize(resd->x, sizeof(resd->x), y)
@@ -324,8 +325,6 @@ void treeCalc(TreeData* g, int maxCombos) {
         quant(75);
         quant(95);
         quant(99);
-
-        treeResultClear(resd);
 
         size_t numCombos = BufLen(combos.onein) / combos.comboSize;
         fmt(numCombosStr, numCombos);
