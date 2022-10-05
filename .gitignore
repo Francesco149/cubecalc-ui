@@ -8,3 +8,4 @@ generated.c
 __pycache__
 src/data/*
 src/cubecalc
+src/test
