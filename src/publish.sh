@@ -6,7 +6,6 @@ files="
   index.html
   main.js
   main.wasm
-  cubecalc.zip
 "
 cp $files $d
 pushd $d

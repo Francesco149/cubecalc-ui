@@ -33,7 +33,7 @@
     </script>
 
     <script type='text/javascript'>
-const buildflags ="-sALLOW_MEMORY_GROWTH -lidbfs.js -fdiagnostics-color=always -m32 -sEXPORTED_FUNCTIONS=_main,_storageAfterInit,_storageAfterCommit -O0 -DCUBECALC_DEBUG"
+    const buildflags ="-I ./thirdparty/ -DTS=1664887073 compilation-units/monolith.c -o main.js -s USE_WEBGL2=1 -s USE_GLFW=3 -s FULL_ES2 -s WASM=1 --cache ./emcc-cache -sALLOW_MEMORY_GROWTH -lidbfs.js -m32 -sEXPORTED_FUNCTIONS=_main,_storageAfterInit,_storageAfterCommit -fdiagnostics-color=always -lGL -O3 -flto"
       console.log("built with flags: " + buildflags);
     </script>
 
@@ -64,6 +64,6 @@ const buildflags ="-sALLOW_MEMORY_GROWTH -lidbfs.js -fdiagnostics-color=always -
         return Window.devicePixelRatio || 1;
       }
     </script>
-    <script async type="text/javascript" src="main.js?ts=1664878700"></script>
+    <script async type="text/javascript" src="main.js?ts=1664887073"></script>
   </body>
 </html>

@@ -9,7 +9,6 @@
 #include <string.h>
 #include <math.h>
 #include <sys/stat.h>
-#include <threads.h>
 #include <stdlib.h> // qsort
 #include <dirent.h> // opendir readdir
 
@@ -1126,7 +1125,13 @@ dontShowCalc:
 #ifdef __EMSCRIPTEN__
   updateWindowSize();
 #else
-  glfwGetWindowSize(win, &width, &height);
+  int w, h;
+  glfwGetWindowSize(win, &w, &h);
+  if (w != width || h != height) {
+    width = w;
+    height = h;
+    flags |= UPDATE_SIZE;
+  }
 #endif
 
   if (flags & UPDATE_SIZE) {
@@ -1465,7 +1470,11 @@ static char* storageReadSync(char* path) {
   return rawData;
 }
 
+#ifdef __EMSCRIPTEN__
 #define DATADIR "/data/"
+#else
+#define DATADIR "./data/"
+#endif
 #define GLOBALS_FILE DATADIR ".globals.bin"
 #define EXTENSION ".maplecalcv2"
 #define AUTOSAVE_FILE DATADIR "autosave" EXTENSION
@@ -1592,7 +1601,10 @@ void presetList() {
       end = nameEnd;
     }
 
-    *BufAlloc(&presetFiles) = strndup(data->d_name, end - data->d_name);
+    size_t len = end - data->d_name;
+    char* s = *BufAlloc(&presetFiles) = malloc(len + 1);
+    memcpy(s, data->d_name, len);
+    s[len] = 0;
   }
 
   qsort(presetFiles, BufLen(presetFiles), sizeof(*presetFiles), qsortStrcmp);
@@ -1668,6 +1680,9 @@ int main() {
     puts("[GFLW] failed to init!");
     return 1;
   }
+  glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_ES_API);
+  glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 2);
+  glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
   glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
   win = glfwCreateWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "MapleStory Average Cubing Cost", 0, 0);
   glfwMakeContextCurrent(win);
