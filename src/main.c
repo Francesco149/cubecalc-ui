@@ -15,11 +15,11 @@
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
 
-EM_JS(int, canvas_get_width, (), {
+EM_JS(int, canvasWidth, (), {
   return Module.canvas.width;
 });
 
-EM_JS(int, canvas_get_height, (), {
+EM_JS(int, canvasHeight, (), {
   return Module.canvas.height;
 });
 
@@ -546,8 +546,8 @@ void uiTreeSetValue(NodeData* d, int newValue) {
 #ifdef __EMSCRIPTEN__
 void updateWindowSize() {
   int w, h;
-  w = canvas_get_width();
-  h = canvas_get_height();
+  w = canvasWidth();
+  h = canvasHeight();
   if (w != width || h != height) {
     width = w;
     height = h;
