@@ -100,7 +100,7 @@ int selectedNode = -1;
 struct nk_vec2 savedMousePos; // in node space, not screen space
 int tool;
 int disclaimerHeight = 290;
-int maxCombos = 50;
+int maxCombos = 110;
 int* removeNodes;
 
 void dbg(char* fmt, ...) {
@@ -1230,7 +1230,10 @@ int uiTreeAddComment(struct nk_vec2 start, int x, int y, int w, int h, char* tex
 
 int examplesCommon(int* succ, int category) {
   struct nk_vec2 s = nk_vec2(20, 20);
-  int ncategory = uiTreeAddChk(s, NCATEGORY, 0, 0, succ);
+  int ncategory;
+  if (category >= 0) {
+    ncategory = uiTreeAddChk(s, NCATEGORY, 0, 0, succ);
+  }
   int ncube = uiTreeAddChk(s, NCUBE, 310, 0, succ);
   int ntier = uiTreeAddChk(s, NTIER, 520, 0, succ);
   int nlevel = uiTreeAddChk(s, NLEVEL, 730, 0, succ);
@@ -1238,10 +1241,12 @@ int examplesCommon(int* succ, int category) {
   int nsplit = uiTreeAddChk(s, NSPLIT, 650, 90, succ);
 
   if (*succ) {
-    uiTreeDataByNode(ncategory)->value = category;
     uiTreeDataByNode(nsplit)->value = ntier;
     uiTreeDataByNode(nlevel)->value = 200;
-    uiTreeLink(ncategory, ncube);
+    if (category >= 0) {
+      uiTreeDataByNode(ncategory)->value = category;
+      uiTreeLink(ncategory, ncube);
+    }
     uiTreeLink(ncube, ntier);
     uiTreeLink(nlevel, ntier);
     uiTreeLink(nlevel, nregion);
@@ -1250,7 +1255,7 @@ int examplesCommon(int* succ, int category) {
   return nsplit;
 }
 
-void examplesBasicUsage() {
+void examplesWSE() {
   struct nk_vec2 s = nk_vec2(20, 20);
   int succ = 1;
   int nprevres;
@@ -1328,6 +1333,374 @@ void examplesBasicUsage() {
       uiTreeLink(nstat, nstat2);
       uiTreeLink(nstat3, namt2);
       uiTreeLink(namt2, nres);
+    }
+  }
+}
+
+void examplesAccessory() {
+  struct nk_vec2 s = nk_vec2(20, 20);
+  int succ = 1;
+  int nprevres;
+  int nsplit = examplesCommon(&succ, FACE_EYE_RING_EARRING_PENDANT_IDX);
+  {
+    s.y += 150;
+    int ncomment = uiTreeAddComment(s, 0, 0, 410, 310, "example: 23+ %stat accessory", &succ);
+    int nstat = uiTreeAddChk(s, NSTAT, 0, 50, &succ);
+    int namt = uiTreeAddChk(s, NAMOUNT, 0, 140, &succ);
+    int nres = nprevres = uiTreeAddChk(s, NRESULT, 210, 50, &succ);
+
+    if (succ) {
+      uiTreeDataByNode(nstat)->value = STAT_IDX;
+      uiTreeDataByNode(namt)->value = 23;
+      uiTreeDataByNode(nres)->bounds.h = 260;
+      uiTreeResultByNode(nres)->perPage = 100;
+      uiTreeLink(nsplit, nstat);
+      uiTreeLink(nstat, namt);
+      uiTreeLink(namt, nres);
+    }
+  }
+  {
+    s.x += 450;
+    int ncomment = uiTreeAddComment(s, 0, 0, 410, 310,
+        "example: drop and 10+ %stat accessory", &succ);
+    int nstat = uiTreeAddChk(s, NSTAT, 0, 50, &succ);
+    int namt = uiTreeAddChk(s, NAMOUNT, 0, 140, &succ);
+    int ndrop = uiTreeAddChk(s, NSTAT, 0, 230, &succ);
+    int nres = nprevres = uiTreeAddChk(s, NRESULT, 210, 50, &succ);
+
+    if (succ) {
+      uiTreeDataByNode(nstat)->value = STAT_IDX;
+      uiTreeDataByNode(ndrop)->value = DROP_IDX;
+      uiTreeDataByNode(namt)->value = 10;
+      uiTreeDataByNode(nres)->bounds.h = 260;
+      uiTreeResultByNode(nres)->perPage = 100;
+      uiTreeLink(nsplit, nstat);
+      uiTreeLink(nstat, namt);
+      uiTreeLink(namt, nres);
+      uiTreeLink(ndrop, nres);
+    }
+  }
+  {
+    s.y += 350;
+    s.x -= 450;
+    int ncomment = uiTreeAddComment(s, 0, 0, 410, 400,
+        "example: any 2l combo drop/meso w/ black cubes", &succ);
+    int nstat = uiTreeAddChk(s, NSTAT, 0, 50, &succ);
+    int nstat2 = uiTreeAddChk(s, NSTAT, 0, 140, &succ);
+    int nstat3 = uiTreeAddChk(s, NSTAT, 0, 230, &succ);
+    int namt = uiTreeAddChk(s, NAMOUNT, 0, 320, &succ);
+    int ncube = uiTreeAddChk(s, NCUBE, 210, 320, &succ);
+    int nres = nprevres = uiTreeAddChk(s, NRESULT, 210, 50, &succ);
+
+    if (succ) {
+      uiTreeDataByNode(nstat)->value = DROP_IDX;
+      uiTreeDataByNode(nstat2)->value = MESO_IDX;
+      uiTreeDataByNode(nstat3)->value = LINES_IDX;
+      uiTreeDataByNode(ncube)->value = BLACK_IDX;
+      uiTreeDataByNode(namt)->value = 2;
+      uiTreeDataByNode(nres)->bounds.h = 260;
+      uiTreeResultByNode(nres)->perPage = 100;
+      uiTreeLink(nsplit, nstat);
+      uiTreeLink(nstat2, nstat);
+      uiTreeLink(nstat3, nstat2);
+      uiTreeLink(nstat3, namt);
+      uiTreeLink(namt, ncube);
+      uiTreeLink(ncube, nres);
+    }
+  }
+  {
+    s.x += 450;
+    int ncomment = uiTreeAddComment(s, 0, 0, 410, 310,
+        "example: 40+ %drop accessory w/ black cubes", &succ);
+    int nstat = uiTreeAddChk(s, NSTAT, 0, 50, &succ);
+    int namt = uiTreeAddChk(s, NAMOUNT, 0, 140, &succ);
+    int ncube = uiTreeAddChk(s, NCUBE, 0, 230, &succ);
+    int nres = nprevres = uiTreeAddChk(s, NRESULT, 210, 50, &succ);
+
+    if (succ) {
+      uiTreeDataByNode(nstat)->value = DROP_IDX;
+      uiTreeDataByNode(ncube)->value = BLACK_IDX;
+      uiTreeDataByNode(namt)->value = 40;
+      uiTreeDataByNode(nres)->bounds.h = 260;
+      uiTreeResultByNode(nres)->perPage = 100;
+      uiTreeLink(nsplit, nstat);
+      uiTreeLink(nstat, namt);
+      uiTreeLink(namt, ncube);
+      uiTreeLink(ncube, nres);
+    }
+  }
+}
+
+void examplesGlove() {
+  struct nk_vec2 s = nk_vec2(20, 20);
+  int succ = 1;
+  int nprevres;
+  int nsplit = examplesCommon(&succ, GLOVE_IDX);
+  {
+    s.y += 150;
+    int ncomment = uiTreeAddComment(s, 0, 0, 410, 310, "example: 23+ %stat glove", &succ);
+    int nstat = uiTreeAddChk(s, NSTAT, 0, 50, &succ);
+    int namt = uiTreeAddChk(s, NAMOUNT, 0, 140, &succ);
+    int nres = nprevres = uiTreeAddChk(s, NRESULT, 210, 50, &succ);
+
+    if (succ) {
+      uiTreeDataByNode(nstat)->value = STAT_IDX;
+      uiTreeDataByNode(namt)->value = 23;
+      uiTreeDataByNode(nres)->bounds.h = 260;
+      uiTreeResultByNode(nres)->perPage = 100;
+      uiTreeLink(nsplit, nstat);
+      uiTreeLink(nstat, namt);
+      uiTreeLink(namt, nres);
+    }
+  }
+  {
+    s.x += 450;
+    int ncomment = uiTreeAddComment(s, 0, 0, 410, 310,
+        "example: 8+ %critdmg and and 10+ %stat glove", &succ);
+    int nstat = uiTreeAddChk(s, NSTAT, 0, 50, &succ);
+    int namt = uiTreeAddChk(s, NAMOUNT, 0, 140, &succ);
+    int ndrop = uiTreeAddChk(s, NSTAT, 0, 230, &succ);
+    int nres = nprevres = uiTreeAddChk(s, NRESULT, 210, 50, &succ);
+
+    if (succ) {
+      uiTreeDataByNode(nstat)->value = STAT_IDX;
+      uiTreeDataByNode(ndrop)->value = CRITDMG_IDX;
+      uiTreeDataByNode(namt)->value = 10;
+      uiTreeDataByNode(nres)->bounds.h = 260;
+      uiTreeResultByNode(nres)->perPage = 100;
+      uiTreeLink(nsplit, nstat);
+      uiTreeLink(nstat, namt);
+      uiTreeLink(namt, nres);
+      uiTreeLink(ndrop, nres);
+    }
+  }
+  {
+    s.x -= 450;
+    s.y += 350;
+    int ncomment = uiTreeAddComment(s, 0, 0, 410, 400,
+        "example: (sharp eyes or crit dmg) and 10+ %stat glove", &succ);
+    int nstat = uiTreeAddChk(s, NSTAT, 0, 50, &succ);
+    int namt = uiTreeAddChk(s, NAMOUNT, 0, 140, &succ);
+    int ndrop = uiTreeAddChk(s, NSTAT, 0, 230, &succ);
+    int ncritdmg = uiTreeAddChk(s, NSTAT, 0, 320, &succ);
+    int nor = uiTreeAddChk(s, NOR, 210, 320, &succ);
+    int nres = nprevres = uiTreeAddChk(s, NRESULT, 210, 50, &succ);
+
+    if (succ) {
+      uiTreeDataByNode(nstat)->value = STAT_IDX;
+      uiTreeDataByNode(ndrop)->value = DECENT_SHARP_EYES_IDX;
+      uiTreeDataByNode(ncritdmg)->value = CRITDMG_IDX;
+      uiTreeDataByNode(namt)->value = 10;
+      uiTreeDataByNode(nres)->bounds.h = 260;
+      uiTreeResultByNode(nres)->perPage = 100;
+      uiTreeLink(nsplit, nstat);
+      uiTreeLink(nstat, namt);
+      uiTreeLink(namt, nres);
+      uiTreeLink(ndrop, nor);
+      uiTreeLink(ncritdmg, nor);
+      uiTreeLink(nres, nor);
+    }
+  }
+  {
+    s.x += 450;
+    int ncomment = uiTreeAddComment(s, 0, 0, 410, 310,
+        "example: 16+ %critdmg glove w/ black cubes", &succ);
+    int nstat = uiTreeAddChk(s, NSTAT, 0, 50, &succ);
+    int namt = uiTreeAddChk(s, NAMOUNT, 0, 140, &succ);
+    int ncube = uiTreeAddChk(s, NCUBE, 0, 230, &succ);
+    int nres = nprevres = uiTreeAddChk(s, NRESULT, 210, 50, &succ);
+
+    if (succ) {
+      uiTreeDataByNode(nstat)->value = CRITDMG_IDX;
+      uiTreeDataByNode(ncube)->value = BLACK_IDX;
+      uiTreeDataByNode(namt)->value = 16;
+      uiTreeDataByNode(nres)->bounds.h = 260;
+      uiTreeResultByNode(nres)->perPage = 100;
+      uiTreeLink(nsplit, nstat);
+      uiTreeLink(nstat, namt);
+      uiTreeLink(namt, ncube);
+      uiTreeLink(ncube, nres);
+    }
+  }
+}
+
+void examplesHat() {
+  struct nk_vec2 s = nk_vec2(20, 20);
+  int succ = 1;
+  int nprevres;
+  int nsplit = examplesCommon(&succ, HAT_IDX);
+  {
+    s.y += 150;
+    int ncomment = uiTreeAddComment(s, 0, 0, 410, 310, "example: 23+ %stat hat", &succ);
+    int nstat = uiTreeAddChk(s, NSTAT, 0, 50, &succ);
+    int namt = uiTreeAddChk(s, NAMOUNT, 0, 140, &succ);
+    int nres = nprevres = uiTreeAddChk(s, NRESULT, 210, 50, &succ);
+
+    if (succ) {
+      uiTreeDataByNode(nstat)->value = STAT_IDX;
+      uiTreeDataByNode(namt)->value = 23;
+      uiTreeDataByNode(nres)->bounds.h = 260;
+      uiTreeResultByNode(nres)->perPage = 100;
+      uiTreeLink(nsplit, nstat);
+      uiTreeLink(nstat, namt);
+      uiTreeLink(namt, nres);
+    }
+  }
+  {
+    s.x += 450;
+    int ncomment = uiTreeAddComment(s, 0, 0, 410, 310,
+        "example: 2+s cooldown and and 10+ %stat hat", &succ);
+    int nstat = uiTreeAddChk(s, NSTAT, 0, 50, &succ);
+    int namt = uiTreeAddChk(s, NAMOUNT, 0, 140, &succ);
+    int ndrop = uiTreeAddChk(s, NSTAT, 0, 230, &succ);
+    int nres = nprevres = uiTreeAddChk(s, NRESULT, 210, 50, &succ);
+
+    if (succ) {
+      uiTreeDataByNode(nstat)->value = STAT_IDX;
+      uiTreeDataByNode(ndrop)->value = COOLDOWN_IDX;
+      uiTreeDataByNode(namt)->value = 10;
+      uiTreeDataByNode(nres)->bounds.h = 260;
+      uiTreeResultByNode(nres)->perPage = 100;
+      uiTreeLink(nsplit, nstat);
+      uiTreeLink(nstat, namt);
+      uiTreeLink(namt, nres);
+      uiTreeLink(ndrop, nres);
+    }
+  }
+  {
+    s.y += 350;
+    int ncomment = uiTreeAddComment(s, 0, 0, 410, 310,
+        "example: 4+s cooldown hat w/ black cubes", &succ);
+    int nstat = uiTreeAddChk(s, NSTAT, 0, 50, &succ);
+    int namt = uiTreeAddChk(s, NAMOUNT, 0, 140, &succ);
+    int ncube = uiTreeAddChk(s, NCUBE, 0, 230, &succ);
+    int nres = nprevres = uiTreeAddChk(s, NRESULT, 210, 50, &succ);
+
+    if (succ) {
+      uiTreeDataByNode(nstat)->value = COOLDOWN_IDX;
+      uiTreeDataByNode(ncube)->value = BLACK_IDX;
+      uiTreeDataByNode(namt)->value = 4;
+      uiTreeDataByNode(nres)->bounds.h = 260;
+      uiTreeResultByNode(nres)->perPage = 100;
+      uiTreeLink(nsplit, nstat);
+      uiTreeLink(nstat, namt);
+      uiTreeLink(namt, ncube);
+      uiTreeLink(ncube, nres);
+    }
+  }
+}
+
+void examplesTopOverall() {
+  struct nk_vec2 s = nk_vec2(20, 20);
+  int succ = 1;
+  int nprevres;
+  int nsplit = examplesCommon(&succ, TOP_OVERALL_IDX);
+  {
+    s.y += 150;
+    int ncomment = uiTreeAddComment(s, 0, 0, 410, 310, "example: 23+ %stat top/overall", &succ);
+    int nstat = uiTreeAddChk(s, NSTAT, 0, 50, &succ);
+    int namt = uiTreeAddChk(s, NAMOUNT, 0, 140, &succ);
+    int nres = nprevres = uiTreeAddChk(s, NRESULT, 210, 50, &succ);
+
+    if (succ) {
+      uiTreeDataByNode(nstat)->value = STAT_IDX;
+      uiTreeDataByNode(namt)->value = 23;
+      uiTreeDataByNode(nres)->bounds.h = 260;
+      uiTreeResultByNode(nres)->perPage = 100;
+      uiTreeLink(nsplit, nstat);
+      uiTreeLink(nstat, namt);
+      uiTreeLink(namt, nres);
+    }
+  }
+  {
+    s.x += 450;
+    int ncomment = uiTreeAddComment(s, 0, 0, 410, 310,
+        "example: 2+s invincibility and 10+ %stat top/overall", &succ);
+    int nstat = uiTreeAddChk(s, NSTAT, 0, 50, &succ);
+    int namt = uiTreeAddChk(s, NAMOUNT, 0, 140, &succ);
+    int ndrop = uiTreeAddChk(s, NSTAT, 0, 230, &succ);
+    int nres = nprevres = uiTreeAddChk(s, NRESULT, 210, 50, &succ);
+
+    if (succ) {
+      uiTreeDataByNode(nstat)->value = STAT_IDX;
+      uiTreeDataByNode(ndrop)->value = INVIN_IDX;
+      uiTreeDataByNode(namt)->value = 10;
+      uiTreeDataByNode(nres)->bounds.h = 260;
+      uiTreeResultByNode(nres)->perPage = 100;
+      uiTreeLink(nsplit, nstat);
+      uiTreeLink(nstat, namt);
+      uiTreeLink(namt, nres);
+      uiTreeLink(ndrop, nres);
+    }
+  }
+}
+
+void examplesShoe() {
+  struct nk_vec2 s = nk_vec2(20, 20);
+  int succ = 1;
+  int nprevres;
+  int nsplit = examplesCommon(&succ, SHOE_IDX);
+  {
+    s.y += 150;
+    int ncomment = uiTreeAddComment(s, 0, 0, 410, 310, "example: 23+ %stat shoe", &succ);
+    int nstat = uiTreeAddChk(s, NSTAT, 0, 50, &succ);
+    int namt = uiTreeAddChk(s, NAMOUNT, 0, 140, &succ);
+    int nres = nprevres = uiTreeAddChk(s, NRESULT, 210, 50, &succ);
+
+    if (succ) {
+      uiTreeDataByNode(nstat)->value = STAT_IDX;
+      uiTreeDataByNode(namt)->value = 23;
+      uiTreeDataByNode(nres)->bounds.h = 260;
+      uiTreeResultByNode(nres)->perPage = 100;
+      uiTreeLink(nsplit, nstat);
+      uiTreeLink(nstat, namt);
+      uiTreeLink(namt, nres);
+    }
+  }
+  {
+    s.x += 450;
+    int ncomment = uiTreeAddComment(s, 0, 0, 410, 310,
+        "example: combat orders and and 10+ %stat shoe", &succ);
+    int nstat = uiTreeAddChk(s, NSTAT, 0, 50, &succ);
+    int namt = uiTreeAddChk(s, NAMOUNT, 0, 140, &succ);
+    int ndrop = uiTreeAddChk(s, NSTAT, 0, 230, &succ);
+    int nres = nprevres = uiTreeAddChk(s, NRESULT, 210, 50, &succ);
+
+    if (succ) {
+      uiTreeDataByNode(nstat)->value = STAT_IDX;
+      uiTreeDataByNode(ndrop)->value = DECENT_COMBAT_ORDERS_IDX;
+      uiTreeDataByNode(namt)->value = 10;
+      uiTreeDataByNode(nres)->bounds.h = 260;
+      uiTreeResultByNode(nres)->perPage = 100;
+      uiTreeLink(nsplit, nstat);
+      uiTreeLink(nstat, namt);
+      uiTreeLink(namt, nres);
+      uiTreeLink(ndrop, nres);
+    }
+  }
+}
+
+void examplesCapeBeltShoulder() {
+  struct nk_vec2 s = nk_vec2(20, 20);
+  int succ = 1;
+  int nprevres;
+  int nsplit = examplesCommon(&succ, CAPE_BELT_SHOULDER_IDX);
+  {
+    s.y += 150;
+    int ncomment = uiTreeAddComment(s, 0, 0, 410, 310,
+      "example: 23+ %stat cape/belt/shoulder", &succ);
+    int nstat = uiTreeAddChk(s, NSTAT, 0, 50, &succ);
+    int namt = uiTreeAddChk(s, NAMOUNT, 0, 140, &succ);
+    int nres = nprevres = uiTreeAddChk(s, NRESULT, 210, 50, &succ);
+
+    if (succ) {
+      uiTreeDataByNode(nstat)->value = STAT_IDX;
+      uiTreeDataByNode(namt)->value = 23;
+      uiTreeDataByNode(nres)->bounds.h = 260;
+      uiTreeResultByNode(nres)->perPage = 100;
+      uiTreeLink(nsplit, nstat);
+      uiTreeLink(nstat, namt);
+      uiTreeLink(namt, nres);
     }
   }
 }
@@ -1661,18 +2034,24 @@ void storageAfterInit() {
   }
   BufFree(&disc);
 
-  examplesFile(BasicUsage);
+  examplesFile(WSE);
+  examplesFile(Accessory);
+  examplesFile(Glove);
+  examplesFile(Hat);
+  examplesFile(TopOverall);
+  examplesFile(Shoe);
+  examplesFile(CapeBeltShoulder);
   examplesFile(Operators);
   examplesFile(Familiars);
-  examplesFile_(DATADIR "zzz_Preset1" EXTENSION, examplesBasicUsage);
-  examplesFile_(DATADIR "zzz_Preset2" EXTENSION, examplesBasicUsage);
-  examplesFile_(DATADIR "zzz_Preset3" EXTENSION, examplesBasicUsage);
-  examplesFile_(DATADIR "zzz_Preset4" EXTENSION, examplesBasicUsage);
-  examplesFile_(DATADIR "zzz_Preset5" EXTENSION, examplesBasicUsage);
+  examplesFile_(DATADIR "zzz_Preset1" EXTENSION, examplesWSE);
+  examplesFile_(DATADIR "zzz_Preset2" EXTENSION, examplesWSE);
+  examplesFile_(DATADIR "zzz_Preset3" EXTENSION, examplesWSE);
+  examplesFile_(DATADIR "zzz_Preset4" EXTENSION, examplesWSE);
+  examplesFile_(DATADIR "zzz_Preset5" EXTENSION, examplesWSE);
   storageCommit();
 
   if (!storageLoadSync(AUTOSAVE_FILE)) {
-    storageLoadSync(DATADIR "BasicUsage" EXTENSION);
+    storageLoadSync(DATADIR "WSE" EXTENSION);
   }
   status("");
 }

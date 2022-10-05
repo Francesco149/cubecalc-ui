@@ -182,6 +182,9 @@ int treeDefaultValue(int type, int statIndex) {
         case INVIN_IDX:
           return 2;
         case DECENTS_IDX:
+        case DECENT_SHARP_EYES_IDX:
+        case DECENT_SPEED_INFUSION_IDX:
+        case DECENT_COMBAT_ORDERS_IDX:
           return 1;
         case CRITDMG_IDX:
           return 8;
