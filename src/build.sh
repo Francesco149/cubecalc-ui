@@ -19,7 +19,8 @@ platformflags="
   -sEXPORTED_FUNCTIONS=_main,_storageAfterInit,_storageAfterCommit
 "
 
-flags="-fdiagnostics-color=always -lGL -DCUBECALC_DEBUG -DUTILS_STDIO"
+dbgflags="-DCUBECALC_DEBUG -DUTILS_STDIO"
+flags="-fdiagnostics-color=always -lGL"
 buildflags="-O0" # ~1s build time
 units=compilation-units/monolith.c
 if which emcc >/dev/null 2>&1; then
@@ -30,7 +31,11 @@ fi
 
 for x in $@; do
   case "$x" in
-    rel*) buildflags="-O3 -flto" ;; # ~6s build time
+    rel*)
+      # ~6s build time
+      buildflags="-O3 -flto"
+      dbgflags=""
+      ;;
     san*) buildflags="-O0 -g -fsanitize=leak" ;;
     gen*)
       protoc -I ./thirdparty/ -I . --c_out=./proto ./cubecalc.proto || exit
@@ -68,7 +73,7 @@ printargs() {
   echo "$@"
 }
 
-flags="$(printargs $preflags $units $platformflags $flags $buildflags)"
+flags="$(printargs $preflags $units $platformflags $flags $buildflags $dbgflags)"
 echo "flags: $flags"
 
 # NOTE: mold does nothing when building for emscripten
