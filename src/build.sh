@@ -19,7 +19,7 @@ platformflags="
   -sEXPORTED_FUNCTIONS=_main,_storageAfterInit,_storageAfterCommit
 "
 
-dbgflags="-DCUBECALC_DEBUG -DUTILS_STDIO"
+dbgflags="-DCUBECALC_DEBUG"
 flags="-fdiagnostics-color=always -lGL"
 buildflags="-O0" # ~1s build time
 units=compilation-units/monolith.c

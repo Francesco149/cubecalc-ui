@@ -5,9 +5,7 @@
 #include <stdint.h> // intmax_t
 #include <limits.h> // SIZE_MAX and others
 #include <stdarg.h>
-#ifdef UTILS_STDIO
 #include <stdio.h>
-#endif
 
 //
 // Misc Macros
@@ -80,6 +78,10 @@
 
 #define ArrayBitVal(array, bit) \
   ((ArrayBitSlot(array, bit) & ArrayBitMask(array, bit)) >> ArrayBitShift(array, bit))
+
+// NOTE: this doesn't clear if val is 0
+#define ArrayBitSetVal(array, bit, val) \
+  ArrayBitSlot(array, bit) |= ArrayBitMask(array, bit) * (val & 1)
 
 // returns the allocation size for an array bitmask that will be stored in arr. arr is an integer
 // pointer of any size, the purpose of this function is to figure out how many bits can be stored
@@ -522,7 +524,6 @@ size_t BitCount(void* data, size_t bytes);
 // hash functions
 unsigned HashInt(unsigned x);
 
-#ifdef UTILS_STDIO
 //
 // Align: right justifies a group of lines
 //
@@ -551,7 +552,6 @@ Align* _AlignInit(Allocator const* allocator);
 void _AlignFeed(Align* al, char* alignFmt, char* fmt, ...);
 void AlignPrint(Align* al, FILE* f);
 void AlignFree(Align* al);
-#endif
 
 #endif
 
@@ -1216,7 +1216,6 @@ unsigned HashInt(unsigned x) {
   return x;
 }
 
-#ifdef UTILS_STDIO
 //
 // Align
 //
@@ -1265,6 +1264,5 @@ void AlignFree(Align* al) {
 }
 #undef allocatorDefault
 #define allocatorDefault allocatorDefault_
-#endif
 
 #endif
