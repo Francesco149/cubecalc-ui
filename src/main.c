@@ -937,6 +937,10 @@ terminateNode:
     flags &= ~DIRTY;
   }
 
+  if (treeCalcMerge(&graph)) {
+    puts("merged");
+  }
+
   if (flags & UPDATE_CONNECTIONS) {
     uiTreeUpdateConnections();
     flags &= ~UPDATE_CONNECTIONS;
@@ -2121,12 +2125,12 @@ int main() {
   disclaimerHeight = NK_MAX(rowHeight, disclaimerHeight);
   disclaimerHeight += nk->style.edit.padding.y * 2 + nk->style.edit.border * 2;
 
+#ifdef __EMSCRIPTEN__
   if (isTouch()) {
     tool = PAN;
     nk_glfw3_set_left_button(toolToMouseButton[tool]);
   }
 
-#ifdef __EMSCRIPTEN__
   resizeCanvas();
   updateWindowSize();
 

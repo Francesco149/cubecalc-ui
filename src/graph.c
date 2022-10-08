@@ -74,6 +74,7 @@ typedef struct _TreeData {
   NodeData* data[NLAST];
   Comment* commentData;
   Result* resultData;
+  intmax_t revision; // used by graphcalc
 } TreeData;
 
 void treeGlobalInit();
@@ -116,7 +117,7 @@ void treeResultClear(Result* r) {
   BufFreeClear((void**)r->prob);
   BufFree(&r->prob);
   BufFree(&r->prime);
-  memset(r, 0, sizeof(*r));
+  MemZero(r);
   r->perPage = perPage;
 }
 
@@ -159,6 +160,7 @@ void treeClear(TreeData* g) {
     treeResultClear(r);
   }
   BufClear(g->resultData);
+  ++g->revision;
 }
 
 void treeFree(TreeData* g) {

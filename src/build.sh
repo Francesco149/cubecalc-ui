@@ -17,9 +17,10 @@ platformflags="
   -sALLOW_MEMORY_GROWTH
   -lidbfs.js
   -sEXPORTED_FUNCTIONS=_main,_storageAfterInit,_storageAfterCommit
+  -sWASM_WORKERS
 "
 
-dbgflags="-DCUBECALC_DEBUG"
+dbgflags="-DCUBECALC_DEBUG -DMULTITHREAD_DEBUG"
 flags="-fdiagnostics-color=always -lGL"
 buildflags="-O0" # ~1s build time
 units=compilation-units/monolith.c
@@ -74,6 +75,9 @@ printargs() {
 }
 
 flags="$(printargs $preflags $units $platformflags $flags $buildflags $dbgflags)"
+if [ "$compiler" != "emcc" ]; then
+  flags="$flags -pthread"
+fi
 echo "flags: $flags"
 
 # NOTE: mold does nothing when building for emscripten

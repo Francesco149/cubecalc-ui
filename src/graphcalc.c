@@ -2,10 +2,17 @@
 #define GRAPHCALC_H
 
 #include "graph.c"
+#include "multithread.c"
 
 void treeCalcGlobalInit();
 void treeCalcGlobalFree();
-void treeCalc(TreeData* g, int maxCombos);
+
+// start a recalc
+void treeCalc(TreeData* g, size_t maxCombos);
+
+// check if the recalc is done and merge results with the tree if so.
+// returns nonzero if anything was merged
+int treeCalcMerge(TreeData* g);
 
 #endif
 
@@ -23,11 +30,14 @@ void treeCalc(TreeData* g, int maxCombos);
 extern void dbg(char* fmt, ...);
 
 void treeCalcGlobalInit() {
+  MTGlobalInit();
   CubeGlobalInit();
 }
 
+void treeCalcMTGlobalFree();
 void treeCalcGlobalFree() {
   CubeGlobalFree();
+  treeCalcMTGlobalFree();
 }
 
 // we want to be able to override stats
@@ -244,110 +254,238 @@ char const* valueName(int type, int value) {
 void WantPrint(Want const* wantBuf);
 #endif
 
-void treeCalc(TreeData* g, int maxCombos) {
+typedef struct _TreeCalcJobData {
+  size_t maxCombos;
+  char* treeData;
+  int resultId;
+  intmax_t revision;
+} TreeCalcJobData;
+
+void treeCalcJobDataFree(TreeCalcJobData* data) {
+  BufFree(&data->treeData);
+  free(data);
+}
+
+static
+int resultById(TreeData* g, int id) {
+  BufEach(Node, g->tree, n) {
+    if (n->id == id) {
+      return n->data;
+    }
+  }
+  return -1;
+}
+
+void* treeCalcJob(void* data) {
+  TreeCalcJobData* jobData = data;
+  TreeData* g = malloc(sizeof(TreeData));
+  MemZero(g);
+
+  NodeData* d;
+  Node* n;
   Want* wants = 0;
-  for (size_t i = 0; i < BufLen(g->tree); ++i) {
-    Node* n = &g->tree[i];
 
-    if (n->type != NRESULT) {
-      continue;
+  int values[NLAST];
+  int statMap[numLines];
+  int* seen = 0;
+  int elementsOnStack;
+
+  if (!unpackTree(g, jobData->treeData)) {
+    dbg("treeCalcJob: unexpected failure deserializing tree");
+    goto cleanup;
+  }
+
+  int resultIdx = resultById(g, jobData->resultId);
+  if (resultIdx < 0) {
+    dbg("treeCalcJob: couldn't find result id %d", jobData->resultId);
+    goto cleanup;
+  }
+  d = &g->data[NRESULT][resultIdx];
+  n = &g->tree[d->node];
+
+  dbg("treeCalcJob %s\n", d->name);
+
+  ArrayEach(int, values, x) { *x = -1; }
+  ArrayEach(int, statMap, x) { *x = -1; }
+
+  BufReserve(&seen, BufLen(g->tree));
+  BufZero(seen);
+  BufClear(wants);
+  elementsOnStack = treeCalcBranch(g, &wants, statMap, values, d->node, seen);
+  BufFree(&seen);
+
+  for (size_t j = NINVALID + 1; j < NLAST; ++j) {
+    switch (j) {
+      case NSTAT:
+      case NAMOUNT:
+      case NRESULT:
+      case NCOMMENT:
+      case NSPLIT:
+      case NOR:
+      case NAND:
+        // these are handled separately, or are not relevant
+        continue;
     }
-
-    NodeData* d = &g->data[n->type][n->data];
-    dbg("treeCalc %s\n", d->name);
-
-    int values[NLAST];
-    int statMap[numLines];
-
-    ArrayEach(int, values, x) { *x = -1; }
-    ArrayEach(int, statMap, x) { *x = -1; }
-
-    int* seen = 0;
-    BufReserve(&seen, BufLen(g->tree));
-    BufZero(seen);
-    BufClear(wants);
-    int elementsOnStack = treeCalcBranch(g, &wants, statMap, values, i, seen);
-    BufFree(&seen);
-
-    for (size_t j = NINVALID + 1; j < NLAST; ++j) {
-      switch (j) {
-        case NSTAT:
-        case NAMOUNT:
-        case NRESULT:
-        case NCOMMENT:
-        case NSPLIT:
-        case NOR:
-        case NAND:
-          // these are handled separately, or are not relevant
-          continue;
-      }
-      if (values[j] == -1) {
-        values[j] = treeDefaultValue(j, values[NCATEGORY]);
-        dbg("(assumed) ");
-      }
-      char const* svalue = valueName(j, values[j]);
-      char* valueName = nodeNames[j - 1];
-      if (svalue) {
-        dbg("%s = %s\n", valueName, svalue);
-      } else {
-        dbg("%s = %d\n", valueName, values[j]);
-      }
+    if (values[j] == -1) {
+      values[j] = treeDefaultValue(j, values[NCATEGORY]);
+      dbg("(assumed) ");
     }
+    char const* svalue = valueName(j, values[j]);
+    char* valueName = nodeNames[j - 1];
+    if (svalue) {
+      dbg("%s = %s\n", valueName, svalue);
+    } else {
+      dbg("%s = %d\n", valueName, values[j]);
+    }
+  }
 
-    // complete any pending stats and push all the stats to the stack
-    elementsOnStack += treeCalcFinalizeWants(statMap, values, 0);
-    treeCalcPushStats(&wants, statMap);
+  // complete any pending stats and push all the stats to the stack
+  elementsOnStack += treeCalcFinalizeWants(statMap, values, 0);
+  treeCalcPushStats(&wants, statMap);
 
-    if (BufLen(wants)) {
-      // terminate with an AND since we always want an operator
-      *BufAlloc(&wants) = WantOp(AND, elementsOnStack);
+  if (BufLen(wants)) {
+    // terminate with an AND since we always want an operator
+    *BufAlloc(&wants) = WantOp(AND, elementsOnStack);
 
 #ifdef CUBECALC_DEBUG
-      dbg("===========================================\n");
-      dbg("# %s\n", g->data[n->type][n->data].name);
-      WantPrint(wants);
-      dbg("===========================================\n");
+    dbg("===========================================\n");
+    dbg("# %s\n", g->data[n->type][n->data].name);
+    WantPrint(wants);
+    dbg("===========================================\n");
 #endif
 
-      Category category = categoryValues[values[NCATEGORY]];
-      Cube cube = cubeValues[values[NCUBE]];
-      Tier tier = tierValues[values[NTIER]];
-      Region region = regionValues[values[NREGION]];
+    Category category = categoryValues[values[NCATEGORY]];
+    Cube cube = cubeValues[values[NCUBE]];
+    Tier tier = tierValues[values[NTIER]];
+    Region region = regionValues[values[NREGION]];
 
-      Lines combos = {0};
+    Lines combos = {0};
 
-      // TODO: call CubeCalc
-      float p = CubeCalc(wants, category, cube, tier, values[NLEVEL], region, &combos);
-      dbg("p: %f\n", p);
-      Result* resd = &g->resultData[n->data];
-      treeResultClear(resd);
-      if (p > 0) {
+    float p = CubeCalc(wants, category, cube, tier, values[NLEVEL], region, &combos);
+    dbg("p: %f\n", p);
+    Result* resd = &g->resultData[n->data];
+    treeResultClear(resd);
+    if (p > 0) {
 
 #define fmt(x, y) Humanize(resd->x, sizeof(resd->x), y)
 #define quant(n, ...) fmt(within##n, ProbToGeoDistrQuantileDingle(p, n))
-        fmt(average, ProbToOneIn(p));
-        quant(50);
-        quant(75);
-        quant(95);
-        quant(99);
+      fmt(average, ProbToOneIn(p));
+      quant(50);
+      quant(75);
+      quant(95);
+      quant(99);
 
-        size_t numCombos = BufLen(combos.onein) / combos.comboSize;
-        fmt(numCombosStr, numCombos);
+      size_t numCombos = BufLen(combos.onein) / combos.comboSize;
+      fmt(numCombosStr, numCombos);
 
-        if (numCombos <= maxCombos) {
-          BufEachi(combos.onein, i) {
-            *BufAlloc(&resd->line) = LineToStr(combos.lineHi[i], combos.lineLo[i]);
-            BufAllocStrf(&resd->value, "%d", combos.value[i]);
-            BufAllocStrf(&resd->prob, "%.02f", 1/combos.onein[i]);
-          }
-
-          BufCpy(&resd->prime, combos.prime);
-          resd->comboLen = combos.comboSize;
+      if (numCombos <= jobData->maxCombos) {
+        BufEachi(combos.onein, i) {
+          *BufAlloc(&resd->line) = LineToStr(combos.lineHi[i], combos.lineLo[i]);
+          BufAllocStrf(&resd->value, "%d", combos.value[i]);
+          BufAllocStrf(&resd->prob, "%.02f", 1/combos.onein[i]);
         }
-        LinesFree(&combos);
+
+        BufCpy(&resd->prime, combos.prime);
+        resd->comboLen = combos.comboSize;
       }
+      LinesFree(&combos);
     }
   }
+
+cleanup:
   BufFree(&wants);
+  g->revision = jobData->revision;
+  treeCalcJobDataFree(jobData);
+  return g;
+}
+
+static MTJob** jobs = 0;
+static int* resultIds = 0;
+
+void treeCalc(TreeData* g, size_t maxCombos) {
+  ++g->revision;
+
+  // lazy but safe: just serialize the three and deserialize it to make a copy.
+  // this way we don't have to worry about making a proper deep copy of it and potentially
+  // duplicate a lot of the serialization logic.
+  Arena* arena = ArenaInit();
+  Allocator allocatorArena = ArenaAllocator(arena);
+  int res;
+  char* out = packTree(&allocatorArena, g);
+  if (!out) {
+    dbg("treeCalc: unexpected failure serializing tree");
+    res = 0;
+  }
+  BufEachi(g->resultData, i) {
+    Node* n = &g->tree[g->data[NRESULT][i].node];
+    TreeCalcJobData* data = malloc(sizeof(TreeCalcJobData));
+    MemZero(data);
+    data->maxCombos = maxCombos;
+    data->treeData = BufDup(out);
+    data->resultId = n->id;
+    data->revision = g->revision;
+    *BufAlloc(&jobs) = MTStart(treeCalcJob, data);
+    *BufAlloc(&resultIds) = n->id;
+  }
+
+  ArenaFree(arena);
+}
+
+int treeCalcMerge(TreeData* g) {
+  int res = 0;
+  intmax_t* keep = 0;
+  BufEachi(jobs, i) {
+    MTJob* j = jobs[i];
+    if (MTDone(j)) {
+      dbg("joining job %zu\n", i);
+      TreeData* merge = MTJoin(j);
+      dbg("joined %p\n", merge);
+      dbg("revision %jd\n", merge->revision);
+      // we keep track of whether the tree has changed since the calc was started.
+      // this is done by incrementing revision every time treeCalc is called.
+      // if it doesn't match with what it was when job was started, then we ignore the job result
+      if (merge->revision == g->revision) {
+        int rdata = resultById(merge, resultIds[i]);
+        if (rdata < 0) {
+          dbg("treeCalcMerge: couldn't locate result id %d", resultIds[i]);
+        } else {
+          NodeData* d = &merge->data[NRESULT][rdata];
+          Result* r = &merge->resultData[rdata];
+          int drdata = resultById(g, resultIds[i]);
+          Result* dr = &g->resultData[drdata];
+          treeResultClear(dr);
+          *dr = *r;
+          MemZero(r); // to make sure it doesn't get freed
+          res = 1;
+        }
+      } else dbg("(discarded, current revision is %jd)\n", g->revision);
+      treeFree(merge);
+      free(merge);
+      dbg("%zu done\n", i);
+    } else {
+      *BufAlloc(&keep) = i;
+    }
+  }
+
+  MTJob** newJobs = 0;
+  int* newResultIds = 0;
+  BufIndex(jobs, keep, &newJobs);
+  BufIndex(resultIds, keep, &newResultIds);
+  BufFree(&jobs);
+  BufFree(&resultIds);
+  jobs = newJobs;
+  resultIds = newResultIds;
+  BufFree(&keep);
+
+  return res;
+}
+
+void treeCalcMTGlobalFree() {
+  BufEach(MTJob*, jobs, pj) {
+    MTJoin(*pj);
+    MTFree(*pj);
+  }
+  BufFree(&jobs);
+  BufFree(&resultIds);
 }
 #endif
