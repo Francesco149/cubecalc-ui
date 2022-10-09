@@ -941,7 +941,7 @@ terminateNode:
   }
 
   if (treeCalcMerge(&graph)) {
-    puts("merged");
+    dbg("merged");
   }
 
   if (flags & UPDATE_CONNECTIONS) {
