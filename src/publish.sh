@@ -5,6 +5,7 @@ mkdir -pv $d/thirdparty
 files="
   index.html
   main.js
+  main.worker.js
   main.wasm
   coi-serviceworker.js
 "
