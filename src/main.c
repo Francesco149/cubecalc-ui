@@ -11,6 +11,7 @@
 #include <sys/stat.h>
 #include <stdlib.h> // qsort
 #include <dirent.h> // opendir readdir
+#include <limits.h>
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
@@ -84,7 +85,6 @@ GLFWwindow* win;
 struct nk_context* nk;
 struct nk_input* in;
 char** errors;
-char statusText[64];
 int width, height;
 int displayWidth, displayHeight;
 int fps;
@@ -115,13 +115,6 @@ void dbg(char* fmt, ...) {
 void error(char* s) {
   *BufAlloc(&errors) = s;
   dbg("%s\n", s);
-}
-
-void status(char* fmt, ...) {
-  va_list va;
-  va_start(va, fmt);
-  vsnprintf(statusText, sizeof(statusText), fmt, va);
-  va_end(va);
 }
 
 void errorCallback(int e, const char *d) {
@@ -821,6 +814,14 @@ terminateNode:
                        COMMENT_ROUND, COMMENT_THICK, selColor);
     }
 
+    // draw colored border around results when calcs are pending
+    if (treeCalcJobs()) {
+      BufEach(NodeData, graph.data[NRESULT], sd) {
+        const struct nk_color calcColor = nk_rgb(255, 128, 128);
+        nk_stroke_rect(canvas, nodeSpaceToScreenRect(sd->bounds), 0, 2, calcColor);
+      }
+    }
+
     // we can't do this from the contextual menu code because it will be in a different local
     // space and it won't convert properly
     struct nk_vec2 mouse = nk_layout_space_to_local(nk, in->mouse.pos);
@@ -908,7 +909,9 @@ terminateNode:
   }
   nk_end(nk);
 
-  if (flags & DIRTY) {
+  if ((flags & DIRTY) && !treeCalcJobs()) {
+    // do not queue any more calcs until pending jobs are done
+    // this prevents piling up too many jobs when quickly changing stuff
     treeCalc(&graph, maxCombos);
 
     // ensure autosaves happens on 1st frame
@@ -1103,12 +1106,11 @@ terminateNode:
         nk_glfw3_set_scale_factor(sf);
         flags |= UPDATE_SIZE;
       }
-      int newMaxCombos = nk_propertyi(nk, "Max Combos", 0, maxCombos, 500, 100, 0.02);
+      int newMaxCombos = nk_propertyi(nk, "Max Combos", 0, maxCombos, INT_MAX, 100, 0.02);
       if (newMaxCombos != maxCombos) {
         maxCombos = newMaxCombos;
         flags |= DIRTY;
       }
-      nk_label(nk, *statusText ? statusText : "Idle", NK_TEXT_LEFT);
 
     } else {
       flags &= ~SHOW_INFO;
@@ -2054,7 +2056,6 @@ void storageAfterInit() {
   if (!storageLoadSync(AUTOSAVE_FILE)) {
     storageLoadSync(DATADIR "WSE" EXTENSION);
   }
-  status("");
 }
 
 void storageAutoSave() {
@@ -2064,7 +2065,6 @@ void storageAutoSave() {
 }
 
 void storageInit() {
-  status("loading from storage");
 #ifdef __EMSCRIPTEN__
   EM_ASM(
     FS.mkdir('/data');

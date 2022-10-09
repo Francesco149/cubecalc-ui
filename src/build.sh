@@ -18,10 +18,11 @@ platformflags="
   -lidbfs.js
   -sEXPORTED_FUNCTIONS=_main,_storageAfterInit,_storageAfterCommit
   -sWASM_WORKERS
+  -sPTHREAD_POOL_SIZE=navigator.hardwareConcurrency+1
 "
 
 dbgflags="-DCUBECALC_DEBUG -DMULTITHREAD_DEBUG"
-flags="-fdiagnostics-color=always -lGL"
+flags="-fdiagnostics-color=always -lGL -pthread"
 buildflags="-O0" # ~1s build time
 units=compilation-units/monolith.c
 if which emcc >/dev/null 2>&1; then
@@ -67,6 +68,7 @@ if [ "$compiler" != "emcc" ]; then
     -ocubecalc
     -lm
     $(pkg-config --libs glfw3 gl)
+    -D_GNU_SOURCE
   "
 fi
 
@@ -75,9 +77,6 @@ printargs() {
 }
 
 flags="$(printargs $preflags $units $platformflags $flags $buildflags $dbgflags)"
-if [ "$compiler" != "emcc" ]; then
-  flags="$flags -pthread"
-fi
 echo "flags: $flags"
 
 # NOTE: mold does nothing when building for emscripten

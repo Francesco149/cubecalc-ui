@@ -14,6 +14,9 @@ void treeCalc(TreeData* g, size_t maxCombos);
 // returns nonzero if anything was merged
 int treeCalcMerge(TreeData* g);
 
+// returns the number of recalcs in progress
+size_t treeCalcJobs();
+
 #endif
 
 #if defined(GRAPHCALC_IMPLEMENTATION) && !defined(GRAPHCALC_UNIT)
@@ -437,8 +440,7 @@ int treeCalcMerge(TreeData* g) {
   BufEachi(jobs, i) {
     MTJob* j = jobs[i];
     if (MTDone(j)) {
-      dbg("joining job %zu\n", i);
-      TreeData* merge = MTJoin(j);
+      TreeData* merge = MTResult(j);
       dbg("joined %p\n", merge);
       dbg("revision %jd\n", merge->revision);
       // we keep track of whether the tree has changed since the calc was started.
@@ -455,10 +457,14 @@ int treeCalcMerge(TreeData* g) {
           Result* dr = &g->resultData[drdata];
           treeResultClear(dr);
           *dr = *r;
-          MemZero(r); // to make sure it doesn't get freed
+          MemZero(r); // to make sure it doesn't get freed twice
           res = 1;
         }
-      } else dbg("(discarded, current revision is %jd)\n", g->revision);
+      } else {
+        // I don't think this can happen now that I only allow starting new calcs when there's
+        // no background jobs, but might as well check for good measure
+        dbg("(discarded, current revision is %jd)\n", g->revision);
+      }
       treeFree(merge);
       free(merge);
       dbg("%zu done\n", i);
@@ -482,10 +488,18 @@ int treeCalcMerge(TreeData* g) {
 
 void treeCalcMTGlobalFree() {
   BufEach(MTJob*, jobs, pj) {
-    MTJoin(*pj);
+    size_t n = 0;
+    while (!MTDone(*pj)) {
+      MTYield(&n);
+    }
     MTFree(*pj);
   }
   BufFree(&jobs);
   BufFree(&resultIds);
+  MTGlobalFree();
+}
+
+size_t treeCalcJobs() {
+  return BufLen(jobs);
 }
 #endif
