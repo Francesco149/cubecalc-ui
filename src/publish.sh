@@ -6,6 +6,7 @@ files="
   index.html
   main.js
   main.wasm
+  coi-serviceworker.js
 "
 cp $files $d
 pushd $d
