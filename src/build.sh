@@ -21,6 +21,8 @@ wasmflags="
 "
 nowasmflags="
   -s WASM=0
+  -s LEGACY_VM_SUPPORT=1
+  -s MIN_IE_VERSION=11
 "
 mtflags="
   -sWASM_WORKERS
