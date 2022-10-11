@@ -8,7 +8,6 @@ preflags="
   -DTS=$ts
 "
 platformflags="
-  -o main.js
   -s USE_WEBGL2=1
   -s USE_GLFW=3
   -s FULL_ES2
@@ -17,12 +16,12 @@ platformflags="
   -sALLOW_MEMORY_GROWTH
   -lidbfs.js
   -sEXPORTED_FUNCTIONS=_main,_storageAfterInit,_storageAfterCommit
-  -sWASM_WORKERS
-  -sPTHREAD_POOL_SIZE=navigator.hardwareConcurrency+1
 "
+mtflags="-sWASM_WORKERS -sPTHREAD_POOL_SIZE=navigator.hardwareConcurrency+1 -pthread"
+stflags="-DNO_MULTITHREAD"
 
 dbgflags="-DCUBECALC_DEBUG -DMULTITHREAD_DEBUG"
-flags="-fdiagnostics-color=always -lGL -pthread"
+flags="-fdiagnostics-color=always -lGL"
 buildflags="-O0" # ~1s build time
 units=compilation-units/monolith.c
 if which emcc >/dev/null 2>&1; then
@@ -69,6 +68,7 @@ if [ "$compiler" != "emcc" ]; then
     -lm
     $(pkg-config --libs glfw3 gl)
     -D_GNU_SOURCE
+    -pthread
   "
 fi
 
@@ -77,23 +77,31 @@ printargs() {
 }
 
 flags="$(printargs $preflags $units $platformflags $flags $buildflags $dbgflags)"
+echo "compiler: $compiler"
 echo "flags: $flags"
 
 # NOTE: mold does nothing when building for emscripten
 # it will be useful when I build a desktop version
 
 if which mold >/dev/null 2>&1; then
-  time mold -run $cc $flags || exit
+  moldcmd="mold -run"
+fi
+
+if [ "$compiler" = "emcc" ]; then
+  time $moldcmd $cc -o main.js              $flags $mtflags || exit
+  time $moldcmd $cc -o main-singlethread.js $flags $stflags || exit
 else
-  $cc $flags || exit
+  time $moldcmd $cc $flags || exit
 fi
 #--preload-file ./data \
 
 if [ "$compiler" = "emcc" ]; then
   sed -i "s/main\.wasm/main.wasm?ts=$ts/g" main.js
-  sed -i "s/main\.js\(?ts=[0-9]\+\)\?/main.js?ts=$ts/g" index.html
+  sed -i "s/main\.worker\.js/main.worker\.js?ts=$ts/g" main.js
   sed -i '\|buildflags =|c\
     const buildflags ="'"$flags"'"' index.html
+  sed -i '\|const ts=|c\
+    const ts="'"$ts"'";' index.html
 fi
 
 #xdg-open "http://0.0.0.0:6969/"

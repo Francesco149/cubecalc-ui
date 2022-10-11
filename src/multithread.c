@@ -28,6 +28,64 @@ void MTYield(size_t* n);
 #if defined(MULTITHREAD_IMPLEMENTATION) && !defined(MULTITHREAD_UNIT)
 #define MULTITHREAD_UNIT
 
+#include <sched.h>
+
+#ifndef NO_MULTITHREAD
+#include <emscripten/wasm_worker.h>
+#else
+// any type of sleep in the main thread does not let anything do any work
+#define emscripten_wasm_worker_sleep(x) sched_yield()
+#endif
+
+void MTYield(size_t* n) {
+  if (*n < 4) {
+    // just spin
+  } else if (*n < 32 || (*n & 1)) {
+    sched_yield(); // yield every other attempt, sleep otherwise
+  }
+  else {
+#ifdef __EMSCRIPTEN__
+    emscripten_wasm_worker_sleep(100);
+#else
+    struct timespec rqtp;
+    rqtp.tv_sec  = 0;
+    rqtp.tv_nsec = 100;
+    nanosleep(&rqtp, 0);
+#endif
+  }
+  ++*n;
+}
+
+#ifdef NO_MULTITHREAD
+void MTGlobalInit() {
+
+}
+
+void MTGlobalFree() {
+
+}
+
+size_t MTNumThreads() {
+  return 0;
+}
+
+MTJob* MTStart(MTJobFunc* func, void* data) {
+  return (MTJob*)func(data);
+}
+
+int MTDone(MTJob* j) {
+  return 1;
+}
+
+void* MTResult(MTJob* j) {
+  return j;
+}
+
+void MTFree(MTJob* j) {
+
+}
+
+#else
 // NOTE: I intentionally don't use atomics and lock-free because that would require
 // platform specific code at the moment since mingw and msvc don't support C11 threads
 
@@ -38,7 +96,6 @@ void MTYield(size_t* n);
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
-#include <emscripten/wasm_worker.h>
 
 EM_JS(int, js_numThreads, (), {
   return window.navigator.hardwareConcurrency;
@@ -83,8 +140,10 @@ size_t MTNumThreads() {
 // simpler to implement and reason about than a many consumers version.
 //
 // queue thread dequeues from this queue, locks a mutex and pushes to the many consumers
-// queue for the workers. it then signals the worker cond. this adds latency but at least
-// it doesn't block the main thread
+// stack for the workers. it then signals the worker cond. this adds latency but at least
+// it doesn't block the main thread.
+// the double stack, besides being simple, reverses the order of jobs twice effectively making
+// if like a queue
 //
 // workers wait on the mutex and cond and execute work. they then atomically set the job
 // done flag
@@ -109,7 +168,6 @@ typedef struct _MTJob {
 static pthread_mutex_t workerMutex;
 static pthread_cond_t workerCond;
 MTJob* mtQueue;
-MTJob* mtQueueLast;
 
 // many consumers of the locked queue
 pthread_t* workers;
@@ -146,7 +204,6 @@ void* MTWorker(void* ptr) {
     if (j) {
       if (!j->terminate) {
         mtQueue = mtQueue->next;
-        if (!mtQueue) mtQueueLast = 0;
       } else {
         // make sure all other workers wake up to the termination job
         pthread_cond_broadcast(&workerCond);
@@ -174,24 +231,6 @@ void* MTWorker(void* ptr) {
 _Atomic(MTJob*) pending;
 pthread_t pendingWorker;
 
-void MTYield(size_t* n) {
-  if (*n < 4) {
-    // just spin
-  } else if (*n < 32 || (*n & 1)) {
-    sched_yield(); // yield every other attempt, sleep otherwise
-  } else {
-#ifdef __EMSCRIPTEN__
-    emscripten_wasm_worker_sleep(100);
-#else
-    struct timespec rqtp;
-    rqtp.tv_sec  = 0;
-    rqtp.tv_nsec = 100;
-    nanosleep(&rqtp, 0);
-#endif
-  }
-  ++*n;
-}
-
 static
 void* MTPendingWorker(void* p) {
   int terminate = 0;
@@ -214,16 +253,11 @@ tryAgain:
       // which means a new job was pushed while we were trying to pop so try again
       goto tryAgain;
     }
-    j->next = 0; // no next since we're appending to the tail of the queue
     terminate |= j->terminate;
     mtdbg("dispatching %p", j);
     pthread_mutex_lock(&workerMutex);
-    if (!mtQueueLast) {
-      mtQueue = mtQueueLast = j;
-    } else {
-      mtQueueLast->next = j;
-      mtQueueLast = j;
-    }
+    j->next = mtQueue;
+    mtQueue = j;
     // NOTE: the worker must be in cond_wait when we signal otherwise it's gonna miss it
     // so we must have the mutex locked when we signal
     pthread_cond_signal(&workerCond);
@@ -306,5 +340,6 @@ void MTGlobalFree() {
   pthread_cond_destroy(&workerCond);
   BufFree(&workers);
 }
+#endif
 
 #endif
