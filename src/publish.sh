@@ -9,6 +9,8 @@ files="
   main.wasm
   main-singlethread.wasm
   main-singlethread.js
+  main-nowasm.js
+  main-nowasm.js.mem
   coi-serviceworker.js
 "
 cp $files $d

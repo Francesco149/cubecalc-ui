@@ -11,14 +11,25 @@ platformflags="
   -s USE_WEBGL2=1
   -s USE_GLFW=3
   -s FULL_ES2
-  -s WASM=1
   --cache ./emcc-cache
   -sALLOW_MEMORY_GROWTH
   -lidbfs.js
   -sEXPORTED_FUNCTIONS=_main,_storageAfterInit,_storageAfterCommit
 "
-mtflags="-sWASM_WORKERS -sPTHREAD_POOL_SIZE=navigator.hardwareConcurrency+1 -pthread"
-stflags="-DNO_MULTITHREAD"
+wasmflags="
+  -s WASM=1
+"
+nowasmflags="
+  -s WASM=0
+"
+mtflags="
+  -sWASM_WORKERS
+  -sPTHREAD_POOL_SIZE=navigator.hardwareConcurrency+1
+  -pthread
+"
+stflags="
+  -DNO_MULTITHREAD
+"
 
 dbgflags="-DCUBECALC_DEBUG -DMULTITHREAD_DEBUG"
 flags="-fdiagnostics-color=always -lGL"
@@ -88,20 +99,29 @@ if which mold >/dev/null 2>&1; then
 fi
 
 if [ "$compiler" = "emcc" ]; then
-  time $moldcmd $cc -o main.js              $flags $mtflags || exit
-  time $moldcmd $cc -o main-singlethread.js $flags $stflags || exit
+  $moldcmd $cc -o main.js              $flags $mtflags $wasmflags &
+  pid1=$!
+  $moldcmd $cc -o main-singlethread.js $flags $stflags $wasmflags &
+  pid2=$!
+  $moldcmd $cc -o main-nowasm.js       $flags $stflags $nowasmflags &
+  pid3=$!
+
+  time for x in $pid1 $pid2 $pid3; do
+      wait $x || exit
+    done
 else
-  time $moldcmd $cc $flags || exit
+  time $moldcmd $cc $flags $mtflags $wasmflags || exit
 fi
 #--preload-file ./data \
 
 if [ "$compiler" = "emcc" ]; then
   sed -i "s/main\.wasm/main.wasm?ts=$ts/g" main.js
+  sed -i "s/main-nowasm\.js\.mem/main-nowasm.js.mem?ts=$ts/g" main-nowasm.js
   sed -i "s/main\.worker\.js/main.worker\.js?ts=$ts/g" main.js
   sed -i '\|buildflags =|c\
-    const buildflags ="'"$flags"'"' index.html
+      const buildflags ="'"$flags"'"' index.html
   sed -i '\|const ts=|c\
-    const ts="'"$ts"'";' index.html
+      const ts="'"$ts"'";' index.html
 fi
 
 #xdg-open "http://0.0.0.0:6969/"
