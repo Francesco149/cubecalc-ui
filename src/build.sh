@@ -116,6 +116,7 @@ fi
 
 if [ "$compiler" = "emcc" ]; then
   sed -i "s/main\.wasm/main.wasm?ts=$ts/g" main.js
+  sed -i "s/main-singlethread\.wasm/main-singlethread.wasm?ts=$ts/g" main-singlethread.js
   sed -i "s/main-nowasm\.js\.mem/main-nowasm.js.mem?ts=$ts/g" main-nowasm.js
   sed -i "s/main\.worker\.js/main.worker\.js?ts=$ts/g" main.js
   sed -i '\|buildflags =|c\
