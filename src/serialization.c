@@ -250,13 +250,12 @@ int unpackTree(TreeData* g, char* rawData) {
       }
       treeById[sn->id] = BufLen(g->tree);
 
-      int in = treeAdd(g, type, 0, 0);
+      int in = treeAddId(sn->id, g, type, 0, 0);
       if (in < 0) {
         goto cleanup;
       }
 
       Node* n = &g->tree[in];
-      n->id = sn->id;
 
       SavedNodeData* sd = sn->data;
       if (!sd) {
