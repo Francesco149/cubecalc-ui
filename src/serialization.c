@@ -256,6 +256,7 @@ int unpackTree(TreeData* g, char* rawData) {
       }
 
       Node* n = &g->tree[in];
+      n->id = sn->id;
 
       SavedNodeData* sd = sn->data;
       if (!sd) {
