@@ -1165,12 +1165,12 @@ static void dataInit()
       {
         static const BufH(int const, lineHi,
           LINE_A_HI | FLAT_MAINSTAT_HI,
-          LINE_A_HI | HP_HI,
+          LINE_A_HI | FLAT_HP_HI,
           LINE_A_HI | FLAT_ATT_HI,
         );
         static const BufH(int const, lineLo,
           LINE_A_LO | FLAT_MAINSTAT_LO,
-          LINE_A_LO | HP_LO,
+          LINE_A_LO | FLAT_HP_LO,
           LINE_A_LO | FLAT_ATT_LO,
         );
         static const BufH(float const, onein,
@@ -1506,12 +1506,12 @@ static void dataInit()
       {
         static const BufH(int const, lineHi,
           LINE_A_HI | FLAT_MAINSTAT_HI,
-          LINE_A_HI | HP_HI,
+          LINE_A_HI | FLAT_HP_HI,
           LINE_A_HI | FLAT_ATT_HI,
         );
         static const BufH(int const, lineLo,
           LINE_A_LO | FLAT_MAINSTAT_LO,
-          LINE_A_LO | HP_LO,
+          LINE_A_LO | FLAT_HP_LO,
           LINE_A_LO | FLAT_ATT_LO,
         );
         static const BufH(float const, onein,
@@ -2933,12 +2933,12 @@ static void dataInit()
       {
         static const BufH(int const, lineHi,
           LINE_A_HI | FLAT_MAINSTAT_HI,
-          LINE_A_HI | HP_HI,
+          LINE_A_HI | FLAT_HP_HI,
           LINE_A_HI | FLAT_ATT_HI,
         );
         static const BufH(int const, lineLo,
           LINE_A_LO | FLAT_MAINSTAT_LO,
-          LINE_A_LO | HP_LO,
+          LINE_A_LO | FLAT_HP_LO,
           LINE_A_LO | FLAT_ATT_LO,
         );
         static const BufH(float const, onein,
@@ -3268,12 +3268,12 @@ static void dataInit()
       {
         static const BufH(int const, lineHi,
           LINE_A_HI | FLAT_MAINSTAT_HI,
-          LINE_A_HI | HP_HI,
+          LINE_A_HI | FLAT_HP_HI,
           LINE_A_HI | FLAT_ATT_HI,
         );
         static const BufH(int const, lineLo,
           LINE_A_LO | FLAT_MAINSTAT_LO,
-          LINE_A_LO | HP_LO,
+          LINE_A_LO | FLAT_HP_LO,
           LINE_A_LO | FLAT_ATT_LO,
         );
         static const BufH(float const, onein,
@@ -4731,12 +4731,12 @@ static void dataInit()
       {
         static const BufH(int const, lineHi,
           LINE_A_HI | FLAT_MAINSTAT_HI,
-          LINE_A_HI | HP_HI,
+          LINE_A_HI | FLAT_HP_HI,
           LINE_A_HI | FLAT_ATT_HI,
         );
         static const BufH(int const, lineLo,
           LINE_A_LO | FLAT_MAINSTAT_LO,
-          LINE_A_LO | HP_LO,
+          LINE_A_LO | FLAT_HP_LO,
           LINE_A_LO | FLAT_ATT_LO,
         );
         static const BufH(float const, onein,
@@ -5090,12 +5090,12 @@ static void dataInit()
       {
         static const BufH(int const, lineHi,
           LINE_A_HI | FLAT_MAINSTAT_HI,
-          LINE_A_HI | HP_HI,
+          LINE_A_HI | FLAT_HP_HI,
           LINE_A_HI | FLAT_ATT_HI,
         );
         static const BufH(int const, lineLo,
           LINE_A_LO | FLAT_MAINSTAT_LO,
-          LINE_A_LO | HP_LO,
+          LINE_A_LO | FLAT_HP_LO,
           LINE_A_LO | FLAT_ATT_LO,
         );
         static const BufH(float const, onein,
@@ -17166,7 +17166,7 @@ static void valuesInit()
     valueGroupsSet(35, 4, 7, linesHi, linesLo, vals);
   }
   {
-    static const int linesHi[8] = 
+    static const int linesHi[9] = 
     {
       ANY_HI,
       LINE_A_HI | FLAT_MAINSTAT_HI,
@@ -17176,8 +17176,9 @@ static void valuesInit()
       LINE_A_HI | HP_HI,
       LINE_A_HI | ALLSTAT_HI,
       MAINSTAT_PER_10_LVLS_HI,
+      LINE_A_HI | HP_ITEMS_AND_SKILLS_HI,
     };
-    static const int linesLo[8] = 
+    static const int linesLo[9] = 
     {
       ANY_LO,
       LINE_A_LO | FLAT_MAINSTAT_LO,
@@ -17187,8 +17188,9 @@ static void valuesInit()
       LINE_A_LO | HP_LO,
       LINE_A_LO | ALLSTAT_LO,
       MAINSTAT_PER_10_LVLS_LO,
+      LINE_A_LO | HP_ITEMS_AND_SKILLS_LO,
     };
-    static const int vals[8] = 
+    static const int vals[9] = 
     {
       1,
       8,
@@ -17198,11 +17200,12 @@ static void valuesInit()
       2,
       1,
       1,
+      5,
     };
-    valueGroupsSet(35, 5, 8, linesHi, linesLo, vals);
+    valueGroupsSet(35, 5, 9, linesHi, linesLo, vals);
   }
   {
-    static const int linesHi[12] = 
+    static const int linesHi[13] = 
     {
       ANY_HI,
       LINE_A_HI | FLAT_MAINSTAT_HI,
@@ -17216,8 +17219,9 @@ static void valuesInit()
       LINE_A_HI | COOLDOWN_HI,
       LINE_B_HI | MESO_ONLY_HI,
       LINE_B_HI | DROP_ONLY_HI,
+      LINE_A_HI | HP_ITEMS_AND_SKILLS_HI,
     };
-    static const int linesLo[12] = 
+    static const int linesLo[13] = 
     {
       ANY_LO,
       LINE_A_LO | FLAT_MAINSTAT_LO,
@@ -17231,8 +17235,9 @@ static void valuesInit()
       LINE_A_LO | COOLDOWN_LO,
       LINE_B_LO | MESO_ONLY_LO,
       LINE_B_LO | DROP_ONLY_LO,
+      LINE_A_LO | HP_ITEMS_AND_SKILLS_LO,
     };
-    static const int vals[12] = 
+    static const int vals[13] = 
     {
       1,
       8,
@@ -17246,8 +17251,9 @@ static void valuesInit()
       1,
       5,
       5,
+      10,
     };
-    valueGroupsSet(35, 6, 12, linesHi, linesLo, vals);
+    valueGroupsSet(35, 6, 13, linesHi, linesLo, vals);
   }
   {
     static const int linesHi[4] = 
@@ -17340,7 +17346,7 @@ static void valuesInit()
     valueGroupsSet(36, 4, 7, linesHi, linesLo, vals);
   }
   {
-    static const int linesHi[8] = 
+    static const int linesHi[9] = 
     {
       ANY_HI,
       LINE_A_HI | FLAT_MAINSTAT_HI,
@@ -17350,8 +17356,9 @@ static void valuesInit()
       LINE_A_HI | HP_HI,
       LINE_A_HI | ALLSTAT_HI,
       MAINSTAT_PER_10_LVLS_HI,
+      LINE_A_HI | HP_ITEMS_AND_SKILLS_HI,
     };
-    static const int linesLo[8] = 
+    static const int linesLo[9] = 
     {
       ANY_LO,
       LINE_A_LO | FLAT_MAINSTAT_LO,
@@ -17361,8 +17368,9 @@ static void valuesInit()
       LINE_A_LO | HP_LO,
       LINE_A_LO | ALLSTAT_LO,
       MAINSTAT_PER_10_LVLS_LO,
+      LINE_A_LO | HP_ITEMS_AND_SKILLS_LO,
     };
-    static const int vals[8] = 
+    static const int vals[9] = 
     {
       1,
       8,
@@ -17372,11 +17380,12 @@ static void valuesInit()
       2,
       1,
       1,
+      5,
     };
-    valueGroupsSet(36, 5, 8, linesHi, linesLo, vals);
+    valueGroupsSet(36, 5, 9, linesHi, linesLo, vals);
   }
   {
-    static const int linesHi[12] = 
+    static const int linesHi[13] = 
     {
       ANY_HI,
       LINE_A_HI | FLAT_MAINSTAT_HI,
@@ -17390,8 +17399,9 @@ static void valuesInit()
       LINE_A_HI | COOLDOWN_HI,
       LINE_B_HI | MESO_ONLY_HI,
       LINE_B_HI | DROP_ONLY_HI,
+      LINE_A_HI | HP_ITEMS_AND_SKILLS_HI,
     };
-    static const int linesLo[12] = 
+    static const int linesLo[13] = 
     {
       ANY_LO,
       LINE_A_LO | FLAT_MAINSTAT_LO,
@@ -17405,8 +17415,9 @@ static void valuesInit()
       LINE_A_LO | COOLDOWN_LO,
       LINE_B_LO | MESO_ONLY_LO,
       LINE_B_LO | DROP_ONLY_LO,
+      LINE_A_LO | HP_ITEMS_AND_SKILLS_LO,
     };
-    static const int vals[12] = 
+    static const int vals[13] = 
     {
       1,
       8,
@@ -17420,8 +17431,9 @@ static void valuesInit()
       1,
       5,
       5,
+      10,
     };
-    valueGroupsSet(36, 6, 12, linesHi, linesLo, vals);
+    valueGroupsSet(36, 6, 13, linesHi, linesLo, vals);
   }
   {
     static const int linesHi[4] = 
@@ -17514,7 +17526,7 @@ static void valuesInit()
     valueGroupsSet(37, 4, 7, linesHi, linesLo, vals);
   }
   {
-    static const int linesHi[8] = 
+    static const int linesHi[9] = 
     {
       ANY_HI,
       LINE_A_HI | FLAT_MAINSTAT_HI,
@@ -17524,8 +17536,9 @@ static void valuesInit()
       LINE_A_HI | HP_HI,
       LINE_A_HI | ALLSTAT_HI,
       MAINSTAT_PER_10_LVLS_HI,
+      LINE_A_HI | HP_ITEMS_AND_SKILLS_HI,
     };
-    static const int linesLo[8] = 
+    static const int linesLo[9] = 
     {
       ANY_LO,
       LINE_A_LO | FLAT_MAINSTAT_LO,
@@ -17535,8 +17548,9 @@ static void valuesInit()
       LINE_A_LO | HP_LO,
       LINE_A_LO | ALLSTAT_LO,
       MAINSTAT_PER_10_LVLS_LO,
+      LINE_A_LO | HP_ITEMS_AND_SKILLS_LO,
     };
-    static const int vals[8] = 
+    static const int vals[9] = 
     {
       1,
       10,
@@ -17546,11 +17560,12 @@ static void valuesInit()
       3,
       2,
       1,
+      10,
     };
-    valueGroupsSet(37, 5, 8, linesHi, linesLo, vals);
+    valueGroupsSet(37, 5, 9, linesHi, linesLo, vals);
   }
   {
-    static const int linesHi[12] = 
+    static const int linesHi[13] = 
     {
       ANY_HI,
       LINE_A_HI | FLAT_MAINSTAT_HI,
@@ -17564,8 +17579,9 @@ static void valuesInit()
       LINE_A_HI | COOLDOWN_HI,
       LINE_B_HI | MESO_ONLY_HI,
       LINE_B_HI | DROP_ONLY_HI,
+      LINE_A_HI | HP_ITEMS_AND_SKILLS_HI,
     };
-    static const int linesLo[12] = 
+    static const int linesLo[13] = 
     {
       ANY_LO,
       LINE_A_LO | FLAT_MAINSTAT_LO,
@@ -17579,8 +17595,9 @@ static void valuesInit()
       LINE_A_LO | COOLDOWN_LO,
       LINE_B_LO | MESO_ONLY_LO,
       LINE_B_LO | DROP_ONLY_LO,
+      LINE_A_LO | HP_ITEMS_AND_SKILLS_LO,
     };
-    static const int vals[12] = 
+    static const int vals[13] = 
     {
       1,
       10,
@@ -17594,8 +17611,9 @@ static void valuesInit()
       1,
       5,
       5,
+      15,
     };
-    valueGroupsSet(37, 6, 12, linesHi, linesLo, vals);
+    valueGroupsSet(37, 6, 13, linesHi, linesLo, vals);
   }
   {
     static const int linesHi[4] = 
@@ -17688,7 +17706,7 @@ static void valuesInit()
     valueGroupsSet(38, 4, 7, linesHi, linesLo, vals);
   }
   {
-    static const int linesHi[8] = 
+    static const int linesHi[9] = 
     {
       ANY_HI,
       LINE_A_HI | FLAT_MAINSTAT_HI,
@@ -17698,8 +17716,9 @@ static void valuesInit()
       LINE_A_HI | HP_HI,
       LINE_A_HI | ALLSTAT_HI,
       MAINSTAT_PER_10_LVLS_HI,
+      LINE_A_HI | HP_ITEMS_AND_SKILLS_HI,
     };
-    static const int linesLo[8] = 
+    static const int linesLo[9] = 
     {
       ANY_LO,
       LINE_A_LO | FLAT_MAINSTAT_LO,
@@ -17709,8 +17728,9 @@ static void valuesInit()
       LINE_A_LO | HP_LO,
       LINE_A_LO | ALLSTAT_LO,
       MAINSTAT_PER_10_LVLS_LO,
+      LINE_A_LO | HP_ITEMS_AND_SKILLS_LO,
     };
-    static const int vals[8] = 
+    static const int vals[9] = 
     {
       1,
       10,
@@ -17720,11 +17740,12 @@ static void valuesInit()
       3,
       2,
       1,
+      10,
     };
-    valueGroupsSet(38, 5, 8, linesHi, linesLo, vals);
+    valueGroupsSet(38, 5, 9, linesHi, linesLo, vals);
   }
   {
-    static const int linesHi[12] = 
+    static const int linesHi[13] = 
     {
       ANY_HI,
       LINE_A_HI | FLAT_MAINSTAT_HI,
@@ -17738,8 +17759,9 @@ static void valuesInit()
       LINE_A_HI | COOLDOWN_HI,
       LINE_B_HI | MESO_ONLY_HI,
       LINE_B_HI | DROP_ONLY_HI,
+      LINE_A_HI | HP_ITEMS_AND_SKILLS_HI,
     };
-    static const int linesLo[12] = 
+    static const int linesLo[13] = 
     {
       ANY_LO,
       LINE_A_LO | FLAT_MAINSTAT_LO,
@@ -17753,8 +17775,9 @@ static void valuesInit()
       LINE_A_LO | COOLDOWN_LO,
       LINE_B_LO | MESO_ONLY_LO,
       LINE_B_LO | DROP_ONLY_LO,
+      LINE_A_LO | HP_ITEMS_AND_SKILLS_LO,
     };
-    static const int vals[12] = 
+    static const int vals[13] = 
     {
       1,
       10,
@@ -17768,8 +17791,9 @@ static void valuesInit()
       1,
       5,
       5,
+      15,
     };
-    valueGroupsSet(38, 6, 12, linesHi, linesLo, vals);
+    valueGroupsSet(38, 6, 13, linesHi, linesLo, vals);
   }
   {
     static const int linesHi[4] = 
@@ -17862,7 +17886,7 @@ static void valuesInit()
     valueGroupsSet(39, 4, 7, linesHi, linesLo, vals);
   }
   {
-    static const int linesHi[8] = 
+    static const int linesHi[9] = 
     {
       ANY_HI,
       LINE_A_HI | FLAT_MAINSTAT_HI,
@@ -17872,8 +17896,9 @@ static void valuesInit()
       LINE_A_HI | HP_HI,
       LINE_A_HI | ALLSTAT_HI,
       MAINSTAT_PER_10_LVLS_HI,
+      LINE_A_HI | HP_ITEMS_AND_SKILLS_HI,
     };
-    static const int linesLo[8] = 
+    static const int linesLo[9] = 
     {
       ANY_LO,
       LINE_A_LO | FLAT_MAINSTAT_LO,
@@ -17883,8 +17908,9 @@ static void valuesInit()
       LINE_A_LO | HP_LO,
       LINE_A_LO | ALLSTAT_LO,
       MAINSTAT_PER_10_LVLS_LO,
+      LINE_A_LO | HP_ITEMS_AND_SKILLS_LO,
     };
-    static const int vals[8] = 
+    static const int vals[9] = 
     {
       1,
       10,
@@ -17894,11 +17920,12 @@ static void valuesInit()
       3,
       2,
       1,
+      10,
     };
-    valueGroupsSet(39, 5, 8, linesHi, linesLo, vals);
+    valueGroupsSet(39, 5, 9, linesHi, linesLo, vals);
   }
   {
-    static const int linesHi[12] = 
+    static const int linesHi[13] = 
     {
       ANY_HI,
       LINE_A_HI | FLAT_MAINSTAT_HI,
@@ -17912,8 +17939,9 @@ static void valuesInit()
       LINE_A_HI | COOLDOWN_HI,
       LINE_B_HI | MESO_ONLY_HI,
       LINE_B_HI | DROP_ONLY_HI,
+      LINE_A_HI | HP_ITEMS_AND_SKILLS_HI,
     };
-    static const int linesLo[12] = 
+    static const int linesLo[13] = 
     {
       ANY_LO,
       LINE_A_LO | FLAT_MAINSTAT_LO,
@@ -17927,8 +17955,9 @@ static void valuesInit()
       LINE_A_LO | COOLDOWN_LO,
       LINE_B_LO | MESO_ONLY_LO,
       LINE_B_LO | DROP_ONLY_LO,
+      LINE_A_LO | HP_ITEMS_AND_SKILLS_LO,
     };
-    static const int vals[12] = 
+    static const int vals[13] = 
     {
       1,
       12,
@@ -17942,8 +17971,9 @@ static void valuesInit()
       1,
       5,
       5,
+      15,
     };
-    valueGroupsSet(39, 6, 12, linesHi, linesLo, vals);
+    valueGroupsSet(39, 6, 13, linesHi, linesLo, vals);
   }
   {
     static const int linesHi[4] = 
@@ -18036,7 +18066,7 @@ static void valuesInit()
     valueGroupsSet(40, 4, 7, linesHi, linesLo, vals);
   }
   {
-    static const int linesHi[8] = 
+    static const int linesHi[9] = 
     {
       ANY_HI,
       LINE_A_HI | FLAT_MAINSTAT_HI,
@@ -18046,8 +18076,9 @@ static void valuesInit()
       LINE_A_HI | HP_HI,
       LINE_A_HI | ALLSTAT_HI,
       MAINSTAT_PER_10_LVLS_HI,
+      LINE_A_HI | HP_ITEMS_AND_SKILLS_HI,
     };
-    static const int linesLo[8] = 
+    static const int linesLo[9] = 
     {
       ANY_LO,
       LINE_A_LO | FLAT_MAINSTAT_LO,
@@ -18057,8 +18088,9 @@ static void valuesInit()
       LINE_A_LO | HP_LO,
       LINE_A_LO | ALLSTAT_LO,
       MAINSTAT_PER_10_LVLS_LO,
+      LINE_A_LO | HP_ITEMS_AND_SKILLS_LO,
     };
-    static const int vals[8] = 
+    static const int vals[9] = 
     {
       1,
       12,
@@ -18068,11 +18100,12 @@ static void valuesInit()
       5,
       3,
       1,
+      15,
     };
-    valueGroupsSet(40, 5, 8, linesHi, linesLo, vals);
+    valueGroupsSet(40, 5, 9, linesHi, linesLo, vals);
   }
   {
-    static const int linesHi[12] = 
+    static const int linesHi[13] = 
     {
       ANY_HI,
       LINE_A_HI | FLAT_MAINSTAT_HI,
@@ -18086,8 +18119,9 @@ static void valuesInit()
       LINE_A_HI | COOLDOWN_HI,
       LINE_B_HI | MESO_ONLY_HI,
       LINE_B_HI | DROP_ONLY_HI,
+      LINE_A_HI | HP_ITEMS_AND_SKILLS_HI,
     };
-    static const int linesLo[12] = 
+    static const int linesLo[13] = 
     {
       ANY_LO,
       LINE_A_LO | FLAT_MAINSTAT_LO,
@@ -18101,8 +18135,9 @@ static void valuesInit()
       LINE_A_LO | COOLDOWN_LO,
       LINE_B_LO | MESO_ONLY_LO,
       LINE_B_LO | DROP_ONLY_LO,
+      LINE_A_LO | HP_ITEMS_AND_SKILLS_LO,
     };
-    static const int vals[12] = 
+    static const int vals[13] = 
     {
       1,
       14,
@@ -18116,8 +18151,9 @@ static void valuesInit()
       1,
       5,
       5,
+      20,
     };
-    valueGroupsSet(40, 6, 12, linesHi, linesLo, vals);
+    valueGroupsSet(40, 6, 13, linesHi, linesLo, vals);
   }
   {
     static const int linesHi[4] = 
@@ -18210,7 +18246,7 @@ static void valuesInit()
     valueGroupsSet(41, 4, 7, linesHi, linesLo, vals);
   }
   {
-    static const int linesHi[8] = 
+    static const int linesHi[9] = 
     {
       ANY_HI,
       LINE_A_HI | FLAT_MAINSTAT_HI,
@@ -18220,8 +18256,9 @@ static void valuesInit()
       LINE_A_HI | HP_HI,
       LINE_A_HI | ALLSTAT_HI,
       MAINSTAT_PER_10_LVLS_HI,
+      LINE_A_HI | HP_ITEMS_AND_SKILLS_HI,
     };
-    static const int linesLo[8] = 
+    static const int linesLo[9] = 
     {
       ANY_LO,
       LINE_A_LO | FLAT_MAINSTAT_LO,
@@ -18231,8 +18268,9 @@ static void valuesInit()
       LINE_A_LO | HP_LO,
       LINE_A_LO | ALLSTAT_LO,
       MAINSTAT_PER_10_LVLS_LO,
+      LINE_A_LO | HP_ITEMS_AND_SKILLS_LO,
     };
-    static const int vals[8] = 
+    static const int vals[9] = 
     {
       1,
       12,
@@ -18242,11 +18280,12 @@ static void valuesInit()
       5,
       3,
       1,
+      15,
     };
-    valueGroupsSet(41, 5, 8, linesHi, linesLo, vals);
+    valueGroupsSet(41, 5, 9, linesHi, linesLo, vals);
   }
   {
-    static const int linesHi[12] = 
+    static const int linesHi[13] = 
     {
       ANY_HI,
       LINE_A_HI | FLAT_MAINSTAT_HI,
@@ -18260,8 +18299,9 @@ static void valuesInit()
       LINE_A_HI | COOLDOWN_HI,
       LINE_B_HI | MESO_ONLY_HI,
       LINE_B_HI | DROP_ONLY_HI,
+      LINE_A_HI | HP_ITEMS_AND_SKILLS_HI,
     };
-    static const int linesLo[12] = 
+    static const int linesLo[13] = 
     {
       ANY_LO,
       LINE_A_LO | FLAT_MAINSTAT_LO,
@@ -18275,8 +18315,9 @@ static void valuesInit()
       LINE_A_LO | COOLDOWN_LO,
       LINE_B_LO | MESO_ONLY_LO,
       LINE_B_LO | DROP_ONLY_LO,
+      LINE_A_LO | HP_ITEMS_AND_SKILLS_LO,
     };
-    static const int vals[12] = 
+    static const int vals[13] = 
     {
       1,
       14,
@@ -18290,8 +18331,9 @@ static void valuesInit()
       1,
       5,
       5,
+      20,
     };
-    valueGroupsSet(41, 6, 12, linesHi, linesLo, vals);
+    valueGroupsSet(41, 6, 13, linesHi, linesLo, vals);
   }
   {
     static const int linesHi[4] = 
@@ -18384,7 +18426,7 @@ static void valuesInit()
     valueGroupsSet(42, 4, 7, linesHi, linesLo, vals);
   }
   {
-    static const int linesHi[8] = 
+    static const int linesHi[9] = 
     {
       ANY_HI,
       LINE_A_HI | FLAT_MAINSTAT_HI,
@@ -18394,8 +18436,9 @@ static void valuesInit()
       LINE_A_HI | HP_HI,
       LINE_A_HI | ALLSTAT_HI,
       MAINSTAT_PER_10_LVLS_HI,
+      LINE_A_HI | HP_ITEMS_AND_SKILLS_HI,
     };
-    static const int linesLo[8] = 
+    static const int linesLo[9] = 
     {
       ANY_LO,
       LINE_A_LO | FLAT_MAINSTAT_LO,
@@ -18405,8 +18448,9 @@ static void valuesInit()
       LINE_A_LO | HP_LO,
       LINE_A_LO | ALLSTAT_LO,
       MAINSTAT_PER_10_LVLS_LO,
+      LINE_A_LO | HP_ITEMS_AND_SKILLS_LO,
     };
-    static const int vals[8] = 
+    static const int vals[9] = 
     {
       1,
       14,
@@ -18416,11 +18460,12 @@ static void valuesInit()
       5,
       3,
       1,
+      15,
     };
-    valueGroupsSet(42, 5, 8, linesHi, linesLo, vals);
+    valueGroupsSet(42, 5, 9, linesHi, linesLo, vals);
   }
   {
-    static const int linesHi[12] = 
+    static const int linesHi[13] = 
     {
       ANY_HI,
       LINE_A_HI | FLAT_MAINSTAT_HI,
@@ -18434,8 +18479,9 @@ static void valuesInit()
       LINE_A_HI | COOLDOWN_HI,
       LINE_B_HI | MESO_ONLY_HI,
       LINE_B_HI | DROP_ONLY_HI,
+      LINE_A_HI | HP_ITEMS_AND_SKILLS_HI,
     };
-    static const int linesLo[12] = 
+    static const int linesLo[13] = 
     {
       ANY_LO,
       LINE_A_LO | FLAT_MAINSTAT_LO,
@@ -18449,8 +18495,9 @@ static void valuesInit()
       LINE_A_LO | COOLDOWN_LO,
       LINE_B_LO | MESO_ONLY_LO,
       LINE_B_LO | DROP_ONLY_LO,
+      LINE_A_LO | HP_ITEMS_AND_SKILLS_LO,
     };
-    static const int vals[12] = 
+    static const int vals[13] = 
     {
       1,
       16,
@@ -18464,8 +18511,9 @@ static void valuesInit()
       1,
       5,
       5,
+      20,
     };
-    valueGroupsSet(42, 6, 12, linesHi, linesLo, vals);
+    valueGroupsSet(42, 6, 13, linesHi, linesLo, vals);
   }
   {
     static const int linesHi[4] = 
@@ -18558,7 +18606,7 @@ static void valuesInit()
     valueGroupsSet(43, 4, 7, linesHi, linesLo, vals);
   }
   {
-    static const int linesHi[8] = 
+    static const int linesHi[9] = 
     {
       ANY_HI,
       LINE_A_HI | FLAT_MAINSTAT_HI,
@@ -18568,8 +18616,9 @@ static void valuesInit()
       LINE_A_HI | HP_HI,
       LINE_A_HI | ALLSTAT_HI,
       MAINSTAT_PER_10_LVLS_HI,
+      LINE_A_HI | HP_ITEMS_AND_SKILLS_HI,
     };
-    static const int linesLo[8] = 
+    static const int linesLo[9] = 
     {
       ANY_LO,
       LINE_A_LO | FLAT_MAINSTAT_LO,
@@ -18579,8 +18628,9 @@ static void valuesInit()
       LINE_A_LO | HP_LO,
       LINE_A_LO | ALLSTAT_LO,
       MAINSTAT_PER_10_LVLS_LO,
+      LINE_A_LO | HP_ITEMS_AND_SKILLS_LO,
     };
-    static const int vals[8] = 
+    static const int vals[9] = 
     {
       1,
       14,
@@ -18590,11 +18640,12 @@ static void valuesInit()
       5,
       3,
       1,
+      15,
     };
-    valueGroupsSet(43, 5, 8, linesHi, linesLo, vals);
+    valueGroupsSet(43, 5, 9, linesHi, linesLo, vals);
   }
   {
-    static const int linesHi[12] = 
+    static const int linesHi[13] = 
     {
       ANY_HI,
       LINE_A_HI | FLAT_MAINSTAT_HI,
@@ -18608,8 +18659,9 @@ static void valuesInit()
       LINE_A_HI | COOLDOWN_HI,
       LINE_B_HI | MESO_ONLY_HI,
       LINE_B_HI | DROP_ONLY_HI,
+      LINE_A_HI | HP_ITEMS_AND_SKILLS_HI,
     };
-    static const int linesLo[12] = 
+    static const int linesLo[13] = 
     {
       ANY_LO,
       LINE_A_LO | FLAT_MAINSTAT_LO,
@@ -18623,8 +18675,9 @@ static void valuesInit()
       LINE_A_LO | COOLDOWN_LO,
       LINE_B_LO | MESO_ONLY_LO,
       LINE_B_LO | DROP_ONLY_LO,
+      LINE_A_LO | HP_ITEMS_AND_SKILLS_LO,
     };
-    static const int vals[12] = 
+    static const int vals[13] = 
     {
       1,
       16,
@@ -18638,8 +18691,9 @@ static void valuesInit()
       1,
       5,
       5,
+      20,
     };
-    valueGroupsSet(43, 6, 12, linesHi, linesLo, vals);
+    valueGroupsSet(43, 6, 13, linesHi, linesLo, vals);
   }
   {
     static const int linesHi[4] = 
@@ -18732,7 +18786,7 @@ static void valuesInit()
     valueGroupsSet(44, 4, 7, linesHi, linesLo, vals);
   }
   {
-    static const int linesHi[8] = 
+    static const int linesHi[9] = 
     {
       ANY_HI,
       LINE_A_HI | FLAT_MAINSTAT_HI,
@@ -18742,8 +18796,9 @@ static void valuesInit()
       LINE_A_HI | HP_HI,
       LINE_A_HI | ALLSTAT_HI,
       MAINSTAT_PER_10_LVLS_HI,
+      LINE_A_HI | HP_ITEMS_AND_SKILLS_HI,
     };
-    static const int linesLo[8] = 
+    static const int linesLo[9] = 
     {
       ANY_LO,
       LINE_A_LO | FLAT_MAINSTAT_LO,
@@ -18753,8 +18808,9 @@ static void valuesInit()
       LINE_A_LO | HP_LO,
       LINE_A_LO | ALLSTAT_LO,
       MAINSTAT_PER_10_LVLS_LO,
+      LINE_A_LO | HP_ITEMS_AND_SKILLS_LO,
     };
-    static const int vals[8] = 
+    static const int vals[9] = 
     {
       1,
       16,
@@ -18764,11 +18820,12 @@ static void valuesInit()
       7,
       4,
       1,
+      20,
     };
-    valueGroupsSet(44, 5, 8, linesHi, linesLo, vals);
+    valueGroupsSet(44, 5, 9, linesHi, linesLo, vals);
   }
   {
-    static const int linesHi[12] = 
+    static const int linesHi[13] = 
     {
       ANY_HI,
       LINE_A_HI | FLAT_MAINSTAT_HI,
@@ -18782,8 +18839,9 @@ static void valuesInit()
       LINE_A_HI | COOLDOWN_HI,
       LINE_B_HI | MESO_ONLY_HI,
       LINE_B_HI | DROP_ONLY_HI,
+      LINE_A_HI | HP_ITEMS_AND_SKILLS_HI,
     };
-    static const int linesLo[12] = 
+    static const int linesLo[13] = 
     {
       ANY_LO,
       LINE_A_LO | FLAT_MAINSTAT_LO,
@@ -18797,8 +18855,9 @@ static void valuesInit()
       LINE_A_LO | COOLDOWN_LO,
       LINE_B_LO | MESO_ONLY_LO,
       LINE_B_LO | DROP_ONLY_LO,
+      LINE_A_LO | HP_ITEMS_AND_SKILLS_LO,
     };
-    static const int vals[12] = 
+    static const int vals[13] = 
     {
       1,
       18,
@@ -18812,8 +18871,9 @@ static void valuesInit()
       1,
       5,
       5,
+      30,
     };
-    valueGroupsSet(44, 6, 12, linesHi, linesLo, vals);
+    valueGroupsSet(44, 6, 13, linesHi, linesLo, vals);
   }
   {
     static const int linesHi[4] = 
@@ -18906,7 +18966,7 @@ static void valuesInit()
     valueGroupsSet(45, 4, 7, linesHi, linesLo, vals);
   }
   {
-    static const int linesHi[8] = 
+    static const int linesHi[9] = 
     {
       ANY_HI,
       LINE_A_HI | FLAT_MAINSTAT_HI,
@@ -18916,8 +18976,9 @@ static void valuesInit()
       LINE_A_HI | HP_HI,
       LINE_A_HI | ALLSTAT_HI,
       MAINSTAT_PER_10_LVLS_HI,
+      LINE_A_HI | HP_ITEMS_AND_SKILLS_HI,
     };
-    static const int linesLo[8] = 
+    static const int linesLo[9] = 
     {
       ANY_LO,
       LINE_A_LO | FLAT_MAINSTAT_LO,
@@ -18927,8 +18988,9 @@ static void valuesInit()
       LINE_A_LO | HP_LO,
       LINE_A_LO | ALLSTAT_LO,
       MAINSTAT_PER_10_LVLS_LO,
+      LINE_A_LO | HP_ITEMS_AND_SKILLS_LO,
     };
-    static const int vals[8] = 
+    static const int vals[9] = 
     {
       1,
       16,
@@ -18938,11 +19000,12 @@ static void valuesInit()
       7,
       4,
       1,
+      20,
     };
-    valueGroupsSet(45, 5, 8, linesHi, linesLo, vals);
+    valueGroupsSet(45, 5, 9, linesHi, linesLo, vals);
   }
   {
-    static const int linesHi[12] = 
+    static const int linesHi[13] = 
     {
       ANY_HI,
       LINE_A_HI | FLAT_MAINSTAT_HI,
@@ -18956,8 +19019,9 @@ static void valuesInit()
       LINE_A_HI | COOLDOWN_HI,
       LINE_B_HI | MESO_ONLY_HI,
       LINE_B_HI | DROP_ONLY_HI,
+      LINE_A_HI | HP_ITEMS_AND_SKILLS_HI,
     };
-    static const int linesLo[12] = 
+    static const int linesLo[13] = 
     {
       ANY_LO,
       LINE_A_LO | FLAT_MAINSTAT_LO,
@@ -18971,8 +19035,9 @@ static void valuesInit()
       LINE_A_LO | COOLDOWN_LO,
       LINE_B_LO | MESO_ONLY_LO,
       LINE_B_LO | DROP_ONLY_LO,
+      LINE_A_LO | HP_ITEMS_AND_SKILLS_LO,
     };
-    static const int vals[12] = 
+    static const int vals[13] = 
     {
       1,
       18,
@@ -18986,8 +19051,9 @@ static void valuesInit()
       1,
       5,
       5,
+      30,
     };
-    valueGroupsSet(45, 6, 12, linesHi, linesLo, vals);
+    valueGroupsSet(45, 6, 13, linesHi, linesLo, vals);
   }
   {
     static const int linesHi[4] = 
@@ -19080,7 +19146,7 @@ static void valuesInit()
     valueGroupsSet(46, 4, 7, linesHi, linesLo, vals);
   }
   {
-    static const int linesHi[8] = 
+    static const int linesHi[9] = 
     {
       ANY_HI,
       LINE_A_HI | FLAT_MAINSTAT_HI,
@@ -19090,8 +19156,9 @@ static void valuesInit()
       LINE_A_HI | HP_HI,
       LINE_A_HI | ALLSTAT_HI,
       MAINSTAT_PER_10_LVLS_HI,
+      LINE_A_HI | HP_ITEMS_AND_SKILLS_HI,
     };
-    static const int linesLo[8] = 
+    static const int linesLo[9] = 
     {
       ANY_LO,
       LINE_A_LO | FLAT_MAINSTAT_LO,
@@ -19101,8 +19168,9 @@ static void valuesInit()
       LINE_A_LO | HP_LO,
       LINE_A_LO | ALLSTAT_LO,
       MAINSTAT_PER_10_LVLS_LO,
+      LINE_A_LO | HP_ITEMS_AND_SKILLS_LO,
     };
-    static const int vals[8] = 
+    static const int vals[9] = 
     {
       1,
       16,
@@ -19112,11 +19180,12 @@ static void valuesInit()
       7,
       4,
       1,
+      20,
     };
-    valueGroupsSet(46, 5, 8, linesHi, linesLo, vals);
+    valueGroupsSet(46, 5, 9, linesHi, linesLo, vals);
   }
   {
-    static const int linesHi[12] = 
+    static const int linesHi[13] = 
     {
       ANY_HI,
       LINE_A_HI | FLAT_MAINSTAT_HI,
@@ -19130,8 +19199,9 @@ static void valuesInit()
       LINE_A_HI | COOLDOWN_HI,
       LINE_B_HI | MESO_ONLY_HI,
       LINE_B_HI | DROP_ONLY_HI,
+      LINE_A_HI | HP_ITEMS_AND_SKILLS_HI,
     };
-    static const int linesLo[12] = 
+    static const int linesLo[13] = 
     {
       ANY_LO,
       LINE_A_LO | FLAT_MAINSTAT_LO,
@@ -19145,8 +19215,9 @@ static void valuesInit()
       LINE_A_LO | COOLDOWN_LO,
       LINE_B_LO | MESO_ONLY_LO,
       LINE_B_LO | DROP_ONLY_LO,
+      LINE_A_LO | HP_ITEMS_AND_SKILLS_LO,
     };
-    static const int vals[12] = 
+    static const int vals[13] = 
     {
       1,
       18,
@@ -19160,8 +19231,9 @@ static void valuesInit()
       1,
       5,
       5,
+      30,
     };
-    valueGroupsSet(46, 6, 12, linesHi, linesLo, vals);
+    valueGroupsSet(46, 6, 13, linesHi, linesLo, vals);
   }
   {
     static const int linesHi[4] = 
@@ -19254,7 +19326,7 @@ static void valuesInit()
     valueGroupsSet(47, 4, 7, linesHi, linesLo, vals);
   }
   {
-    static const int linesHi[8] = 
+    static const int linesHi[9] = 
     {
       ANY_HI,
       LINE_A_HI | FLAT_MAINSTAT_HI,
@@ -19264,8 +19336,9 @@ static void valuesInit()
       LINE_A_HI | HP_HI,
       LINE_A_HI | ALLSTAT_HI,
       MAINSTAT_PER_10_LVLS_HI,
+      LINE_A_HI | HP_ITEMS_AND_SKILLS_HI,
     };
-    static const int linesLo[8] = 
+    static const int linesLo[9] = 
     {
       ANY_LO,
       LINE_A_LO | FLAT_MAINSTAT_LO,
@@ -19275,8 +19348,9 @@ static void valuesInit()
       LINE_A_LO | HP_LO,
       LINE_A_LO | ALLSTAT_LO,
       MAINSTAT_PER_10_LVLS_LO,
+      LINE_A_LO | HP_ITEMS_AND_SKILLS_LO,
     };
-    static const int vals[8] = 
+    static const int vals[9] = 
     {
       1,
       16,
@@ -19286,11 +19360,12 @@ static void valuesInit()
       7,
       4,
       1,
+      20,
     };
-    valueGroupsSet(47, 5, 8, linesHi, linesLo, vals);
+    valueGroupsSet(47, 5, 9, linesHi, linesLo, vals);
   }
   {
-    static const int linesHi[12] = 
+    static const int linesHi[13] = 
     {
       ANY_HI,
       LINE_A_HI | FLAT_MAINSTAT_HI,
@@ -19304,8 +19379,9 @@ static void valuesInit()
       LINE_A_HI | COOLDOWN_HI,
       LINE_B_HI | MESO_ONLY_HI,
       LINE_B_HI | DROP_ONLY_HI,
+      LINE_A_HI | HP_ITEMS_AND_SKILLS_HI,
     };
-    static const int linesLo[12] = 
+    static const int linesLo[13] = 
     {
       ANY_LO,
       LINE_A_LO | FLAT_MAINSTAT_LO,
@@ -19319,8 +19395,9 @@ static void valuesInit()
       LINE_A_LO | COOLDOWN_LO,
       LINE_B_LO | MESO_ONLY_LO,
       LINE_B_LO | DROP_ONLY_LO,
+      LINE_A_LO | HP_ITEMS_AND_SKILLS_LO,
     };
-    static const int vals[12] = 
+    static const int vals[13] = 
     {
       1,
       18,
@@ -19334,8 +19411,9 @@ static void valuesInit()
       1,
       5,
       5,
+      30,
     };
-    valueGroupsSet(47, 6, 12, linesHi, linesLo, vals);
+    valueGroupsSet(47, 6, 13, linesHi, linesLo, vals);
   }
   {
     static const int linesHi[4] = 
@@ -19428,7 +19506,7 @@ static void valuesInit()
     valueGroupsSet(48, 4, 7, linesHi, linesLo, vals);
   }
   {
-    static const int linesHi[8] = 
+    static const int linesHi[9] = 
     {
       ANY_HI,
       LINE_A_HI | FLAT_MAINSTAT_HI,
@@ -19438,8 +19516,9 @@ static void valuesInit()
       LINE_A_HI | HP_HI,
       LINE_A_HI | ALLSTAT_HI,
       MAINSTAT_PER_10_LVLS_HI,
+      LINE_A_HI | HP_ITEMS_AND_SKILLS_HI,
     };
-    static const int linesLo[8] = 
+    static const int linesLo[9] = 
     {
       ANY_LO,
       LINE_A_LO | FLAT_MAINSTAT_LO,
@@ -19449,8 +19528,9 @@ static void valuesInit()
       LINE_A_LO | HP_LO,
       LINE_A_LO | ALLSTAT_LO,
       MAINSTAT_PER_10_LVLS_LO,
+      LINE_A_LO | HP_ITEMS_AND_SKILLS_LO,
     };
-    static const int vals[8] = 
+    static const int vals[9] = 
     {
       1,
       17,
@@ -19460,11 +19540,12 @@ static void valuesInit()
       8,
       5,
       1,
+      20,
     };
-    valueGroupsSet(48, 5, 8, linesHi, linesLo, vals);
+    valueGroupsSet(48, 5, 9, linesHi, linesLo, vals);
   }
   {
-    static const int linesHi[12] = 
+    static const int linesHi[13] = 
     {
       ANY_HI,
       LINE_A_HI | FLAT_MAINSTAT_HI,
@@ -19478,8 +19559,9 @@ static void valuesInit()
       LINE_A_HI | COOLDOWN_HI,
       LINE_B_HI | MESO_ONLY_HI,
       LINE_B_HI | DROP_ONLY_HI,
+      LINE_A_HI | HP_ITEMS_AND_SKILLS_HI,
     };
-    static const int linesLo[12] = 
+    static const int linesLo[13] = 
     {
       ANY_LO,
       LINE_A_LO | FLAT_MAINSTAT_LO,
@@ -19493,8 +19575,9 @@ static void valuesInit()
       LINE_A_LO | COOLDOWN_LO,
       LINE_B_LO | MESO_ONLY_LO,
       LINE_B_LO | DROP_ONLY_LO,
+      LINE_A_LO | HP_ITEMS_AND_SKILLS_LO,
     };
-    static const int vals[12] = 
+    static const int vals[13] = 
     {
       1,
       19,
@@ -19508,8 +19591,9 @@ static void valuesInit()
       1,
       5,
       5,
+      30,
     };
-    valueGroupsSet(48, 6, 12, linesHi, linesLo, vals);
+    valueGroupsSet(48, 6, 13, linesHi, linesLo, vals);
   }
   {
     static const int linesHi[4] = 
@@ -19602,7 +19686,7 @@ static void valuesInit()
     valueGroupsSet(49, 4, 7, linesHi, linesLo, vals);
   }
   {
-    static const int linesHi[8] = 
+    static const int linesHi[9] = 
     {
       ANY_HI,
       LINE_A_HI | FLAT_MAINSTAT_HI,
@@ -19612,8 +19696,9 @@ static void valuesInit()
       LINE_A_HI | HP_HI,
       LINE_A_HI | ALLSTAT_HI,
       MAINSTAT_PER_10_LVLS_HI,
+      LINE_A_HI | HP_ITEMS_AND_SKILLS_HI,
     };
-    static const int linesLo[8] = 
+    static const int linesLo[9] = 
     {
       ANY_LO,
       LINE_A_LO | FLAT_MAINSTAT_LO,
@@ -19623,8 +19708,9 @@ static void valuesInit()
       LINE_A_LO | HP_LO,
       LINE_A_LO | ALLSTAT_LO,
       MAINSTAT_PER_10_LVLS_LO,
+      LINE_A_LO | HP_ITEMS_AND_SKILLS_LO,
     };
-    static const int vals[8] = 
+    static const int vals[9] = 
     {
       1,
       17,
@@ -19634,11 +19720,12 @@ static void valuesInit()
       8,
       5,
       1,
+      20,
     };
-    valueGroupsSet(49, 5, 8, linesHi, linesLo, vals);
+    valueGroupsSet(49, 5, 9, linesHi, linesLo, vals);
   }
   {
-    static const int linesHi[12] = 
+    static const int linesHi[13] = 
     {
       ANY_HI,
       LINE_A_HI | FLAT_MAINSTAT_HI,
@@ -19652,8 +19739,9 @@ static void valuesInit()
       LINE_A_HI | COOLDOWN_HI,
       LINE_B_HI | MESO_ONLY_HI,
       LINE_B_HI | DROP_ONLY_HI,
+      LINE_A_HI | HP_ITEMS_AND_SKILLS_HI,
     };
-    static const int linesLo[12] = 
+    static const int linesLo[13] = 
     {
       ANY_LO,
       LINE_A_LO | FLAT_MAINSTAT_LO,
@@ -19667,8 +19755,9 @@ static void valuesInit()
       LINE_A_LO | COOLDOWN_LO,
       LINE_B_LO | MESO_ONLY_LO,
       LINE_B_LO | DROP_ONLY_LO,
+      LINE_A_LO | HP_ITEMS_AND_SKILLS_LO,
     };
-    static const int vals[12] = 
+    static const int vals[13] = 
     {
       1,
       19,
@@ -19682,8 +19771,9 @@ static void valuesInit()
       1,
       5,
       5,
+      30,
     };
-    valueGroupsSet(49, 6, 12, linesHi, linesLo, vals);
+    valueGroupsSet(49, 6, 13, linesHi, linesLo, vals);
   }
   {
     static const int linesHi[4] = 
