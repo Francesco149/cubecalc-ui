@@ -100,7 +100,7 @@ int selectedNode = -1;
 struct nk_vec2 savedMousePos; // in node space, not screen space
 int tool;
 int disclaimerHeight = 290;
-int maxCombos = 110;
+int maxCombos = 300;
 int* removeNodes;
 
 void dbg(char* fmt, ...) {
@@ -1234,7 +1234,7 @@ int uiTreeAddComment(struct nk_vec2 start, int x, int y, int w, int h, char* tex
   return ncomment;
 }
 
-int examplesCommon(int* succ, int category) {
+int examplesCommonCube(int* succ, int category, int cube) {
   struct nk_vec2 s = nk_vec2(20, 20);
   int ncategory;
   if (category >= 0) {
@@ -1249,6 +1249,7 @@ int examplesCommon(int* succ, int category) {
   if (*succ) {
     uiTreeDataByNode(nsplit)->value = ntier;
     uiTreeDataByNode(nlevel)->value = 200;
+    uiTreeDataByNode(ncube)->value = cube;
     if (category >= 0) {
       uiTreeDataByNode(ncategory)->value = category;
       uiTreeLink(ncategory, ncube);
@@ -1259,6 +1260,10 @@ int examplesCommon(int* succ, int category) {
   }
 
   return nsplit;
+}
+
+int examplesCommon(int* succ, int category) {
+  return examplesCommonCube(succ, category, RED_IDX);
 }
 
 void examplesWSE() {
@@ -1808,6 +1813,160 @@ void examplesFamiliars() {
   }
 }
 
+void examplesBonus() {
+  struct nk_vec2 s = nk_vec2(20, 20);
+  int succ = 1;
+  int nprevres;
+  int nsplit = examplesCommonCube(&succ, FACE_EYE_RING_EARRING_PENDANT_IDX, BONUS_IDX);
+  {
+    s.y += 150;
+    int ncomment = uiTreeAddComment(s, 0, 0, 480, 400,
+        "example: L bpot any 2l combo of stat, stat per 10 lvls", &succ);
+    int nstat = uiTreeAddChk(s, NSTAT, 0, 50, &succ);
+    int nstatperlvl = uiTreeAddChk(s, NSTAT, 0, 140, &succ);
+    int nlines = uiTreeAddChk(s, NSTAT, 0, 230, &succ);
+    int namt = uiTreeAddChk(s, NAMOUNT, 0, 320, &succ);
+    int nres = nprevres = uiTreeAddChk(s, NRESULT, 210, 50, &succ);
+
+    if (succ) {
+      uiTreeDataByNode(nstat)->value = MAINSTAT_IDX;
+      uiTreeDataByNode(nstatperlvl)->value = MAINSTAT_PER_10_LVLS_IDX;
+      uiTreeDataByNode(nlines)->value = LINES_IDX;
+      uiTreeDataByNode(namt)->value = 2;
+      uiTreeDataByNode(nres)->bounds.w = 270;
+      uiTreeDataByNode(nres)->bounds.h = 350;
+      uiTreeResultByNode(nres)->perPage = 100;
+      uiTreeLink(nsplit, nstat);
+      uiTreeLink(nstat, nstatperlvl);
+      uiTreeLink(nlines, nstatperlvl);
+      uiTreeLink(nlines, namt);
+      uiTreeLink(namt, nres);
+    }
+  }
+  {
+    s.x += 530;
+    int ncomment = uiTreeAddComment(s, 0, 0, 410, 310,
+        "example: rare 11 att bpot", &succ);
+    int nstat = uiTreeAddChk(s, NSTAT, 0, 50, &succ);
+    int namt = uiTreeAddChk(s, NAMOUNT, 0, 140, &succ);
+    int ntier = uiTreeAddChk(s, NTIER, 0, 230, &succ);
+    int nres = nprevres = uiTreeAddChk(s, NRESULT, 210, 50, &succ);
+
+    if (succ) {
+      uiTreeDataByNode(nstat)->value = FLAT_ATT_IDX;
+      uiTreeDataByNode(ntier)->value = RARE_IDX;
+      uiTreeDataByNode(namt)->value = 11;
+      uiTreeDataByNode(nres)->bounds.h = 260;
+      uiTreeResultByNode(nres)->perPage = 100;
+      uiTreeLink(nsplit, nstat);
+      uiTreeLink(nstat, namt);
+      uiTreeLink(ntier, namt);
+      uiTreeLink(ntier, nres);
+    }
+  }
+}
+
+void examplesHatBonus() {
+  struct nk_vec2 s = nk_vec2(20, 20);
+  int succ = 1;
+  int nprevres;
+  int nsplit = examplesCommonCube(&succ, HAT_IDX, BONUS_IDX);
+  {
+    s.y += 150;
+    int ncomment = uiTreeAddComment(s, 0, 0, 480, 400,
+        "example: L bpot any 2l combo of stat, stat per 10 lvls", &succ);
+    int nstat = uiTreeAddChk(s, NSTAT, 0, 50, &succ);
+    int nstatperlvl = uiTreeAddChk(s, NSTAT, 0, 140, &succ);
+    int nlines = uiTreeAddChk(s, NSTAT, 0, 230, &succ);
+    int namt = uiTreeAddChk(s, NAMOUNT, 0, 320, &succ);
+    int nres = nprevres = uiTreeAddChk(s, NRESULT, 210, 50, &succ);
+
+    if (succ) {
+      uiTreeDataByNode(nstat)->value = MAINSTAT_IDX;
+      uiTreeDataByNode(nstatperlvl)->value = MAINSTAT_PER_10_LVLS_IDX;
+      uiTreeDataByNode(nlines)->value = LINES_IDX;
+      uiTreeDataByNode(namt)->value = 2;
+      uiTreeDataByNode(nres)->bounds.w = 270;
+      uiTreeDataByNode(nres)->bounds.h = 350;
+      uiTreeResultByNode(nres)->perPage = 100;
+      uiTreeLink(nsplit, nstat);
+      uiTreeLink(nstat, nstatperlvl);
+      uiTreeLink(nlines, nstatperlvl);
+      uiTreeLink(nlines, namt);
+      uiTreeLink(namt, nres);
+    }
+  }
+  {
+    s.x += 530;
+    int ncomment = uiTreeAddComment(s, 0, 0, 410, 310,
+        "example: rare 11 att bpot", &succ);
+    int nstat = uiTreeAddChk(s, NSTAT, 0, 50, &succ);
+    int namt = uiTreeAddChk(s, NAMOUNT, 0, 140, &succ);
+    int ntier = uiTreeAddChk(s, NTIER, 0, 230, &succ);
+    int nres = nprevres = uiTreeAddChk(s, NRESULT, 210, 50, &succ);
+
+    if (succ) {
+      uiTreeDataByNode(nstat)->value = FLAT_ATT_IDX;
+      uiTreeDataByNode(ntier)->value = RARE_IDX;
+      uiTreeDataByNode(namt)->value = 11;
+      uiTreeDataByNode(nres)->bounds.h = 260;
+      uiTreeResultByNode(nres)->perPage = 100;
+      uiTreeLink(nsplit, nstat);
+      uiTreeLink(nstat, namt);
+      uiTreeLink(ntier, namt);
+      uiTreeLink(ntier, nres);
+    }
+  }
+  {
+    s.y += 440;
+    s.x -= 530;
+    int ncomment = uiTreeAddComment(s, 0, 0, 480, 490,
+        "example: L bpot any 2l cooldown, stat, stat per 10 lvls", &succ);
+    int nstat = uiTreeAddChk(s, NSTAT, 0, 50, &succ);
+    int nstatperlvl = uiTreeAddChk(s, NSTAT, 0, 140, &succ);
+    int ncooldown = uiTreeAddChk(s, NSTAT, 0, 230, &succ);
+    int nlines = uiTreeAddChk(s, NSTAT, 0, 320, &succ);
+    int namt = uiTreeAddChk(s, NAMOUNT, 0, 410, &succ);
+    int nres = nprevres = uiTreeAddChk(s, NRESULT, 210, 50, &succ);
+
+    if (succ) {
+      uiTreeDataByNode(nstat)->value = MAINSTAT_IDX;
+      uiTreeDataByNode(nstatperlvl)->value = MAINSTAT_PER_10_LVLS_IDX;
+      uiTreeDataByNode(nlines)->value = LINES_IDX;
+      uiTreeDataByNode(ncooldown)->value = COOLDOWN_IDX;
+      uiTreeDataByNode(namt)->value = 2;
+      uiTreeDataByNode(nres)->bounds.w = 270;
+      uiTreeDataByNode(nres)->bounds.h = 440;
+      uiTreeResultByNode(nres)->perPage = 100;
+      uiTreeLink(nsplit, nstat);
+      uiTreeLink(nstat, nstatperlvl);
+      uiTreeLink(ncooldown, nstatperlvl);
+      uiTreeLink(ncooldown, nlines);
+      uiTreeLink(nlines, namt);
+      uiTreeLink(namt, nres);
+    }
+  }
+  {
+    s.y -= 90;
+    s.x += 530;
+    int ncomment = uiTreeAddComment(s, 0, 0, 410, 310,
+        "example: L bpot 2+s cooldown", &succ);
+    int nstat = uiTreeAddChk(s, NSTAT, 0, 50, &succ);
+    int namt = uiTreeAddChk(s, NAMOUNT, 0, 140, &succ);
+    int nres = nprevres = uiTreeAddChk(s, NRESULT, 210, 50, &succ);
+
+    if (succ) {
+      uiTreeDataByNode(nstat)->value = COOLDOWN_IDX;
+      uiTreeDataByNode(namt)->value = 2;
+      uiTreeDataByNode(nres)->bounds.h = 260;
+      uiTreeResultByNode(nres)->perPage = 100;
+      uiTreeLink(nsplit, nstat);
+      uiTreeLink(nstat, namt);
+      uiTreeLink(namt, nres);
+    }
+  }
+}
+
 void storageAfterCommit() {
   dbg("storage committed\n");
   presetList();
@@ -2046,6 +2205,8 @@ void storageAfterInit() {
   examplesFile(CapeBeltShoulder);
   examplesFile(Operators);
   examplesFile(Familiars);
+  examplesFile(Bonus);
+  examplesFile(HatBonus);
   examplesFile_(DATADIR "zzz_Preset1" EXTENSION, examplesWSE);
   examplesFile_(DATADIR "zzz_Preset2" EXTENSION, examplesWSE);
   examplesFile_(DATADIR "zzz_Preset3" EXTENSION, examplesWSE);
