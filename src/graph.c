@@ -83,6 +83,7 @@ void treeClear(TreeData* g);
 void treeFree(TreeData* g); // call treeClear before this
 int treeDefaultValue(int type, int stat);
 int treeAdd(TreeData* g, int type, int x, int y);
+int treeAddId(int id, TreeData* g, int type, int x, int y); // to force a certain id
 void treeDel(TreeData* g, int nodeIndex);
 void treeLink(TreeData* g, int from, int to);
 void treeUnlink(TreeData* g, int from, int to);
@@ -224,6 +225,10 @@ nextId:
 
 int treeAdd(TreeData* g, int type, int x, int y) {
   int id = treeNextId(g); // important: do this BEFORE allocating the node
+  return treeAddId(id, g, type, x, y);
+}
+
+int treeAddId(int id, TreeData* g, int type, int x, int y) {
   NodeData* d = BufAllocZero(&g->data[type]);
   Node* n;
   int chars;
