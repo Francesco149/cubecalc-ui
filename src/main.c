@@ -1427,7 +1427,11 @@ void presetList() {
 
     // no dot found
     if (end == data->d_name) {
-      end = nameEnd;
+      continue;
+    }
+
+    if (strcmp(end, EXTENSION)) {
+      continue;
     }
 
     size_t len = end - data->d_name;
