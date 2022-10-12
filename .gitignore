@@ -4,7 +4,6 @@ cubecalc.zip
 *.data
 /.direnv
 emcc-cache
-generated.c
 __pycache__
 src/data/*
 src/cubecalc
