@@ -1517,15 +1517,13 @@ void storageAfterInit() {
   examples();
   storageCommit();
 
-  if (!storageLoadSync(AUTOSAVE_FILE)) {
+  if (!presetExists(AUTOSAVE_FILE) || !presetLoad(AUTOSAVE_FILE)) {
     presetLoad("WSE");
   }
 }
 
 void storageAutoSave() {
-  // TODO: make async
-  storageSaveSync(AUTOSAVE_FILE);
-  storageCommit();
+  presetSave(AUTOSAVE_FILE);
 }
 
 #ifdef MICROSHAFT_WANGBLOWS
