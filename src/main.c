@@ -1211,7 +1211,6 @@ dontShowCalc:
     nk_window_set_bounds(nk, DISCLAIMER_NAME, disclaimerBounds);
     nk_window_set_bounds(nk, ERROR_NAME, errorBounds);
     nk_window_set_bounds(nk, INFO_NAME, infoBounds);
-    nk_window_set_focus(nk, DISCLAIMER_NAME);
     flags &= ~UPDATE_SIZE;
   }
 
