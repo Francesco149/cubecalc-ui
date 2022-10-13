@@ -30,11 +30,13 @@ void MTYield(size_t* n);
 
 #include <sched.h>
 
-#ifndef NO_MULTITHREAD
-#include <emscripten/wasm_worker.h>
-#else
+#ifdef NO_MULTITHREAD
 // any type of sleep in the main thread does not let anything do any work
 #define emscripten_wasm_worker_sleep(x) sched_yield()
+#elif defined(__EMSCRIPTEN__)
+#include <emscripten/wasm_worker.h>
+#else
+#include <time.h>
 #endif
 
 void MTYield(size_t* n) {

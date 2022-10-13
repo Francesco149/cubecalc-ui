@@ -732,13 +732,13 @@ void examplesHatBonus() {
 }
 
 #define examplesFile(x) \
-  examplesFile_(DATADIR #x EXTENSION, examples##x)
+  examplesFile_(#x, examples##x)
 
 void examplesFile_(char* path, void (* func)()) {
-  if (!storageExists(path)) {
+  if (!presetExists(path)) {
     uiTreeClear();
     func();
-    storageSaveSync(path);
+    presetSave(path);
   }
 }
 
@@ -754,9 +754,9 @@ void examples() {
   examplesFile(Familiars);
   examplesFile(Bonus);
   examplesFile(HatBonus);
-  examplesFile_(DATADIR "zzz_Preset1" EXTENSION, examplesWSE);
-  examplesFile_(DATADIR "zzz_Preset2" EXTENSION, examplesWSE);
-  examplesFile_(DATADIR "zzz_Preset3" EXTENSION, examplesWSE);
-  examplesFile_(DATADIR "zzz_Preset4" EXTENSION, examplesWSE);
-  examplesFile_(DATADIR "zzz_Preset5" EXTENSION, examplesWSE);
+  examplesFile_("zzz_Preset1", examplesWSE);
+  examplesFile_("zzz_Preset2", examplesWSE);
+  examplesFile_("zzz_Preset3", examplesWSE);
+  examplesFile_("zzz_Preset4", examplesWSE);
+  examplesFile_("zzz_Preset5", examplesWSE);
 }

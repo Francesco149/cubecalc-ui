@@ -12,6 +12,13 @@
 #include <stdlib.h> // qsort
 #include <dirent.h> // opendir readdir
 #include <limits.h>
+#include <errno.h>
+
+#ifdef MICROSHAFT_WANGBLOWS
+#define WIN32_LEAN_AND_MEAN
+#define VC_EXTRALEAN
+#include <windows.h>
+#endif
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
@@ -1234,6 +1241,48 @@ int uiTreeAddComment(struct nk_vec2 start, int x, int y, int w, int h, char* tex
   return ncomment;
 }
 
+#define GLOBALS_FILE ".globals.bin"
+#define EXTENSION ".maplecalcv2"
+#define AUTOSAVE_FILE "autosave"
+
+#ifdef __EMSCRIPTEN__
+#define storageDir "/data/"
+#define storageDirInit()
+#define storageDirFree()
+#else
+static char* storageDir;
+#define PROGNAME "cubecalc"
+
+void storageDirFree() {
+  BufFree(&storageDir);
+}
+
+void storageDirInit() {
+#ifdef MICROSHAFT_WANGBLOWS
+  char appdata[MAX_PATH];
+  if (SHGetFolderPathA(0, CSIDL_LOCAL_APPDATA, 0, SHGFP_TYPE_CURRENT, appdata) != S_OK) {
+    fprintf(stderr, "SHGetFolderPathA failed, falling back to working dir\n");
+    snprintf(appdata, sizeof(appdata), ".\\data");
+  }
+  BufAllocCharsf(&storageDir, "%s\\" PROGNAME "\\", appdata);
+#else
+  // assume unix-like otherwise
+  char* dataHome = getenv("XDG_DATA_HOME");
+  if (!dataHome || !*dataHome) {
+    char* home = getenv("HOME");
+    if (!home) {
+      fprintf(stderr, "$HOME not found, falling back to working dir");
+      BufAllocCharsf(&storageDir, "./data/");
+    } else {
+      BufAllocCharsf(&storageDir, "%s/.local/share/" PROGNAME "/", home);
+    }
+  } else {
+    BufAllocCharsf(&storageDir, "%s/" PROGNAME "/", dataHome);
+  }
+#endif
+}
+#endif // !defined(__EMSCRIPTEN__)
+
 void storageAfterCommit() {
   dbg("storage committed\n");
   presetList();
@@ -1255,9 +1304,13 @@ void storageCommit() {
 static int storageWriteSync(char* path, char* buf) {
   int res = 0;
 
-  dbg("saving %s\n", path);
+  char* s = 0;
+  BufAllocCharsf(&s, "%s%s", storageDir, path);
 
-  FILE* f = fopen(path, "wb");
+  dbg("saving %s\n", s);
+
+  FILE* f = fopen(s, "wb");
+  BufFree(&s);
   if (!f) {
     perror("fopen");
   } else {
@@ -1273,22 +1326,25 @@ static int storageWriteSync(char* path, char* buf) {
 }
 
 static char* storageReadSync(char* path) {
-  dbg("reading %s\n", path);
+  char* rawData = 0;
+  char* s = 0;
+  BufAllocCharsf(&s, "%s%s", storageDir, path);
+
+  dbg("reading %s\n", s);
 
   struct stat st;
-  if (stat(path, &st)) {
+  if (stat(s, &st)) {
     perror("stat");
-    return 0;
+    goto cleanup;
   }
 
-  FILE* f = fopen(path, "rb");
+  FILE* f = fopen(s, "rb");
   if (!f) {
     perror("fopen");
-    return 0;
+    goto cleanup;
   }
 
   int res = 0;
-  char* rawData = 0;
   BufReserve(&rawData, st.st_size);
   if (fread(rawData, 1, st.st_size, f) != st.st_size) {
     perror("fread");
@@ -1296,17 +1352,10 @@ static char* storageReadSync(char* path) {
   }
 
   fclose(f);
+cleanup:
+  BufFree(&s);
   return rawData;
 }
-
-#ifdef __EMSCRIPTEN__
-#define DATADIR "/data/"
-#else
-#define DATADIR "./data/"
-#endif
-#define GLOBALS_FILE DATADIR ".globals.bin"
-#define EXTENSION ".maplecalcv2"
-#define AUTOSAVE_FILE DATADIR "autosave" EXTENSION
 
 int storageSaveGlobalsSync() {
   char* out = packGlobals(disclaimer);
@@ -1331,14 +1380,6 @@ int storageSaveSync(char* path) {
   return res;
 }
 
-char* presetPath(char* path) {
-  char* s = 0;
-  size_t len = snprintf(0, 0, "%s%s%s", DATADIR, path, EXTENSION);
-  BufReserve(&s, len + 1);
-  snprintf(s, len + 1, "%s%s%s", DATADIR, path, EXTENSION);
-  return s;
-}
-
 int storageLoadSync(char* path) {
   int res = 0;
   char* rawData = storageReadSync(path);
@@ -1353,20 +1394,35 @@ int storageLoadSync(char* path) {
 }
 
 void storageDeleteSync(char* path) {
-  dbg("deleting %s\n", path);
-  if (remove(path)) {
+  char* s = 0;
+  BufAllocCharsf(&s, "%s%s", storageDir, path);
+  dbg("deleting %s\n", s);
+  if (remove(s)) {
     perror("remove");
   }
+  BufFree(&s);
   storageCommit();
 }
 
 int storageExists(char* path) {
   struct stat st;
-  return stat(path, &st) == 0;
+  char* s = 0;
+  BufAllocCharsf(&s, "%s%s", storageDir, path);
+  int res = stat(s, &st) == 0;
+  BufFree(&s);
+  return res;
 }
 
+char* presetFileName(char* name) {
+  char* s = 0;
+  BufAllocCharsf(&s, "%s%s", name, EXTENSION);
+  return s;
+}
+
+// TODO: avoid all these unnecessary allocs
+
 int presetSaveNoCommit(char* path) {
-  char* s = presetPath(path);
+  char* s = presetFileName(path);
   int res = storageSaveSync(s);
   BufFree(&s);
   return res;
@@ -1379,20 +1435,20 @@ int presetSave(char* path) {
 }
 
 int presetLoad(char* path) {
-  char* s = presetPath(path);
+  char* s = presetFileName(path);
   int res = storageLoadSync(s);
   BufFree(&s);
   return res;
 }
 
 void presetDelete(char* path) {
-  char* s = presetPath(path);
+  char* s = presetFileName(path);
   storageDeleteSync(s);
   BufFree(&s);
 }
 
 int presetExists(char* path) {
-  char* s = presetPath(path);
+  char* s = presetFileName(path);
   int res = storageExists(s);
   BufFree(&s);
   return res;
@@ -1405,7 +1461,7 @@ static int qsortStrcmp(void const *a, void const *b) {
 }
 
 void presetList() {
-  DIR* dir = opendir(DATADIR);
+  DIR* dir = opendir(storageDir);
   if (!dir) {
     perror("opendir");
     return;
@@ -1462,7 +1518,7 @@ void storageAfterInit() {
   storageCommit();
 
   if (!storageLoadSync(AUTOSAVE_FILE)) {
-    storageLoadSync(DATADIR "WSE" EXTENSION);
+    presetLoad("WSE");
   }
 }
 
@@ -1472,7 +1528,40 @@ void storageAutoSave() {
   storageCommit();
 }
 
+#ifdef MICROSHAFT_WANGBLOWS
+#define STORAGE_PATH_SEPARATOR '\\'
+#else
+#define STORAGE_PATH_SEPARATOR '/'
+#endif
+
+// TODO: handle non-ascii paths for microshaft wangblows
+#ifndef __EMSCRIPTEN__
+void storageMkDir(char* path) {
+  char* end = strchr(path, STORAGE_PATH_SEPARATOR);
+  while (end) {
+    char* folder = BufStrDupn(path, end - path + 1);
+#ifdef MICROSHAFT_WANGBLOWS
+    if (!CreateDirectoryA(folder, 0)) {
+      if (GetLastError() != ERROR_ALREADY_EXISTS) {
+        fprintf(stderr, "CreateDirectoryA failed on %s\n", folder);
+      }
+    }
+#else
+    if (mkdir(path, 0755) < 0 && errno != EEXIST) {
+      perror("mkdir");
+      fprintf(stderr, "mkdir failed on %s\n", folder);
+    }
+#endif
+    BufFree(&folder);
+    end = strchr(++end, STORAGE_PATH_SEPARATOR);
+  }
+}
+#endif
+
 void storageInit() {
+  storageDirInit();
+  dbg("storage dir: %s\n", storageDir);
+  // TODO: would be nice to DRY this and not repeat /data even though it's unlikely to change
 #ifdef __EMSCRIPTEN__
   EM_ASM(
     FS.mkdir('/data');
@@ -1483,6 +1572,7 @@ void storageInit() {
     });
   );
 #else
+  storageMkDir(storageDir);
   storageAfterInit();
 #endif
 }

@@ -112,7 +112,7 @@ if [ "$compiler" = "emcc" ]; then
       wait $x || exit
     done
 else
-  time $moldcmd $cc $flags $mtflags $wasmflags || exit
+  time $moldcmd $cc $flags || exit
 fi
 #--preload-file ./data \
 
