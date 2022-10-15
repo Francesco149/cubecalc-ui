@@ -1,9 +1,15 @@
-name: "Deploy"
+name: "Deployment"
+
+concurrency:
+  group: nightly
+  cancel-in-progress: true
+
 on:
   pull_request:
   push:
+
 jobs:
-  tests:
+  deployment:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
