@@ -5,7 +5,6 @@ ts=$(date +%s)
 
 preflags="
   -I ./thirdparty/
-  -DTS=$ts
 "
 platformflags="
   -s USE_WEBGL2=1
@@ -115,17 +114,6 @@ else
   time $moldcmd $cc $flags || exit
 fi
 #--preload-file ./data \
-
-if [ "$compiler" = "emcc" ]; then
-  sed -i "s/main\.wasm/main.wasm?ts=$ts/g" main.js
-  sed -i "s/main-singlethread\.wasm/main-singlethread.wasm?ts=$ts/g" main-singlethread.js
-  sed -i "s/main-nowasm\.js\.mem/main-nowasm.js.mem?ts=$ts/g" main-nowasm.js
-  sed -i "s/main\.worker\.js/main.worker\.js?ts=$ts/g" main.js
-  sed -i '\|buildflags =|c\
-      const buildflags ="'"$flags"'"' index.html
-  sed -i '\|const ts=|c\
-      const ts="'"$ts"'";' index.html
-fi
 
 #xdg-open "http://0.0.0.0:6969/"
 if [ "$compiler" = "emcc" ]; then

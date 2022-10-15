@@ -12,35 +12,41 @@
   };
 
   outputs = { self, nixpkgs, flake-compat, flake-utils }:
-    flake-utils.lib.eachDefaultSystem (system:
-      with nixpkgs.legacyPackages.${system}; {
-        devShell = mkShell rec {
-          buildInputs = [
-            emscripten
-            mold
-            protobuf
-            protobufc
-            python310 # for the web server
+    let
+      localOverlay = import ./overlay.nix;
+      pkgsForSystem = system: import nixpkgs {
+        overlays = [
+          localOverlay
+        ];
+        inherit system;
+      };
+    in flake-utils.lib.eachDefaultSystem (system: rec {
+      legacyPackages = pkgsForSystem system;
+      pkgs = flake-utils.lib.flattenTree {
+        inherit
+          (legacyPackages)
+          devShell
+          cubecalc-ui;
+      };
+      defaultPackage = pkgs.cubecalc-ui;
 
-            # for desktop
-            libGL
-            glfw3
-            pkg-config
-            tinycc
-            clang
-          ] ++ (with xorg; [
-            libX11
-            libXau
-            libXdmcp
-          ]);
+      # export pkgs.devShell as devShell. the nix develop / direnv shell
+      inherit (pkgs) devShell;
 
-          # this is for the tinycc-built binary which doesn't have the nix runpath
-          # since we don't use a built system atm, the gcc/clang binary also needs this
-          shellHook = let
-            lines = builtins.map (x: "export LD_LIBRARY_PATH=\"${x}/lib:$LD_LIBRARY_PATH\"") buildInputs;
-          in
-            lib.concatStringsSep "\n" lines;
-        };
-      }
-    );
+      apps.cubecalc-ui = flake-utils.lib.mkApp { drv = pkgs.cubecalc-ui; };
+
+      # nix friendly CI/builder thing
+      hydraJobs = {
+        inherit
+        (legacyPackages)
+        cubecalc-ui;
+      };
+
+      checks = { inherit (legacyPackages); };
+    }) // {
+      # these are for example for when I want to expose a nix module or overlay
+      overlay = localOverlay;
+      overlays = [];
+      nixosModule = { config }: { options = {}; config= {}; };
+    };
 }

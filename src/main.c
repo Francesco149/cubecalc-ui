@@ -14,11 +14,7 @@
 #include <limits.h>
 #include <errno.h>
 
-#ifdef MICROSHAFT_WANGBLOWS
-#define WIN32_LEAN_AND_MEAN
-#define VC_EXTRALEAN
-#include <windows.h>
-#endif
+#include "microshaft_wangblows.c"
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>

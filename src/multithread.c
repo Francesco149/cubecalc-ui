@@ -28,7 +28,12 @@ void MTYield(size_t* n);
 #if defined(MULTITHREAD_IMPLEMENTATION) && !defined(MULTITHREAD_UNIT)
 #define MULTITHREAD_UNIT
 
-#include <sched.h>
+#ifndef MICROSHAFT_WANGBLOWS
+#include <sched.h> // sched_yield
+#else
+#include "microshaft_wangblows.c"
+#define sched_yield SwitchToThread
+#endif
 
 #ifdef NO_MULTITHREAD
 // any type of sleep in the main thread does not let anything do any work

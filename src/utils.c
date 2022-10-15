@@ -553,14 +553,6 @@ void _AlignFeed(Align* al, char* alignFmt, char* fmt, ...);
 void AlignPrint(Align* al, FILE* f);
 void AlignFree(Align* al);
 
-//
-// OS detection macros
-//
-
-#if defined(_WIN32) || defined(_WIN64) || defined(__MINGW32__)
-#define MICROSHAFT_WANGBLOWS
-#endif
-
 #endif
 
 #if defined(UTILS_IMPLEMENTATION) && !defined(UTILS_UNIT)
