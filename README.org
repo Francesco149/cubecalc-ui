@@ -7,7 +7,7 @@ check out the presets combo box in the bottom/right bar for common setups
 * usage
 ** web version
 - just use the [[https://francesco149.github.io/maple/cube][hosted version here]] .
-** desktop (linux, WSL)
+** desktop (linux, WSL, probably macOS too?)
 - [[https://nix.dev/tutorials/install-nix][install the nix package manager]]
 - ~nix run github:Francesco149/cubecalc-ui~
 ** desktop (windows)
