@@ -36,15 +36,6 @@
 
       # for nix run
       apps.cubecalc-ui = flake-utils.lib.mkApp { drv = pkgs.cubecalc-ui; };
-
-      # nix friendly CI/builder thing
-      hydraJobs = {
-        inherit
-          (legacyPackages)
-          cubecalc-ui;
-      };
-
-      checks = { inherit (legacyPackages); };
     }) // {
       # these are for example for when I want to expose a nix module or overlay
       overlay = localOverlay;
