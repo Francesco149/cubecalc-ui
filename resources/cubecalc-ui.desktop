@@ -1,0 +1,6 @@
+[Desktop Entry]
+Type=Application
+Name=CubeCalcUI
+Exec=cubecalc-ui
+Icon=cubecalc-ui
+Categories=Utility;

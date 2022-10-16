@@ -21,4 +21,12 @@ jobs:
         name: lolisamurai
         authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
     - run: src/cachix-push.sh
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install meson libglfw3-dev
+    - name: Build AppImage
+      run: |
+        cd src
+        ./appimage.sh
     # TODO: actually build binaries to distribute
