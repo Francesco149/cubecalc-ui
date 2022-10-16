@@ -28,6 +28,7 @@
           devShell
           cubecalc-ui;
       };
+      packages = pkgs;
       defaultPackage = pkgs.cubecalc-ui;
 
       # export pkgs.devShell as devShell. the nix develop / direnv shell
