@@ -31,6 +31,21 @@ if cc.get_id() != 'emcc'
     include_directories : incdir,
     install : true,
   )
+
+  install_data(
+    '../resources/cubecalc-ui.desktop',
+    install_dir : 'share/applications'
+  )
+
+  install_data(
+    '../resources/cubecalc-ui.png',
+    install_dir : 'share/icons/hicolor/512x512/apps'
+  )
+
+  install_data(
+    '../resources/cubecalc-ui-48.png',
+    install_dir : 'share/icons/hicolor/48x48/apps'
+  )
 else
   extra_args += [
     '-sUSE_WEBGL2=1',
