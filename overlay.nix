@@ -39,7 +39,7 @@ self: super: with super; {
     };
   };
 
-  devShell = mkShell rec {
+  cubecalc-ui-devshell = mkShell rec {
     buildInputs = [
       emscripten
 

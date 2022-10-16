@@ -25,22 +25,23 @@
       pkgs = flake-utils.lib.flattenTree {
         inherit
           (legacyPackages)
-          devShell
+          cubecalc-ui-devshell
           cubecalc-ui;
       };
       packages = pkgs;
       defaultPackage = pkgs.cubecalc-ui;
 
-      # export pkgs.devShell as devShell. the nix develop / direnv shell
-      inherit (pkgs) devShell;
+      # export devShell for nix develop / direnv shell
+      devShell = pkgs.cubecalc-ui-devshell;
 
+      # for nix run
       apps.cubecalc-ui = flake-utils.lib.mkApp { drv = pkgs.cubecalc-ui; };
 
       # nix friendly CI/builder thing
       hydraJobs = {
         inherit
-        (legacyPackages)
-        cubecalc-ui;
+          (legacyPackages)
+          cubecalc-ui;
       };
 
       checks = { inherit (legacyPackages); };
