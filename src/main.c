@@ -1580,7 +1580,7 @@ int main() {
 
   glfwSetErrorCallback(errorCallback);
   if (!glfwInit()) {
-    puts("[GFLW] failed to init!");
+    fprintf(stderr, "[GFLW] failed to init!\n");
     res = 1;
     goto cleanup;
   }
@@ -1590,6 +1590,7 @@ int main() {
   glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_ANY_PROFILE);
   win = glfwCreateWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "MapleStory Average Cubing Cost", 0, 0);
   if (!win) {
+    fprintf(stderr, "[GLFW] failed to create window\n");
     res = 1;
     goto cleanup;
   }
