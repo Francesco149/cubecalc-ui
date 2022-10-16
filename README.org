@@ -1,13 +1,22 @@
-a simple GUI to use the [[https://github.com/Francesco149/cubecalc][average cubing chances calculator]] for MapleStory
+GUI for the [[https://github.com/Francesco149/cubecalc][average cubing chances calculator]] for MapleStory.
+
+the idea is that through the graph you can configure it for any complicated stat combination you're looking for as well as have multiple calculations for different combinations on screen.
+
+check out the presets combo box in the bottom/right bar for common setups
 
 * usage
-just use the [[https://francesco149.github.io/maple/cube][hosted version here]] .
-the idea is that through the graph you can configure it for any complicated stat combination you're looking for as well as have multiple calculations for different combinations on screen.
+** web version
+- just use the [[https://francesco149.github.io/maple/cube][hosted version here]] .
+** desktop (linux, WSL)
+- [[https://nix.dev/tutorials/install-nix][install the nix package manager]]
+- ~nix run github:Francesco149/cubecalc-ui~
+** desktop (windows)
+- TODO
 
 * navigating the code (for developers)
 this is a quite unusual stack. the UI is written in C using [[https://github.com/Immediate-Mode-UI/Nuklear][nuklear]], the cubing calculator is also written in C, and it's all running in a browser. a lot of the code is generated from the python proof-of-concept of the cubing calc that I initially wrote. I am planning to make a desktop build for this now that I got rid of all python code
 
-emscripten is used to compile the C ui to wasm. see ~src/build.sh~. 
+emscripten is used to compile the C ui to wasm. see ~src/build.sh~.
 
 to set up the dev environment, [[https://nix.dev/tutorials/install-nix][install the nix package manager]] and run ~nix develop~, you will be put into a shell with all the dependencies installed.
 
@@ -16,3 +25,9 @@ to build the project, cd into ~src~ and type ~./build.sh~
 you should be able to see the result at [[http://0.0.0.0:6969/test]]
 
 for an optimized release build, do ~./build.sh release~
+
+~publish.sh~ is used to copy the emscripten compiled version to my github.io page
+
+I am trying to get meson to build the emscripten version, so it can be easily deployed with nix
+
+for quick iterative desktop builds, do ~./build.sh tcc~ (fastest build time)
