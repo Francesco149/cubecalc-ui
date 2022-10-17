@@ -9,6 +9,8 @@ check out the presets combo box in the bottom/right bar for common setups
 - just use the [[https://francesco149.github.io/maple/cube][hosted version here]] .
 ** AppImage: almost every linux distro
 - download the AppImage from the [[https://github.com/Francesco149/cubecalc-ui/releases][latest releases]]
+- on most distros, you can just ~chmod +x cubecalc-ui-*.AppImage~ and run it.
+- on NixOS you need to also install ~appimage-run~ and use it to run it, but I recommend just using nix as described below for NixOS.
 ** nix: linux, WSL, probably macOS too?
 - [[https://nix.dev/tutorials/install-nix][install the nix package manager]]
 - ~nix run github:Francesco149/cubecalc-ui~
