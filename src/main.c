@@ -1540,7 +1540,7 @@ void storageMkDir(char* path) {
       }
     }
 #else
-    if (mkdir(path, 0755) < 0 && errno != EEXIST) {
+    if (mkdir(folder, 0755) < 0 && errno != EEXIST) {
       perror("mkdir");
       fprintf(stderr, "mkdir failed on %s\n", folder);
     }
