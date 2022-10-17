@@ -9,7 +9,7 @@ on:
   push:
 
 jobs:
-  deployment:
+  build-and-test:
     strategy:
       matrix:
         ARCH: [x86_64]
@@ -50,12 +50,12 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: AppImage
-        path: **/cubecalc-ui-*.AppImage
+        path: src/cubecalc-ui-*.AppImage
 
   upload:
     name: Create release and upload artifacts
     needs:
-      - deployment
+      - build-and-test
     runs-on: ubuntu-latest
     steps:
       - name: Download artifacts
