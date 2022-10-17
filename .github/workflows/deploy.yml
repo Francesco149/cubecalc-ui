@@ -12,7 +12,7 @@ jobs:
   deployment:
     strategy:
       matrix:
-        ARCH: [x86_64, i386]
+        ARCH: [x86_64]
 
     name: deployment ${{ matrix.ARCH }}
     runs-on: ubuntu-latest
@@ -40,23 +40,12 @@ jobs:
       if: matrix.ARCH == 'x86_64'
       run: |
         sudo apt-get update
-        sudo apt-get install meson libglfw3-dev
-    - name: Install dependencies (i386)
-      if: matrix.ARCH == 'i386'
-      run: |
-        sudo dpkg --add-architecture i386
-        sudo apt-get update
-        sudo apt-get install meson libglfw3-dev:i386 gcc-multilib
+        sudo apt-get install -y meson libglfw3-dev
     - name: Build AppImage (x86_64)
       if: matrix.ARCH == 'x86_64'
       run: |
         cd src
         ./appimage.sh
-    - name: Build AppImage (i386)
-      if: matrix.ARCH == 'i386'
-      run: |
-        cd src
-        CC=gcc ./appimage.sh
     - name: Archive AppImage
       uses: actions/upload-artifact@v3
       with:
