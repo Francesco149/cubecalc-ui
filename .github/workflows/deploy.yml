@@ -10,7 +10,14 @@ on:
 
 jobs:
   deployment:
+    strategy:
+      matrix:
+        ARCH: [x86_64, i386]
+
+    name: deployment ${{ matrix.ARCH }}
     runs-on: ubuntu-latest
+    env:
+      ARCH: ${{ matrix.ARCH }}
     steps:
     - uses: actions/checkout@v3
     - uses: cachix/install-nix-action@v18
@@ -21,12 +28,37 @@ jobs:
         name: lolisamurai
         authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
     - run: src/cachix-push.sh
-    - name: Install dependencies
+    - name: Cache linuxdeploy
+      id: cache-linuxdeploy
+      uses: actions/cache@v3
+      env:
+        cache-name: cache-linuxdeploy-${{ matrix.ARCH }}
+      with:
+        path: src/linuxdeploy-${{ matrix.ARCH }}.AppImage
+        key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**') }}
+    - name: Install dependencies (x86_64)
+      if: matrix.ARCH == 'x86_64'
       run: |
         sudo apt-get update
         sudo apt-get install meson libglfw3-dev
-    - name: Build AppImage
+    - name: Install dependencies (i386)
+      if: matrix.ARCH == 'i386'
+      run: |
+        sudo dpkg --add-architecture i386
+        sudo apt-get update
+        sudo apt-get install meson libglfw3-dev:i386 gcc-multilib
+    - name: Build AppImage (x86_64)
+      if: matrix.ARCH == 'x86_64'
       run: |
         cd src
         ./appimage.sh
-    # TODO: actually build binaries to distribute
+    - name: Build AppImage (i386)
+      if: matrix.ARCH == 'i386'
+      run: |
+        cd src
+        CC=gcc ./appimage.sh
+    - name: Archive AppImage
+      uses: actions/upload-artifact@v3
+      with:
+        name: AppImage
+        path: cubecalc-ui-*.AppImage
