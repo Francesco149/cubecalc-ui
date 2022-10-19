@@ -53,7 +53,7 @@ jobs:
     - name: Package emscripten build
       run: |
         mv -v result cubecalc-ui-web
-        7z c cubecalc-ui-web.zip cubecalc-ui-web/
+        7z a cubecalc-ui-web.zip cubecalc-ui-web/
     - name: Archive web build
       uses: actions/upload-artifact@v3
       with:
