@@ -75,6 +75,7 @@ in {
   cubecalc-ui-devshell = mkShell rec {
     buildInputs = [
       emscripten
+      actionlint
 
       # to regen protobuf stuff
       protobuf
