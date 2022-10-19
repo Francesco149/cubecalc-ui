@@ -61,6 +61,7 @@ in {
 
     installPhase = ''
       mkdir -p $out
+      mv -v *.html $out/
       mv -v *.js $out/
       mv -v *.mem $out/
       mv -v *.wasm $out/
