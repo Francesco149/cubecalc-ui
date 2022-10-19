@@ -82,4 +82,4 @@ jobs:
           wget -q https://github.com/Francesco149/cubecalc-ui/releases/download/0.0.0-pyuploadtool-2022-10-17/pyuploadtool-x86_64.AppImage.sum
           sha512sum -c pyuploadtool-x86_64.AppImage.sum &&
           chmod +x pyuploadtool-x86_64.AppImage &&
-          ./pyuploadtool-x86_64.AppImage cubecalc-ui*.AppImage cubecalc-ui-web.zip
+          ./pyuploadtool-x86_64.AppImage AppImage/cubecalc-ui*.AppImage web/cubecalc-ui-web.zip
