@@ -9,7 +9,7 @@ on:
   push:
 
 jobs:
-  build-and-test:
+  build-appimage:
     strategy:
       matrix:
         ARCH: [x86_64]
@@ -20,22 +20,6 @@ jobs:
       ARCH: ${{ matrix.ARCH }}
     steps:
     - uses: actions/checkout@v3
-    - uses: cachix/install-nix-action@v18
-      with:
-        nix_path: nixpkgs=channel:nixos-unstable
-    - uses: cachix/cachix-action@v11
-      with:
-        name: lolisamurai
-        authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
-    - run: src/cachix-push.sh
-    - name: Cache linuxdeploy
-      id: cache-linuxdeploy
-      uses: actions/cache@v3
-      env:
-        cache-name: cache-linuxdeploy-${{ matrix.ARCH }}
-      with:
-        path: src/linuxdeploy-${{ matrix.ARCH }}.AppImage
-        key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**') }}
     - name: Install dependencies (x86_64)
       if: matrix.ARCH == 'x86_64'
       run: |
@@ -52,10 +36,32 @@ jobs:
         name: AppImage
         path: src/cubecalc-ui-*.AppImage
 
+  build-nix-emscripten:
+    - uses: actions/checkout@v3
+    - uses: cachix/install-nix-action@v18
+      with:
+        nix_path: nixpkgs=channel:nixos-unstable
+    - uses: cachix/cachix-action@v11
+      with:
+        name: lolisamurai
+        authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
+    - name: Build and cache nix packages
+      run: src/cachix-push.sh
+    - name: Package emscripten build
+      run: |
+        mv -v result cubecalc-ui-web
+        7z c cubecalc-ui-web.zip cubecalc-ui-web/
+    - name: Archive web build
+      uses: actions/upload-artifact@v3
+      with:
+        name: web
+        path: cubecalc-ui-web.zip
+
   upload:
     name: Create release and upload artifacts
     needs:
-      - build-and-test
+      - build-appimage
+      - build-nix-emscripten
     runs-on: ubuntu-latest
     steps:
       - name: Download artifacts
@@ -73,4 +79,4 @@ jobs:
           wget -q https://github.com/Francesco149/cubecalc-ui/releases/download/0.0.0-pyuploadtool-2022-10-17/pyuploadtool-x86_64.AppImage.sum
           sha512sum -c pyuploadtool-x86_64.AppImage.sum &&
           chmod +x pyuploadtool-x86_64.AppImage &&
-          ./pyuploadtool-x86_64.AppImage **/cubecalc-ui*.AppImage*
+          ./pyuploadtool-x86_64.AppImage **/cubecalc-ui*.AppImage* cubecalc-ui-web.zip

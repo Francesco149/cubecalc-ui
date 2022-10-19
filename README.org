@@ -26,14 +26,16 @@ emscripten is used to compile the C ui to wasm. see ~src/build.sh~.
 
 to set up the dev environment, [[https://nix.dev/tutorials/install-nix][install the nix package manager]] and run ~nix develop~, you will be put into a shell with all the dependencies installed.
 
-to build the project, cd into ~src~ and type ~./build.sh~
+to build the project, cd into ~src~ and type ~./build.sh emcc~
 
 you should be able to see the result at [[http://0.0.0.0:6969/test]]
 
-for an optimized release build, do ~./build.sh release~
+for an optimized release build, do ~./build.sh emcc release~
 
 ~publish.sh~ is used to copy the emscripten compiled version to my github.io page
 
 I am trying to get meson to build the emscripten version, so it can be easily deployed with nix
 
 for quick iterative desktop builds, do ~./build.sh tcc~ (fastest build time)
+
+for optimized desktop build,s do ~./build.sh clang release~

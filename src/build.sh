@@ -31,16 +31,20 @@ mtflags="
 stflags="
   -DNO_MULTITHREAD
 "
+# if I ever need to embed data for wasm: --preload-file ./data
 
 dbgflags="-DCUBECALC_DEBUG -DMULTITHREAD_DEBUG"
 flags="-fdiagnostics-color=always -lGL"
 buildflags="-O0" # ~1s build time
 units=compilation-units/monolith.c
-if which emcc >/dev/null 2>&1; then
-  cc=emcc
+if which tcc >/dev/null 2>&1; then
+  cc=tcc
 else
   cc=${CC:-gcc}
 fi
+
+is_release=false
+serve=true
 
 for x in $@; do
   case "$x" in
@@ -48,6 +52,10 @@ for x in $@; do
       # ~6s build time
       buildflags="-O3 -flto"
       dbgflags=""
+      is_release=true
+      ;;
+    noserv*)
+      serve=false
       ;;
     san*) buildflags="-O0 -g -fsanitize=leak" ;;
     gen*)
@@ -70,7 +78,11 @@ for x in $@; do
 done
 
 compiler="$("$cc" --version 2>&1 | cut -d' ' -f1 | sed 1q)"
-if [ "$compiler" != "emcc" ]; then
+is_emcc=false
+if [ "$compiler" = "emcc" ]; then
+  is_emcc=true
+fi
+if ! $is_emcc; then
   preflags="
     $preflags
     $(pkg-config --cflags --libs-only-L glfw3 gl)
@@ -84,11 +96,7 @@ if [ "$compiler" != "emcc" ]; then
   "
 fi
 
-printargs() {
-  echo "$@"
-}
-
-flags="$(printargs $preflags $units $platformflags $flags $buildflags $dbgflags)"
+flags="$(echo $preflags $units $platformflags $flags $buildflags $dbgflags)"
 echo "compiler: $compiler"
 echo "flags: $flags"
 
@@ -99,27 +107,22 @@ if which mold >/dev/null 2>&1; then
   moldcmd="mold -run"
 fi
 
-if [ "$compiler" = "emcc" ]; then
-  $moldcmd $cc -o main.js              $flags $mtflags $wasmflags &
-  pid1=$!
-  $moldcmd $cc -o main-singlethread.js $flags $stflags $wasmflags &
-  pid2=$!
-  $moldcmd $cc -o main-nowasm.js       $flags $stflags $nowasmflags &
-  pid3=$!
-
-  time for x in $pid1 $pid2 $pid3; do
-      wait $x || exit
-    done
+if $is_emcc; then
+  # note: these commands cannot run concurrently if the cache doesn't already exists or needs to
+  #       be updated. seems to be a limitation of emcc
+  $moldcmd $cc -o main.js $flags $mtflags $wasmflags
+  if $is_release; then
+    $moldcmd $cc -o main-singlethread.js $flags $stflags $wasmflags
+    $moldcmd $cc -o main-nowasm.js $flags $stflags $nowasmflags
+  fi
+  if $serve; then
+    ln -fsv . test
+    python -m http.server --directory test 6969
+  fi
 else
   time $moldcmd $cc $flags || exit
-fi
-#--preload-file ./data \
-
-#xdg-open "http://0.0.0.0:6969/"
-if [ "$compiler" = "emcc" ]; then
-  ln -fsv . test
-  python -m http.server --directory test 6969
-else
-  # I can't get asan to work with glfw. it makes glx fail for some reason
-  ./cubecalc
+  if $serve; then
+    # NOTE: I can't get asan to work with glfw. it makes glx fail for some reason
+    ./cubecalc
+  fi
 fi

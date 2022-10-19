@@ -1,3 +1,1 @@
-option('enable-threads', type : 'boolean', value : true, description : 'enable multithreading')
-option('enable-wasm', type : 'boolean', value : true, description : 'enable wasm (only affects emcc)')
-option('web-dir', type : 'string', value : 'usr/share/webapps/cubecalc', description : 'install directory for web version (emcc only)')
+option('enable-threads', type : 'boolean', value : true, description : 'enable multithreading (no-op on emscripten)')

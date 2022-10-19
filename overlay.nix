@@ -1,4 +1,18 @@
-self: super: with super; {
+self: super: with super; let
+  meta = with lib; {
+    description = "MapleStory average cubing probabilities calculator, advanced graph UI";
+    longDescription = ''
+      cubecalc-ui estimates the average probability to roll any desired combination
+      of stats for cubes and familiars (including some TMS cubes such as Equality, Violet, Uni).
+      The graph UI with operators allows configuring for any complicated combination of lines
+      as well as showing the matching combinations of lines.
+    '';
+    homepage = "https://github.com/Francesco149/cubecalc-ui";
+    license = licenses.unlicense;
+    maintainers = with maintainers; [ lolisamurai ];
+    platforms = platforms.all;
+  };
+in {
 
   self.maintainers = super.maintainers.override {
     lolisamurai = {
@@ -24,19 +38,38 @@ self: super: with super; {
       glfw3
     ];
 
-    meta = with lib; {
-      description = "MapleStory average cubing probabilities calculator, advanced graph UI";
-      longDescription = ''
-        cubecalc-ui estimates the average probability to roll any desired combination
-        of stats for cubes and familiars (including some TMS cubes such as Equality, Violet, Uni).
-        The graph UI with operators allows configuring for any complicated combination of lines
-        as well as showing the matching combinations of lines.
-      '';
-      homepage = "https://github.com/Francesco149/cubecalc-ui";
-      license = licenses.unlicense;
-      maintainers = with maintainers; [ lolisamurai ];
-      platforms = platforms.all;
-    };
+    inherit meta;
+  };
+
+  cubecalc-ui-web = pkgs.buildEmscriptenPackage rec {
+    pname = "cubecalc-ui-web";
+    version = "0.2.0-dev";
+    src = ./src;
+
+    nativeBuildInputs = [
+      emscripten
+    ];
+
+    configurePhase = ''
+    '';
+
+    buildPhase = ''
+      ./build.sh emcc rel noserv
+    '';
+
+    outputs = [ "out" ];
+
+    installPhase = ''
+      mkdir -p $out
+      mv -v *.js $out/
+      mv -v *.mem $out/
+      mv -v *.wasm $out/
+    '';
+
+    checkPhase = ''
+    '';
+
+    inherit meta;
   };
 
   cubecalc-ui-devshell = mkShell rec {
