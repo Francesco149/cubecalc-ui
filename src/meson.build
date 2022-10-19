@@ -17,12 +17,12 @@ deps = [
   dependency('glfw3'),
 
   # not every platform has a dedicated math library. this finds it, optionally
-  cc.find_library('m', required : false, static : static),
+  cc.find_library('m', required : false),
 ]
 
 if get_option('enable-threads')
   deps += [
-    dependency('threads', static : static),
+    dependency('threads'),
   ]
 else
   extra_args += [
