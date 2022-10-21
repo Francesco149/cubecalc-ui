@@ -10,20 +10,33 @@ project('cubecalc', 'c',
 cc = meson.get_compiler('c')
 
 extra_args = []
+link_args = []
 incdir = include_directories('thirdparty')
+static = get_option('build-config') == 'mingw'
+
+if get_option('build-config') == 'mingw'
+  link_args += [ '-fstack-protector' ]
+endif
 
 deps = [
-  dependency('GL'),
-  dependency('glfw3'),
+  dependency('glfw3', static : static),
 
   # not every platform has a dedicated math library. this finds it, optionally
   cc.find_library('m', required : false),
 ]
 
 if get_option('enable-threads')
-  deps += [
-    dependency('threads'),
-  ]
+  if get_option('build-config') == 'mingw'
+    # threads with static = true is not actually static on wangblows
+    deps += [
+      cc.find_library('libwinpthread', static : static),
+      cc.find_library('libssp', static : static),
+    ]
+  else
+    deps += [
+      dependency('threads'),
+    ]
+  endif
 else
   extra_args += [
     '-DNO_MULTITHREAD',
@@ -33,21 +46,24 @@ endif
 executable('cubecalc-ui', 'compilation-units/monolith.c',
   dependencies: deps,
   c_args : extra_args,
+  link_args : link_args,
   include_directories : incdir,
   install : true,
 )
 
-install_data(
-  '../resources/cubecalc-ui.desktop',
-  install_dir : 'share/applications'
-)
+if get_option('build-config') == 'default'
+  install_data(
+    '../resources/cubecalc-ui.desktop',
+    install_dir : 'share/applications'
+  )
 
-install_data(
-  '../resources/cubecalc-ui.png',
-  install_dir : 'share/icons/hicolor/512x512/apps'
-)
+  install_data(
+    '../resources/cubecalc-ui.png',
+    install_dir : 'share/icons/hicolor/512x512/apps'
+  )
 
-install_data(
-  '../resources/cubecalc-ui-48.png',
-  install_dir : 'share/icons/hicolor/48x48/apps'
-)
+  install_data(
+    '../resources/cubecalc-ui-48.png',
+    install_dir : 'share/icons/hicolor/48x48/apps'
+  )
+endif

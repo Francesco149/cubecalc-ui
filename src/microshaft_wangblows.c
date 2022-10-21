@@ -9,8 +9,7 @@
 #define WIN32_LEAN_AND_MEAN
 #define VC_EXTRALEAN
 #include <windows.h>
-#include <Shlobj.h>
-#include <shlobj_core.h>
+#include <shlobj.h>
 #endif
 
 #endif

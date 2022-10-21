@@ -17,8 +17,8 @@
 #ifndef NK_GLFW_ES2_H_
 #define NK_GLFW_ES2_H_
 
-#define GLFW_INCLUDE_ES2
-#include <GLES2/gl2.h>
+#include <glad/gles2.h>
+#define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
 
 enum nk_glfw_init_state{
@@ -51,6 +51,9 @@ NK_API int nk_glfw3_set_left_button(int new_val);
  * ===============================================================
  */
 #ifdef NK_GLFW_ES2_IMPLEMENTATION
+
+#define GLAD_GLES2_IMPLEMENTATION
+#include <glad/gles2.h>
 
 #ifndef NK_GLFW_TEXT_MAX
 #define NK_GLFW_TEXT_MAX 256
@@ -393,6 +396,11 @@ nk_glfw3_clipboard_copy(nk_handle usr, const char *text, int len)
 NK_API struct nk_context*
 nk_glfw3_init(GLFWwindow *win, enum nk_glfw_init_state init_state)
 {
+    if (!gladLoadGLES2((void*)glfwGetProcAddress)) {
+      fprintf(stderr, "glad failed to load GLES2");
+      return 0;
+    }
+
     glfw.win = win;
     if (init_state == NK_GLFW3_INSTALL_CALLBACKS) {
         glfwSetScrollCallback(win, nk_gflw3_scroll_callback);

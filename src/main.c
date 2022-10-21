@@ -1534,9 +1534,9 @@ void storageMkDir(char* path) {
   while (end) {
     char* folder = BufStrDupn(path, end - path + 1);
 #ifdef MICROSHAFT_WANGBLOWS
-    if (!CreateDirectoryA(folder, 0)) {
-      if (GetLastError() != ERROR_ALREADY_EXISTS) {
-        fprintf(stderr, "CreateDirectoryA failed on %s\n", folder);
+    if (GetFileAttributes(folder) == INVALID_FILE_ATTRIBUTES) {
+      if (!CreateDirectoryA(folder, 0)) {
+        fprintf(stderr, "CreateDirectoryA failed on %s 0x%08X\n", folder, GetLastError());
       }
     }
 #else
@@ -1598,6 +1598,7 @@ int main() {
   glfwGetWindowSize(win, &width, &height);
 
   nk = nk_glfw3_init(win, NK_GLFW3_INSTALL_CALLBACKS);
+  if (!nk) goto cleanup;
   in = &nk->input;
 
   // this is required even if empty

@@ -39,3 +39,21 @@ I am trying to get meson to build the emscripten version, so it can be easily de
 for quick iterative desktop builds, do ~./build.sh tcc~ (fastest build time)
 
 for optimized desktop build,s do ~./build.sh clang release~
+
+* cross compiling to windows (arch)
+#+BEGIN_SRC sh
+  sudo pacman -Sy git base-devel --needed
+
+  git clone https://aur.archlinux.org/trizen.git
+  cd trizen
+  makepkg -si
+  trizen -Sy mingw-w64 mingw-w64-glfw
+
+  cd
+  git clone https://github.com/Francesco149/cubecalc-ui
+  cd cubecalc-ui/src
+  meson setup --cross-file x86_64-w64-mingw32.txt -Dbuildtype=release build-mingw
+  meson compile -C build-mingw
+
+  # binary is build-mingw/cubecalc-ui.exe
+#+END_SRC

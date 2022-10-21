@@ -34,7 +34,7 @@ stflags="
 # if I ever need to embed data for wasm: --preload-file ./data
 
 dbgflags="-DCUBECALC_DEBUG -DMULTITHREAD_DEBUG"
-flags="-fdiagnostics-color=always -lGL"
+flags="-fdiagnostics-color=always"
 buildflags="-O0" # ~1s build time
 units=compilation-units/monolith.c
 if which tcc >/dev/null 2>&1; then
