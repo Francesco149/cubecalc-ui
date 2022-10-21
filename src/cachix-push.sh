@@ -6,5 +6,9 @@ push_cache() {
 }
 
 for x in '.#cubecalc-ui' '.#cubecalc-ui-web'; do
-  nix build "$x" --json | push_cache
+  rm tmp.json
+  nix build "$x" --json > tmp.json || exit
+  push_cache < tmp.json || exit
 done
+
+rm tmp.json

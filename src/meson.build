@@ -53,17 +53,17 @@ executable('cubecalc-ui', 'compilation-units/monolith.c',
 
 if get_option('build-config') == 'default'
   install_data(
-    '../resources/cubecalc-ui.desktop',
+    'resources/cubecalc-ui.desktop',
     install_dir : 'share/applications'
   )
 
   install_data(
-    '../resources/cubecalc-ui.png',
+    'resources/cubecalc-ui.png',
     install_dir : 'share/icons/hicolor/512x512/apps'
   )
 
   install_data(
-    '../resources/cubecalc-ui-48.png',
+    'resources/cubecalc-ui-48.png',
     install_dir : 'share/icons/hicolor/48x48/apps'
   )
 endif
