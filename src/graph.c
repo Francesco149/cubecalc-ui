@@ -112,6 +112,9 @@ char* nodeNames[nodeNamesCount] = { nodeTypes(StringifyComma) };
 // ideally cache 1 page worth of lines into the struct for performance at draw time
 void treeResultClear(Result* r) {
   int perPage = r->perPage;
+  BufEach(char*, r->line, x) {
+    BufFree(x);
+  }
   BufFree(&r->line);
   BufFreeClear((void**)r->value);
   BufFree(&r->value);
