@@ -465,8 +465,10 @@ int treeCalcMerge(TreeData* g) {
         // no background jobs, but might as well check for good measure
         dbg("(discarded, current revision is %jd)\n", g->revision);
       }
+      treeClear(merge);
       treeFree(merge);
       free(merge);
+      MTFree(j);
       dbg("%zu done\n", i);
     } else {
       *BufAlloc(&keep) = i;
