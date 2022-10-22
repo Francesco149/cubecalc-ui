@@ -25,14 +25,17 @@ deps = [
   cc.find_library('m', required : false),
 ]
 
+
+if get_option('build-config') == 'mingw'
+  # threads with static = true is not actually static on wangblows
+  deps += [
+    cc.find_library('libwinpthread', static : static),
+    cc.find_library('libssp', static : static),
+  ]
+endif
+
 if get_option('enable-threads')
-  if get_option('build-config') == 'mingw'
-    # threads with static = true is not actually static on wangblows
-    deps += [
-      cc.find_library('libwinpthread', static : static),
-      cc.find_library('libssp', static : static),
-    ]
-  else
+  if get_option('build-config') != 'mingw'
     deps += [
       dependency('threads'),
     ]
