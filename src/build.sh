@@ -35,6 +35,7 @@ stflags="
 
 dbgflags="-DCUBECALC_DEBUG -DMULTITHREAD_DEBUG"
 flags="-fdiagnostics-color=always"
+commonbuildflags="-fno-strict-aliasing"
 buildflags="-O0" # ~1s build time
 units=compilation-units/monolith.c
 if which tcc >/dev/null 2>&1; then
@@ -96,7 +97,7 @@ if ! $is_emcc; then
   "
 fi
 
-flags="$(echo $preflags $units $platformflags $flags $buildflags $dbgflags)"
+flags="$(echo $preflags $units $platformflags $flags $buildflags $dbgflags $commonbuildflags)"
 echo "compiler: $compiler"
 echo "flags: $flags"
 

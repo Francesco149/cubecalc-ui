@@ -9,6 +9,12 @@ project('cubecalc', 'c',
 
 cc = meson.get_compiler('c')
 
+# not respecting struct aliasing allows me to DRY some stuff.
+# I can live without the optimization
+if cc.has_argument('-fno-strict-aliasing')
+  add_project_arguments('-fno-strict-aliasing', language: 'c')
+endif
+
 extra_args = []
 link_args = []
 incdir = include_directories('thirdparty')
