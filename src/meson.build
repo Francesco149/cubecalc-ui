@@ -58,15 +58,23 @@ if get_option('debug') == true
   ]
 endif
 
-executable('cubecalc-ui', 'compilation-units/monolith.c',
+extra_sources = []
+
+if target_machine.system() == 'windows'
+  windows = import('windows')
+  extra_sources += [windows.compile_resources('cubecalc.rc')]
+endif
+
+executable('cubecalc-ui', ['compilation-units/monolith.c'] + extra_sources,
   dependencies: deps,
   c_args : extra_args,
   link_args : link_args,
   include_directories : incdir,
   install : true,
+  gui_app: true,
 )
 
-if get_option('build-config') == 'default'
+if target_machine.system() != 'windows' and target_machine.system() != 'darwin'
   install_data(
     'resources/cubecalc-ui.desktop',
     install_dir : 'share/applications'

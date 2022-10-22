@@ -1597,6 +1597,10 @@ int main() {
   glfwMakeContextCurrent(win);
   glfwGetWindowSize(win, &width, &height);
 
+#ifdef MICROSHAFT_WANGBLOWS
+  SetClassLongPtr(glfwGetWin32Window(win), GCLP_HICON, (LONG_PTR)LoadIcon(GetModuleHandle(NULL), MAKEINTRESOURCE(420)));
+#endif
+
   nk = nk_glfw3_init(win, NK_GLFW3_INSTALL_CALLBACKS);
   if (!nk) goto cleanup;
   in = &nk->input;

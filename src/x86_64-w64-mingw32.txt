@@ -5,6 +5,7 @@ ar = 'x86_64-w64-mingw32-ar'
 strip = 'x86_64-w64-mingw32-strip'
 pkgconfig = 'x86_64-w64-mingw32-pkg-config'
 exe_wrapper = 'wine64'
+windres = 'x86_64-w64-mingw32-windres'
 
 [host_machine]
 system = 'windows'
