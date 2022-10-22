@@ -43,6 +43,12 @@ else
   ]
 endif
 
+if get_option('debug') == true
+  extra_args += [
+    '-DCUBECALC_DEBUG'
+  ]
+endif
+
 executable('cubecalc-ui', 'compilation-units/monolith.c',
   dependencies: deps,
   c_args : extra_args,
