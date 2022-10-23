@@ -66,6 +66,7 @@ jobs:
 
   upload:
     name: Create release and upload artifacts
+    if: github.event_name == 'release' && github.event.action == 'created'
     needs:
       - build-appimage
       - build-nix-emscripten
@@ -78,8 +79,6 @@ jobs:
       - name: Create release and upload artifacts
         env:
           GITHUB_TOKEN: ${{ secrets.GHTOKEN }}
-          GITHUB_CONTINUOUS_RELEASE_NAME: nightly (automaticaly built on every change)
-          GITHUB_CONTINUOUS_RELEASE_TAG: 9999.9999.9999-nightly
         run: |
           wget -q https://github.com/Francesco149/cubecalc-ui/releases/download/0.0.0-pyuploadtool-2022-10-17/pyuploadtool-x86_64.AppImage
           wget -q https://github.com/Francesco149/cubecalc-ui/releases/download/0.0.0-pyuploadtool-2022-10-17/pyuploadtool-x86_64.AppImage.sum
