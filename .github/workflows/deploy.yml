@@ -11,14 +11,6 @@ on:
       - '**'
     tags:
       - '!9999.9999.9999-nightly'
-    paths:
-      - '**.c'
-      - '**.h'
-      - '**.build'
-      - '**.rc'
-      - '**.ico'
-      - '**.png'
-      - '**.nix'
 
 jobs:
   build-appimage:
