@@ -8,9 +8,9 @@ on:
   pull_request:
   push:
     branches:
-      - "**"
-    tags-ignore:
-      - '9999.9999.9999-nightly'
+      - '**'
+    tags:
+      - '!9999.9999.9999-nightly'
     paths:
       - '**.c'
       - '**.h'
