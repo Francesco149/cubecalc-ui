@@ -97,10 +97,6 @@ for optimized desktop build,s do ~./build.sh clang release~
     --cross-file x86_64-w64-llvm-mingw32.txt
 
   cd builddir
-
-  # workaround for meson bug that is fixed in 0.62.2
-  sed -i 's/-Wl,--allow-shlib-undefined//g' build.ninja
-
   meson install
 
   # binary is cubecalc-ui.exe in ~/cubecalc-mingw/bin/
