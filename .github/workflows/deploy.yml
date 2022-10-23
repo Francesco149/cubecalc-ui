@@ -74,7 +74,6 @@ jobs:
       - name: Create release and upload artifacts
         env:
           GITHUB_TOKEN: ${{ secrets.GHTOKEN }}
-          GITHUB_CONTINUOUS_RELEASE_TYPE: prerelease
           GITHUB_CONTINUOUS_RELEASE_NAME: nightly (automaticaly built on every change)
           GITHUB_CONTINUOUS_RELEASE_TAG: 9999.9999.9999-nightly
         run: |
