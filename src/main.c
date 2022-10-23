@@ -14,7 +14,14 @@
 #include <limits.h>
 #include <errno.h>
 
+// TODO: don't have ifdefs everywhere for windows
 #include "microshaft_wangblows.c"
+
+#ifdef MICROSHAFT_WANGBLOWS
+#define GLFW_EXPOSE_NATIVE_WIN32
+#define GLFW_EXPOSE_NATIVE_WGL
+#include <GLFW/glfw3native.h>
+#endif
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>

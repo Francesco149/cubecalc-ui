@@ -40,7 +40,7 @@ for quick iterative desktop builds, do ~./build.sh tcc~ (fastest build time)
 
 for optimized desktop build,s do ~./build.sh clang release~
 
-* cross compiling to windows (arch)
+* cross compiling to windows (arch linux, mingw)
 #+BEGIN_SRC sh
   sudo pacman -Sy git base-devel --needed
 
@@ -56,4 +56,52 @@ for optimized desktop build,s do ~./build.sh clang release~
   meson compile -C build-mingw
 
   # binary is build-mingw/cubecalc-ui.exe
+#+END_SRC
+
+* cross compiling to windows (ubuntu, llvm-mingw)
+#+BEGIN_SRC sh
+  sudo apt install git wget mingw-w64 ninja-build cmake make python3 autoconf libtool libxinerama-dev libxcursor-dev libxi-dev
+
+  # build llvm-mingw toolchain
+  git clone https://github.com/mstorsjo/llvm-mingw
+  cd llvm-mingw
+  ./build-all.sh ~/toolchain
+  sudo ln -s $HOME/toolchain /opt/llvm-mingw
+  cd
+
+  # build glfw with llvm-mingw
+  git clone https://github.com/glfw/glfw
+  mkdir glfw/build
+  cd glfw/build
+
+  cmake \
+    -DGLFW_BUILD_EXAMPLES=OFF \
+    -DGLFW_BUILD_TESTS=OFF \
+    -DBUILD_SHARED_LIBS=OFF \
+    -DCMAKE_TOOLCHAIN_FILE=~/cubecalc-ui/src/x86_64-w64-llvm-mingw32.cmake \
+    -DCMAKE_INSTALL_PREFIX=/opt/llvm-mingw/x86_64-w64-mingw32/ \
+    -DCMAKE_BUILD_TYPE=Release \
+    ..
+
+  sudo make VERBOSE=1 -j$(nproc) install
+  cd
+
+  # build cubecalc-ui with llvm-mingw
+  git clone https://github.com/Francesco149/cubecalc-ui
+
+  PKG_CONFIG_PATH=/opt/llvm-mingw/x86_64-w64-mingw32/lib/pkgconfig \
+  PKG_CONFIG_LIBDIR=/opt/llvm-mingw/x86_64-w64-mingw32/lib/pkgconfig \
+  meson setup builddir \
+    --prefix ~/cubecalc-mingw \
+    -Dbuildtype=release \
+    --cross-file x86_64-w64-llvm-mingw32.txt
+
+  cd builddir
+
+  # workaround for meson bug that is fixed in 0.62.2
+  sed -i 's/-Wl,--allow-shlib-undefined//g' build.ninja
+
+  meson install
+
+  # binary is cubecalc-ui.exe in ~/cubecalc-mingw/bin/
 #+END_SRC

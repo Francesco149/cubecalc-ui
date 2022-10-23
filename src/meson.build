@@ -18,11 +18,7 @@ endif
 extra_args = []
 link_args = []
 incdir = include_directories('thirdparty')
-static = get_option('build-config') == 'mingw'
-
-if get_option('build-config') == 'mingw'
-  link_args += [ '-fstack-protector' ]
-endif
+static = target_machine.system() == 'windows'
 
 deps = [
   dependency('glfw3', static : static),
@@ -31,13 +27,12 @@ deps = [
   cc.find_library('m', required : false),
 ]
 
-
 if get_option('build-config') == 'mingw'
-  # threads with static = true is not actually static on wangblows
+  # the mingw glfw3 in the arch AUR is built with stack protector so we need to match that
   deps += [
-    cc.find_library('libwinpthread', static : static),
-    cc.find_library('libssp', static : static),
+    cc.find_library('libssp', static : true),
   ]
+  link_args += [ '-fstack-protector' ]
 endif
 
 if get_option('enable-threads')
@@ -63,6 +58,10 @@ extra_sources = []
 if target_machine.system() == 'windows'
   windows = import('windows')
   extra_sources += [windows.compile_resources('cubecalc.rc')]
+  # threads with static = true is not actually static on wangblows
+  deps += [
+    cc.find_library('libwinpthread', static : true),
+  ]
 endif
 
 executable('cubecalc-ui', ['compilation-units/monolith.c'] + extra_sources,

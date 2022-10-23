@@ -18,6 +18,7 @@
 #define NK_GLFW_ES2_H_
 
 #include <glad/gles2.h>
+
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
 
