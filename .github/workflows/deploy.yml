@@ -1,10 +1,24 @@
 name: "Deployment"
 
+concurrency:
+  group: '${{ github.workflow }} @ ${{ github.event.pull_request.head.label || github.head_ref || github.ref }}'
+  cancel-in-progress: true
+
 on:
   pull_request:
   push:
+    branches:
+      - "**"
     tags-ignore:
       - '9999.9999.9999-nightly'
+    paths:
+      - '**.c'
+      - '**.h'
+      - '**.build'
+      - '**.rc'
+      - '**.ico'
+      - '**.png'
+      - '**.nix'
 
 jobs:
   build-appimage:
