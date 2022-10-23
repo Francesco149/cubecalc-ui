@@ -1,0 +1,27 @@
+[properties]
+needs_exe_wrapper = true
+sys_root = '/opt/llvm-mingw/i686-w64-mingw32'
+
+[binaries]
+c = '/opt/llvm-mingw/bin/i686-w64-mingw32-clang'
+cpp = '/opt/llvm-mingw/bin/i686-w64-mingw32-clang++'
+c_ld = 'lld'
+cpp_ld = 'lld'
+strip = '/opt/llvm-mingw/bin/i686-w64-mingw32-strip'
+ar = '/opt/llvm-mingw/bin/i686-w64-mingw32-ar'
+ranlib = '/opt/llvm-mingw/bin/i686-w64-mingw32-ranlib'
+nm = '/opt/llvm-mingw/bin/i686-w64-mingw32-nm'
+size = '/opt/llvm-mingw/bin/i686-w64-mingw32-size'
+dlltool = '/opt/llvm-mingw/bin/i686-w64-mingw32-dlltool'
+objcopy = '/opt/llvm-mingw/bin/i686-w64-mingw32-objcopy'
+objdump = '/opt/llvm-mingw/bin/i686-w64-mingw32-objdump'
+widl = '/opt/llvm-mingw/bin/i686-w64-mingw32-widl'
+windres = '/opt/llvm-mingw/bin/i686-w64-mingw32-windres'
+ld = '/opt/llvm-mingw/bin/i686-w64-mingw32-ld'
+pkgconfig = 'pkg-config'
+
+[host_machine]
+system = 'windows'
+cpu_family = 'i686'
+cpu = 'i686'
+endian = 'little'
