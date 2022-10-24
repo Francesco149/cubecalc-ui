@@ -58,7 +58,7 @@ for x in $@; do
     noserv*)
       serve=false
       ;;
-    san*) buildflags="-O0 -g -fsanitize=leak" ;;
+    san*) buildflags="-O0 -g -fsanitize=address,undefined,leak" ;;
     gen*)
       protoc -I ./thirdparty/ -I . --c_out=./proto ./cubecalc.proto || exit
       ;;
@@ -123,7 +123,8 @@ if $is_emcc; then
 else
   time $moldcmd $cc $flags || exit
   if $serve; then
-    # NOTE: I can't get asan to work with glfw. it makes glx fail for some reason
+    ASAN_OPTIONS=use_sigaltstack=false,symbolize=1 \
+    ASAN_SYMBOLIZER_PATH=$(which addr2line) \
     ./cubecalc
   fi
 fi

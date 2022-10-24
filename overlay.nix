@@ -107,7 +107,10 @@ in {
     # this is for the tinycc-built binary which doesn't have the nix runpath
     # since we don't use a built system atm, the gcc/clang binary also needs this
     shellHook = let
-      lines = builtins.map (x: "export LD_LIBRARY_PATH=\"${x}/lib:$LD_LIBRARY_PATH\"") buildInputs;
+      lines =
+        builtins.map (x: "export LD_LIBRARY_PATH=\"${x}/lib:$LD_LIBRARY_PATH\"") buildInputs ++
+        # this is necessary when using address sanitizer. it finds some other libGLX otherwise
+        [ "export LD_LIBRARY_PATH=\"/run/opengl-driver/lib/:$LD_LIBRARY_PATH\"" ];
     in
       lib.concatStringsSep "\n" lines;
   };
