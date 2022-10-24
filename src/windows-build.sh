@@ -14,7 +14,10 @@ cmake \
   -DCMAKE_BUILD_TYPE=Release \
   ..
 
-sudo make VERBOSE=1 -j$(nproc) install || exit
+sudobin=sudo
+${NOSUDO:-false} && sudobin=''
+
+$sudobin make VERBOSE=1 -j$(nproc) install || exit
 
 cd ~/cubecalc-ui/src
 PKG_CONFIG_PATH=/opt/llvm-mingw/$arch-w64-mingw32/lib/pkgconfig \

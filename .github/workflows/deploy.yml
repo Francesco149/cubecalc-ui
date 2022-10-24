@@ -47,15 +47,15 @@ jobs:
 
     name: Windows ${{ matrix.ARCH }}
     runs-on: ubuntu-latest
-    container: mstorsjo/llvm-mingw:20210423
+    container: mstorsjo/llvm-mingw:20220906
     env:
       ARCH: ${{ matrix.ARCH }}
     steps:
     - uses: actions/checkout@v3
     - name: Install ubuntu dependencies
       run: |
-        sudo apt-get update
-        sudo apt-get install -y meson cmake make libxinerama-dev libxcursor-dev libxi-dev
+        apt-get update
+        apt-get install -y meson cmake make libxinerama-dev libxcursor-dev libxi-dev
     - name: Fetch dependencies
       run: |
         git clone --depth 1 --branch 3.3.8 https://github.com/glfw/glfw ~/glfw
