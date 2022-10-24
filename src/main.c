@@ -5,6 +5,10 @@
 #include "nuklear.c"
 #include "utils.c"
 
+#ifndef __EMSCRIPTEN__
+#include "multithread.c" // using MTYield for the frame limiter
+#endif
+
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
@@ -111,6 +115,7 @@ struct nk_vec2 savedMousePos; // in node space, not screen space
 int tool;
 int disclaimerHeight = 290;
 int maxCombos = 300;
+int fpsTarget = 120;
 int* removeNodes;
 
 void dbg(char* fmt, ...) {
@@ -1126,6 +1131,8 @@ terminateNode:
         flags |= DIRTY;
       }
 
+      fpsTarget = nk_propertyi(nk, "Max FPS", 20, fpsTarget, INT_MAX, 5, 0.02);
+
     } else {
       flags &= ~SHOW_INFO;
       flags |= UPDATE_SIZE;
@@ -1646,7 +1653,11 @@ int main() {
 #else
   nk_glfw3_set_scale_factor(1);
   while (!glfwWindowShouldClose(win)) {
+    const double frameTime = 1.0/fpsTarget;
+    const double nextFrameTime = glfwGetTime() + frameTime;
     loop();
+    size_t n = 0;
+    for (; glfwGetTime() < nextFrameTime; MTYield(&n));
   }
 #endif
 
