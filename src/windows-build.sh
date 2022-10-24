@@ -14,7 +14,7 @@ cmake \
   -DCMAKE_BUILD_TYPE=Release \
   ..
 
-sudo make VERBOSE=1 -j$(nproc) install
+sudo make VERBOSE=1 -j$(nproc) install || exit
 
 cd ~/cubecalc-ui/src
 PKG_CONFIG_PATH=/opt/llvm-mingw/$arch-w64-mingw32/lib/pkgconfig \
@@ -23,7 +23,7 @@ meson setup builddir --prefix ~/cubecalc-mingw -Dbuildtype=release --cross-file 
 cd builddir
 # workaround for meson bug that is fixed in 0.62.2
 sed -i 's/-Wl,--allow-shlib-undefined//g' build.ninja
-meson install
+meson install || exit
 cd ..
 rm -rf builddir
-~/cubecalc-mingw/bin/cubecalc-ui.exe
+${DONT_RUN:-false} || ~/cubecalc-mingw/bin/cubecalc-ui.exe

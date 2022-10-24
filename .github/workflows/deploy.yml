@@ -40,6 +40,34 @@ jobs:
         name: AppImage
         path: src/cubecalc-ui-*.AppImage
 
+  build-windows:
+    strategy:
+      matrix:
+        ARCH: [x86_64, i686]
+
+    name: Windows ${{ matrix.ARCH }}
+    runs-on: ubuntu-latest
+    env:
+      ARCH: ${{ matrix.ARCH }}
+    steps:
+    - uses: actions/checkout@v3
+    - name: Install ubuntu dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y meson cmake libxinerama-dev libxcursor-dev libxi-dev
+    - name: Fetch dependencies
+      run: |
+        git clone --depth 1 --branch 3.3.8 https://github.com/glfw/glfw ~/glfw
+    - name: Build windows and dependencies
+      run: |
+        DONT_RUN=true ./src/windows-build.sh ${{ matrix.ARCH }}
+
+    - name: Archive windows
+      uses: actions/upload-artifact@v3
+      with:
+        name: windows-${{ matrix.ARCH }}
+        path: ~/cubecalc-mingw/bin/cubecalc-ui.exe
+
   build-nix-emscripten:
     name: Cachix, Web
     runs-on: ubuntu-latest
