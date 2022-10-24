@@ -1546,7 +1546,7 @@ void storageMkDir(char* path) {
 #ifdef MICROSHAFT_WANGBLOWS
     if (GetFileAttributes(folder) == INVALID_FILE_ATTRIBUTES) {
       if (!CreateDirectoryA(folder, 0)) {
-        fprintf(stderr, "CreateDirectoryA failed on %s 0x%08X\n", folder, GetLastError());
+        fprintf(stderr, "CreateDirectoryA failed on %s 0x%08lX\n", folder, GetLastError());
       }
     }
 #else

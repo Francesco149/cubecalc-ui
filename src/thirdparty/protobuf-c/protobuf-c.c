@@ -904,6 +904,7 @@ tag_pack(uint32_t id, uint8_t *out)
 	else {
 		PROTOBUF_C__ASSERT_NOT_REACHED();
 	}
+	return 0; /* never reached, fix windows warning */
 }
 
 /**
