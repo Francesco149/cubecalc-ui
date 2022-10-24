@@ -391,8 +391,8 @@ void* treeCalcJob(void* data) {
         BufCpy(&resd->prime, combos.prime);
         resd->comboLen = combos.comboSize;
       }
-      LinesFree(&combos);
     }
+    LinesFree(&combos);
   }
 
 cleanup:
