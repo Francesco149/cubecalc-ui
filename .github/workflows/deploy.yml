@@ -60,7 +60,7 @@ jobs:
         git clone --depth 1 --branch 3.3.8 https://github.com/glfw/glfw ~/glfw
     - name: Build windows and dependencies
       run: |
-        ln -svf . ~/cubecalc-ui
+        ln -svf "$(pwd)" ~/cubecalc-ui
         DONT_RUN=true ./src/windows-build.sh ${{ matrix.ARCH }}
 
     - name: Archive windows
