@@ -86,7 +86,7 @@ jobs:
       run: |
         ln -svf "$(pwd)" ~/cubecalc-ui
         DONT_RUN=true NOSUDO=true ./src/windows-build.sh ${{ matrix.ARCH }}
-        mv ~/cubecalc-mingw/bin/cubecalc-ui.exe cubecalc-ui-windows-${{ matrix.ARCH }}.exe
+        mv ~/cubecalc-mingw/bin/cubecalc-ui.exe ~/cubecalc-mingw/bin/cubecalc-ui-windows-${{ matrix.ARCH }}.exe
 
     - name: Archive windows
       uses: actions/upload-artifact@v3
