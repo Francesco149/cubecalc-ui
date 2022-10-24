@@ -11,7 +11,12 @@ on:
       - '**'
     tags:
       - '!9999.9999.9999-nightly'
-
+  release:
+    types: [created]
+    branches:
+      - '**'
+    tags:
+      - '!9999.9999.9999-nightly'
 
 env:
   # todo: updgrade to 0.62.2 when more distros have it
