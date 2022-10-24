@@ -62,7 +62,7 @@ jobs:
     - name: Build windows and dependencies
       run: |
         ln -svf "$(pwd)" ~/cubecalc-ui
-        DONT_RUN=true ./src/windows-build.sh ${{ matrix.ARCH }}
+        DONT_RUN=true NOSUDO=true ./src/windows-build.sh ${{ matrix.ARCH }}
 
     - name: Archive windows
       uses: actions/upload-artifact@v3
