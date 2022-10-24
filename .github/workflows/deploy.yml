@@ -54,7 +54,7 @@ jobs:
     - name: Install ubuntu dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y meson cmake libxinerama-dev libxcursor-dev libxi-dev
+        sudo apt-get install -y meson cmake make libxinerama-dev libxcursor-dev libxi-dev
     - name: Fetch dependencies
       run: |
         git clone --depth 1 --branch 3.3.8 https://github.com/glfw/glfw ~/glfw
