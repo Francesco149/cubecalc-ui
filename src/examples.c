@@ -37,7 +37,7 @@ void examplesWSE() {
   int nsplit = examplesCommon(&succ, WEAPON_IDX);
   {
     s.y += 150;
-    int ncomment = uiTreeAddComment(s, 0, 0, 410, 310, "example: 23+ %att", &succ);
+    uiTreeAddComment(s, 0, 0, 410, 310, "example: 23+ %att", &succ);
     int nstat = uiTreeAddChk(s, NSTAT, 0, 50, &succ);
     int namt = uiTreeAddChk(s, NAMOUNT, 0, 140, &succ);
     int nres = nprevres = uiTreeAddChk(s, NRESULT, 210, 50, &succ);
@@ -54,7 +54,7 @@ void examplesWSE() {
 
   {
     s.x += 450;
-    int ncomment = uiTreeAddComment(s, 0, 0, 410, 310, "example: 20+ %att and 30+ %boss", &succ);
+    uiTreeAddComment(s, 0, 0, 410, 310, "example: 20+ %att and 30+ %boss", &succ);
     int nstat2 = uiTreeAddChk(s, NSTAT, 0, 50, &succ);
     int namt2 = uiTreeAddChk(s, NAMOUNT, 0, 140, &succ);
     int nstat = uiTreeAddChk(s, NSTAT, 210, 50, &succ);
@@ -76,7 +76,7 @@ void examplesWSE() {
   {
     s.x = 230;
     s.y += 350;
-    int ncomment = uiTreeAddComment(s, 0, 0, 200, 220, "example: bpot 23+ %att", &succ);
+    uiTreeAddComment(s, 0, 0, 200, 220, "example: bpot 23+ %att", &succ);
     int nbpot = uiTreeAddChk(s, NCUBE, 0, 50, &succ);
     int nres = uiTreeAddChk(s, NRESULT, 0, 140, &succ);
     int nsplit2 = uiTreeAddChk(s, NSPLIT, -100, -20, &succ);
@@ -91,7 +91,7 @@ void examplesWSE() {
 
   {
     s.x += 240;
-    int ncomment = uiTreeAddComment(s, 0, 0, 410, 310,
+    uiTreeAddComment(s, 0, 0, 410, 310,
         "example: any 3l combo of %att or %boss", &succ);
     int nstat2 = uiTreeAddChk(s, NSTAT, 0, 50, &succ);
     int namt2 = uiTreeAddChk(s, NAMOUNT, 0, 140, &succ);
@@ -119,7 +119,7 @@ void examplesAccessory() {
   int nsplit = examplesCommon(&succ, FACE_EYE_RING_EARRING_PENDANT_IDX);
   {
     s.y += 150;
-    int ncomment = uiTreeAddComment(s, 0, 0, 410, 310, "example: 23+ %stat accessory", &succ);
+    uiTreeAddComment(s, 0, 0, 410, 310, "example: 23+ %stat accessory", &succ);
     int nstat = uiTreeAddChk(s, NSTAT, 0, 50, &succ);
     int namt = uiTreeAddChk(s, NAMOUNT, 0, 140, &succ);
     int nres = nprevres = uiTreeAddChk(s, NRESULT, 210, 50, &succ);
@@ -136,7 +136,7 @@ void examplesAccessory() {
   }
   {
     s.x += 450;
-    int ncomment = uiTreeAddComment(s, 0, 0, 410, 310,
+    uiTreeAddComment(s, 0, 0, 410, 310,
         "example: drop and 10+ %stat accessory", &succ);
     int nstat = uiTreeAddChk(s, NSTAT, 0, 50, &succ);
     int namt = uiTreeAddChk(s, NAMOUNT, 0, 140, &succ);
@@ -158,7 +158,7 @@ void examplesAccessory() {
   {
     s.y += 350;
     s.x -= 450;
-    int ncomment = uiTreeAddComment(s, 0, 0, 410, 400,
+    uiTreeAddComment(s, 0, 0, 410, 400,
         "example: any 2l combo drop/meso w/ black cubes", &succ);
     int nstat = uiTreeAddChk(s, NSTAT, 0, 50, &succ);
     int nstat2 = uiTreeAddChk(s, NSTAT, 0, 140, &succ);
@@ -185,7 +185,7 @@ void examplesAccessory() {
   }
   {
     s.x += 450;
-    int ncomment = uiTreeAddComment(s, 0, 0, 410, 310,
+    uiTreeAddComment(s, 0, 0, 410, 310,
         "example: 40+ %drop accessory w/ black cubes", &succ);
     int nstat = uiTreeAddChk(s, NSTAT, 0, 50, &succ);
     int namt = uiTreeAddChk(s, NAMOUNT, 0, 140, &succ);
@@ -213,7 +213,7 @@ void examplesGlove() {
   int nsplit = examplesCommon(&succ, GLOVE_IDX);
   {
     s.y += 150;
-    int ncomment = uiTreeAddComment(s, 0, 0, 410, 310, "example: 23+ %stat glove", &succ);
+    uiTreeAddComment(s, 0, 0, 410, 310, "example: 23+ %stat glove", &succ);
     int nstat = uiTreeAddChk(s, NSTAT, 0, 50, &succ);
     int namt = uiTreeAddChk(s, NAMOUNT, 0, 140, &succ);
     int nres = nprevres = uiTreeAddChk(s, NRESULT, 210, 50, &succ);
@@ -230,7 +230,7 @@ void examplesGlove() {
   }
   {
     s.x += 450;
-    int ncomment = uiTreeAddComment(s, 0, 0, 410, 310,
+    uiTreeAddComment(s, 0, 0, 410, 310,
         "example: 8+ %critdmg and and 10+ %stat glove", &succ);
     int nstat = uiTreeAddChk(s, NSTAT, 0, 50, &succ);
     int namt = uiTreeAddChk(s, NAMOUNT, 0, 140, &succ);
@@ -252,7 +252,7 @@ void examplesGlove() {
   {
     s.x -= 450;
     s.y += 350;
-    int ncomment = uiTreeAddComment(s, 0, 0, 410, 400,
+    uiTreeAddComment(s, 0, 0, 410, 400,
         "example: (sharp eyes or crit dmg) and 10+ %stat glove", &succ);
     int nstat = uiTreeAddChk(s, NSTAT, 0, 50, &succ);
     int namt = uiTreeAddChk(s, NAMOUNT, 0, 140, &succ);
@@ -278,7 +278,7 @@ void examplesGlove() {
   }
   {
     s.x += 450;
-    int ncomment = uiTreeAddComment(s, 0, 0, 410, 310,
+    uiTreeAddComment(s, 0, 0, 410, 310,
         "example: 16+ %critdmg glove w/ black cubes", &succ);
     int nstat = uiTreeAddChk(s, NSTAT, 0, 50, &succ);
     int namt = uiTreeAddChk(s, NAMOUNT, 0, 140, &succ);
@@ -306,7 +306,7 @@ void examplesHat() {
   int nsplit = examplesCommon(&succ, HAT_IDX);
   {
     s.y += 150;
-    int ncomment = uiTreeAddComment(s, 0, 0, 410, 310, "example: 23+ %stat hat", &succ);
+    uiTreeAddComment(s, 0, 0, 410, 310, "example: 23+ %stat hat", &succ);
     int nstat = uiTreeAddChk(s, NSTAT, 0, 50, &succ);
     int namt = uiTreeAddChk(s, NAMOUNT, 0, 140, &succ);
     int nres = nprevres = uiTreeAddChk(s, NRESULT, 210, 50, &succ);
@@ -323,7 +323,7 @@ void examplesHat() {
   }
   {
     s.x += 450;
-    int ncomment = uiTreeAddComment(s, 0, 0, 410, 310,
+    uiTreeAddComment(s, 0, 0, 410, 310,
         "example: 2+s cooldown and and 10+ %stat hat", &succ);
     int nstat = uiTreeAddChk(s, NSTAT, 0, 50, &succ);
     int namt = uiTreeAddChk(s, NAMOUNT, 0, 140, &succ);
@@ -344,7 +344,7 @@ void examplesHat() {
   }
   {
     s.y += 350;
-    int ncomment = uiTreeAddComment(s, 0, 0, 410, 310,
+    uiTreeAddComment(s, 0, 0, 410, 310,
         "example: 4+s cooldown hat w/ black cubes", &succ);
     int nstat = uiTreeAddChk(s, NSTAT, 0, 50, &succ);
     int namt = uiTreeAddChk(s, NAMOUNT, 0, 140, &succ);
@@ -372,7 +372,7 @@ void examplesTopOverall() {
   int nsplit = examplesCommon(&succ, TOP_OVERALL_IDX);
   {
     s.y += 150;
-    int ncomment = uiTreeAddComment(s, 0, 0, 410, 310, "example: 23+ %stat top/overall", &succ);
+    uiTreeAddComment(s, 0, 0, 410, 310, "example: 23+ %stat top/overall", &succ);
     int nstat = uiTreeAddChk(s, NSTAT, 0, 50, &succ);
     int namt = uiTreeAddChk(s, NAMOUNT, 0, 140, &succ);
     int nres = nprevres = uiTreeAddChk(s, NRESULT, 210, 50, &succ);
@@ -389,7 +389,7 @@ void examplesTopOverall() {
   }
   {
     s.x += 450;
-    int ncomment = uiTreeAddComment(s, 0, 0, 410, 310,
+    uiTreeAddComment(s, 0, 0, 410, 310,
       "example: 2+s invincibility top/overall", &succ);
     int nstat = uiTreeAddChk(s, NSTAT, 0, 50, &succ);
     int namt = uiTreeAddChk(s, NAMOUNT, 0, 140, &succ);
@@ -414,7 +414,7 @@ void examplesShoe() {
   int nsplit = examplesCommon(&succ, SHOE_IDX);
   {
     s.y += 150;
-    int ncomment = uiTreeAddComment(s, 0, 0, 410, 310, "example: 23+ %stat shoe", &succ);
+    uiTreeAddComment(s, 0, 0, 410, 310, "example: 23+ %stat shoe", &succ);
     int nstat = uiTreeAddChk(s, NSTAT, 0, 50, &succ);
     int namt = uiTreeAddChk(s, NAMOUNT, 0, 140, &succ);
     int nres = nprevres = uiTreeAddChk(s, NRESULT, 210, 50, &succ);
@@ -431,7 +431,7 @@ void examplesShoe() {
   }
   {
     s.x += 450;
-    int ncomment = uiTreeAddComment(s, 0, 0, 410, 310,
+    uiTreeAddComment(s, 0, 0, 410, 310,
         "example: combat orders and and 10+ %stat shoe", &succ);
     int nstat = uiTreeAddChk(s, NSTAT, 0, 50, &succ);
     int namt = uiTreeAddChk(s, NAMOUNT, 0, 140, &succ);
@@ -459,7 +459,7 @@ void examplesCapeBeltShoulder() {
   int nsplit = examplesCommon(&succ, CAPE_BELT_SHOULDER_IDX);
   {
     s.y += 150;
-    int ncomment = uiTreeAddComment(s, 0, 0, 410, 310,
+    uiTreeAddComment(s, 0, 0, 410, 310,
       "example: 23+ %stat cape/belt/shoulder", &succ);
     int nstat = uiTreeAddChk(s, NSTAT, 0, 50, &succ);
     int namt = uiTreeAddChk(s, NAMOUNT, 0, 140, &succ);
@@ -499,7 +499,7 @@ void examplesOperators() {
     s.y += 60;
     int nres = uiTreeAddChk(s, NRESULT, 210/2, 0, &succ);
     s.y += 90;
-    int ncomment = uiTreeAddComment(s0, 0, 0, 410, s.y - s0.y,
+    uiTreeAddComment(s0, 0, 0, 410, s.y - s0.y,
         "example: ((meso or drop) and 10+ stat) or 23+ stat", &succ);
 
     if (succ) {
@@ -530,7 +530,7 @@ void examplesFamiliars() {
   int succ = 1, nprevres;
 
   {
-    int ncomment = uiTreeAddComment(s, 0, 0, 410, 400, "example: unique fam 30+ boss reveal", &succ);
+    uiTreeAddComment(s, 0, 0, 410, 400, "example: unique fam 30+ boss reveal", &succ);
     int nfamcat = uiTreeAddChk(s, NCATEGORY, 0, 50, &succ);
     int nstat = uiTreeAddChk(s, NSTAT, 0, 140, &succ);
     int namt = uiTreeAddChk(s, NAMOUNT, 0, 230, &succ);
@@ -556,7 +556,7 @@ void examplesFamiliars() {
 
   {
     s.x += 450;
-    int ncomment = uiTreeAddComment(s, 0, 0, 410, 310, "example: red cards 40+ boss", &succ);
+    uiTreeAddComment(s, 0, 0, 410, 310, "example: red cards 40+ boss", &succ);
     int nstat = uiTreeAddChk(s, NSTAT, 0, 50, &succ);
     int namt = uiTreeAddChk(s, NAMOUNT, 0, 140, &succ);
     int nfamtier = uiTreeAddChk(s, NTIER, 210, 50, &succ);
@@ -584,7 +584,7 @@ void examplesBonus() {
   int nsplit = examplesCommonCube(&succ, FACE_EYE_RING_EARRING_PENDANT_IDX, BONUS_IDX);
   {
     s.y += 150;
-    int ncomment = uiTreeAddComment(s, 0, 0, 480, 400,
+    uiTreeAddComment(s, 0, 0, 480, 400,
         "example: L bpot any 2l combo of stat, stat per 10 lvls", &succ);
     int nstat = uiTreeAddChk(s, NSTAT, 0, 50, &succ);
     int nstatperlvl = uiTreeAddChk(s, NSTAT, 0, 140, &succ);
@@ -609,7 +609,7 @@ void examplesBonus() {
   }
   {
     s.x += 530;
-    int ncomment = uiTreeAddComment(s, 0, 0, 410, 310,
+    uiTreeAddComment(s, 0, 0, 410, 310,
         "example: rare 11 att bpot", &succ);
     int nstat = uiTreeAddChk(s, NSTAT, 0, 50, &succ);
     int namt = uiTreeAddChk(s, NAMOUNT, 0, 140, &succ);
@@ -637,7 +637,7 @@ void examplesHatBonus() {
   int nsplit = examplesCommonCube(&succ, HAT_IDX, BONUS_IDX);
   {
     s.y += 150;
-    int ncomment = uiTreeAddComment(s, 0, 0, 480, 400,
+    uiTreeAddComment(s, 0, 0, 480, 400,
         "example: L bpot any 2l combo of stat, stat per 10 lvls", &succ);
     int nstat = uiTreeAddChk(s, NSTAT, 0, 50, &succ);
     int nstatperlvl = uiTreeAddChk(s, NSTAT, 0, 140, &succ);
@@ -662,8 +662,7 @@ void examplesHatBonus() {
   }
   {
     s.x += 530;
-    int ncomment = uiTreeAddComment(s, 0, 0, 410, 310,
-        "example: rare 11 att bpot", &succ);
+    uiTreeAddComment(s, 0, 0, 410, 310, "example: rare 11 att bpot", &succ);
     int nstat = uiTreeAddChk(s, NSTAT, 0, 50, &succ);
     int namt = uiTreeAddChk(s, NAMOUNT, 0, 140, &succ);
     int ntier = uiTreeAddChk(s, NTIER, 0, 230, &succ);
@@ -684,7 +683,7 @@ void examplesHatBonus() {
   {
     s.y += 440;
     s.x -= 530;
-    int ncomment = uiTreeAddComment(s, 0, 0, 480, 490,
+    uiTreeAddComment(s, 0, 0, 480, 490,
         "example: L bpot any 2l cooldown, stat, stat per 10 lvls", &succ);
     int nstat = uiTreeAddChk(s, NSTAT, 0, 50, &succ);
     int nstatperlvl = uiTreeAddChk(s, NSTAT, 0, 140, &succ);
@@ -713,8 +712,7 @@ void examplesHatBonus() {
   {
     s.y -= 90;
     s.x += 530;
-    int ncomment = uiTreeAddComment(s, 0, 0, 410, 310,
-        "example: L bpot 2+s cooldown", &succ);
+    uiTreeAddComment(s, 0, 0, 410, 310, "example: L bpot 2+s cooldown", &succ);
     int nstat = uiTreeAddChk(s, NSTAT, 0, 50, &succ);
     int namt = uiTreeAddChk(s, NAMOUNT, 0, 140, &succ);
     int nres = nprevres = uiTreeAddChk(s, NRESULT, 210, 50, &succ);

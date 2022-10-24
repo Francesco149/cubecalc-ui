@@ -47,15 +47,15 @@ char* packTree(Allocator const* allocator, TreeData* g) {
   SavedRect* savedRects = 0;
 
   size_t treeLen = BufLen(g->tree);
-  BufReserve(&savedTree, treeLen);
-  BufReserve(&savedData, treeLen);
-  BufReserve(&savedRects, treeLen);
+  (void)BufReserve(&savedTree, treeLen);
+  (void)BufReserve(&savedData, treeLen);
+  (void)BufReserve(&savedRects, treeLen);
 
   SavedComment* savedCommentData = 0;
-  BufReserve(&savedCommentData, BufLen(g->commentData));
+  (void)BufReserve(&savedCommentData, BufLen(g->commentData));
 
   SavedResult* savedResultData = 0;
-  BufReserve(&savedResultData, BufLen(g->resultData));
+  (void)BufReserve(&savedResultData, BufLen(g->resultData));
 
   size_t numConnections = 0;
 
@@ -140,11 +140,11 @@ char* packTree(Allocator const* allocator, TreeData* g) {
 
   // now we figure out buckets and connections and copy to bucket arrays
   SavedBucket* buckets = 0;
-  BufReserve(&buckets, NLAST); // make sure we don't trigger realloc
+  (void)BufReserve(&buckets, NLAST); // make sure we don't trigger realloc
   BufClear(buckets);
 
   SavedConnection* connections = 0;
-  BufReserve(&connections, numConnections);
+  (void)BufReserve(&connections, numConnections);
   BufClear(connections);
 
   for (size_t type = 0; type < NLAST; ++type) {
@@ -152,7 +152,7 @@ char* packTree(Allocator const* allocator, TreeData* g) {
     if (!bucketLen) continue;
 
     SavedNode* savedNodes = 0;
-    BufReserve(&savedNodes, bucketLen);
+    (void)BufReserve(&savedNodes, bucketLen);
 
     BufEachi(g->data[type], i) {
       NodeData* d = &g->data[type][i];
@@ -178,7 +178,7 @@ char* packTree(Allocator const* allocator, TreeData* g) {
 
   // prune redundant connections
   SavedConnection* uniqueConnections = 0;
-  BufReserve(&uniqueConnections, numConnections);
+  (void)BufReserve(&uniqueConnections, numConnections);
   BufClear(uniqueConnections);
 
   BufEach(SavedConnection, connections, conn) {
@@ -246,7 +246,7 @@ int unpackTree(TreeData* g, char* rawData) {
 
       // map tree id to tree index to convert the connections later
       if (sn->id + 1 > BufLen(treeById)) {
-        BufReserve(&treeById, sn->id + 1 - BufLen(treeById));
+        (void)BufReserve(&treeById, sn->id + 1 - BufLen(treeById));
       }
       treeById[sn->id] = BufLen(g->tree);
 
@@ -367,7 +367,7 @@ char* packGlobals(char const* disclaimer) {
   glob.disclaimer = (char*)disclaimer;
 
   char* out = 0;
-  BufReserve(&out, saved_globals__get_packed_size(&glob));
+  (void)BufReserve(&out, saved_globals__get_packed_size(&glob));
   saved_globals__pack(&glob, (unsigned char*)out);
   return out;
 }

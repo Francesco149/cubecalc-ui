@@ -245,7 +245,7 @@ void uiTreeUpdateConnections() {
 
   // TODO: could be a bitmask
   int* done = 0;
-  BufReserve(&done, BufLen(graph.tree));
+  (void)BufReserve(&done, BufLen(graph.tree));
   memset(done, 0, BufLen(done) * sizeof(done[0]));
 
   for (size_t i = 0; i < BufLen(graph.tree); ++i) {
@@ -886,9 +886,13 @@ terminateNode:
         nk_layout_row_dynamic(nk, CONTEXT_HEIGHT, 1);
       }
 
-#define flag(x, text, f) ( \
-      nk_contextual_item_label(nk, (flags & x) ? "Hide " text : "Show " text, NK_TEXT_CENTERED) &&\
-        (flags = (flags ^ x) | f))
+#define flag(x, text, f) \
+      (void)( \
+        nk_contextual_item_label(nk, \
+          (flags & x) ? "Hide " text : "Show " text, \
+          NK_TEXT_CENTERED) && \
+        (flags = (flags ^ x) | f) \
+      )
 
       flag(SHOW_INFO, "Info", UPDATE_SIZE);
       flag(SHOW_GRID, "Grid", 0);
@@ -1346,8 +1350,7 @@ static char* storageReadSync(char* path) {
     goto cleanup;
   }
 
-  int res = 0;
-  BufReserve(&rawData, st.st_size);
+  (void)BufReserve(&rawData, st.st_size);
   if (fread(rawData, 1, st.st_size, f) != st.st_size) {
     perror("fread");
     BufFree(&rawData);

@@ -964,9 +964,11 @@ void Humanize(char* buf, size_t sz, intmax_t value) {
     return;
   }
 
-  HumanizeStepWithDot(b, "b", buf, sz, value) ||
-  HumanizeStepWithDot(m, "m", buf, sz, value) ||
-  HumanizeStepWithDot(k, "k", buf, sz, value);
+  (void) (
+    HumanizeStepWithDot(b, "b", buf, sz, value) ||
+    HumanizeStepWithDot(m, "m", buf, sz, value) ||
+    HumanizeStepWithDot(k, "k", buf, sz, value)
+  );
 }
 
 //

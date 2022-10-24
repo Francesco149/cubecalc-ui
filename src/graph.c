@@ -276,7 +276,6 @@ int treeAddId(int id, TreeData* g, int type, int x, int y) {
 void treeDel(TreeData* g, int nodeIndex) {
   int type = g->tree[nodeIndex].type;
   int index = g->tree[nodeIndex].data;
-  NodeData* d = &g->data[type][index];
 
   BufFree(&g->tree[nodeIndex].connections);
 

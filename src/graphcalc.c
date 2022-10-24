@@ -311,7 +311,7 @@ void* treeCalcJob(void* data) {
   ArrayEach(int, values, x) { *x = -1; }
   ArrayEach(int, statMap, x) { *x = -1; }
 
-  BufReserve(&seen, BufLen(g->tree));
+  (void)BufReserve(&seen, BufLen(g->tree));
   BufZero(seen);
   BufClear(wants);
   elementsOnStack = treeCalcBranch(g, &wants, statMap, values, d->node, seen);
@@ -388,7 +388,7 @@ void* treeCalcJob(void* data) {
           BufAllocStrf(&resd->prob, "%.02f", 1/combos.onein[i]);
         }
 
-        BufCpy(&resd->prime, combos.prime);
+        (void)BufCpy(&resd->prime, combos.prime);
         resd->comboLen = combos.comboSize;
       }
     }
@@ -413,22 +413,21 @@ void treeCalc(TreeData* g, size_t maxCombos) {
   // duplicate a lot of the serialization logic.
   Arena* arena = ArenaInit();
   Allocator allocatorArena = ArenaAllocator(arena);
-  int res;
   char* out = packTree(&allocatorArena, g);
   if (!out) {
     dbg("treeCalc: unexpected failure serializing tree");
-    res = 0;
-  }
-  BufEachi(g->resultData, i) {
-    Node* n = &g->tree[g->data[NRESULT][i].node];
-    TreeCalcJobData* data = malloc(sizeof(TreeCalcJobData));
-    MemZero(data);
-    data->maxCombos = maxCombos;
-    data->treeData = BufDup(out);
-    data->resultId = n->id;
-    data->revision = g->revision;
-    *BufAlloc(&jobs) = MTStart(treeCalcJob, data);
-    *BufAlloc(&resultIds) = n->id;
+  } else {
+    BufEachi(g->resultData, i) {
+      Node* n = &g->tree[g->data[NRESULT][i].node];
+      TreeCalcJobData* data = malloc(sizeof(TreeCalcJobData));
+      MemZero(data);
+      data->maxCombos = maxCombos;
+      data->treeData = BufDup(out);
+      data->resultId = n->id;
+      data->revision = g->revision;
+      *BufAlloc(&jobs) = MTStart(treeCalcJob, data);
+      *BufAlloc(&resultIds) = n->id;
+    }
   }
 
   ArenaFree(arena);
@@ -451,7 +450,6 @@ int treeCalcMerge(TreeData* g) {
         if (rdata < 0) {
           dbg("treeCalcMerge: couldn't locate result id %d", resultIds[i]);
         } else {
-          NodeData* d = &merge->data[NRESULT][rdata];
           Result* r = &merge->resultData[rdata];
           int drdata = resultById(g, resultIds[i]);
           Result* dr = &g->resultData[drdata];
