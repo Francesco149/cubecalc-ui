@@ -9,14 +9,6 @@ on:
   push:
     branches:
       - '**'
-    tags:
-      - '!9999.9999.9999-nightly'
-  release:
-    types: [created]
-    branches:
-      - '**'
-    tags:
-      - '!9999.9999.9999-nightly'
 
 env:
   # todo: updgrade to 0.62.2 when more distros have it
@@ -24,12 +16,12 @@ env:
   MESON_VERSION: '0.61.2'
 
 jobs:
-  build-appimage:
+  build-linux-appimage:
     strategy:
       matrix:
         ARCH: [x86_64]
 
-    name: Desktop ${{ matrix.ARCH }}
+    name: Linux ${{ matrix.ARCH }} AppImage
     runs-on: ubuntu-latest
     env:
       ARCH: ${{ matrix.ARCH }}
@@ -99,8 +91,8 @@ jobs:
         name: windows-${{ matrix.ARCH }}
         path: ~/cubecalc-mingw/bin/cubecalc-ui-windows-${{ matrix.ARCH }}.exe
 
-  build-nix-emscripten:
-    name: Cachix, Web
+  build-web:
+    name: Web
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
@@ -112,6 +104,7 @@ jobs:
         name: lolisamurai
         authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
     - name: Build and cache nix packages
+      if: startsWith(github.ref, 'refs/heads/master')
       run: src/cachix-push.sh
     - name: Package emscripten build
       run: |
@@ -125,10 +118,10 @@ jobs:
 
   upload:
     name: Create release and upload artifacts
-    if: github.event_name == 'release' && github.event.action == 'created'
+    if: startsWith(github.ref, 'refs/tags/v')
     needs:
-      - build-appimage
-      - build-nix-emscripten
+      - build-linux-appimage
+      - build-web
       - build-windows
     runs-on: ubuntu-latest
     steps:
