@@ -10,6 +10,8 @@
 #define VC_EXTRALEAN
 #include <windows.h>
 #include <shlobj.h>
+#include <timeapi.h>
+#include <dwmapi.h>
 #endif
 
 #endif

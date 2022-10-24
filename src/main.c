@@ -5,10 +5,6 @@
 #include "nuklear.c"
 #include "utils.c"
 
-#ifndef __EMSCRIPTEN__
-#include "multithread.c" // using MTYield for the frame limiter
-#endif
-
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
@@ -115,7 +111,7 @@ struct nk_vec2 savedMousePos; // in node space, not screen space
 int tool;
 int disclaimerHeight = 290;
 int maxCombos = 300;
-int fpsTarget = 120;
+int fpsTarget = 60;
 int* removeNodes;
 
 void dbg(char* fmt, ...) {
@@ -1656,8 +1652,19 @@ int main() {
     const double frameTime = 1.0/fpsTarget;
     const double nextFrameTime = glfwGetTime() + frameTime;
     loop();
-    size_t n = 0;
-    for (; glfwGetTime() < nextFrameTime; MTYield(&n));
+#ifdef MICROSHAFT_WANGBLOWS
+    DwmFlush(); // lowers cpu usage a lot on windows
+#endif
+    // OS timer accuracy is not good enough at > 60fps (windows is 0.5ms for example)
+    if (fpsTarget > 60) {
+      while (glfwGetTime() < nextFrameTime) {
+	OSYield();
+	OSNanoSleep(0);
+      }
+    } else {
+      size_t n = 0;
+      for (; glfwGetTime() < nextFrameTime; MTYield(&n));
+    }
   }
 #endif
 

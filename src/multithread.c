@@ -21,18 +21,52 @@ void* MTResult(MTJob* j); // returns what func from MTStart returned
 void MTFree(MTJob* j);
 
 // short sleep to let other threads do stuff
-// n is a counter that should be initialized to zero
+// n is a counter that should be initialized to zero.
+// this is limited by the OS's timer precision. use OSYield if faster polling is needed
 void MTYield(size_t* n);
+
+void OSYield();
+void OSNanoSleep(long nanoseconds);
 
 #endif
 #if defined(MULTITHREAD_IMPLEMENTATION) && !defined(MULTITHREAD_UNIT)
 #define MULTITHREAD_UNIT
 
+#include "microshaft_wangblows.c"
 #ifndef MICROSHAFT_WANGBLOWS
 #include <sched.h> // sched_yield
+#include <time.h> // nanosleep
+
+void OSYield() {
+  sched_yield();
+}
+
+void OSNanoSleep(long nanoseconds) {
+  struct timespec rqtp;
+  rqtp.tv_sec  = 0;
+  rqtp.tv_nsec = nanoseconds;
+  nanosleep(&rqtp, 0);
+}
 #else
-#include "microshaft_wangblows.c"
-#define sched_yield SwitchToThread
+// NOTE: SwitchToThread will busy spin if no other threads in this process waiting
+void OSYield() {
+  SwitchToThread();
+}
+
+// https://gist.github.com/hydranix/b8af0c197a1cc11429da600c33c15418
+// http://stackoverflow.com/a/31411628/4725495
+typedef NTSTATUS __stdcall fnNtDelayExecution(BOOL Alertable, PLARGE_INTEGER DelayInterval);
+typedef NTSTATUS __stdcall fnZwSetTimerResolution(IN ULONG RequestedResolution, IN BOOLEAN Set, OUT PULONG ActualResolution);
+
+static fnNtDelayExecution* NtDelayExecution;
+static fnZwSetTimerResolution* ZwSetTimerResolution;
+
+// I'm pretty sure winpthreads does Sleep(0) for < 1ms
+void OSNanoSleep(long nanoseconds) {
+  LARGE_INTEGER interval;
+  interval.QuadPart = -1 * nanoseconds / 100;
+  NtDelayExecution(FALSE, &interval);
+}
 #endif
 
 #ifdef NO_MULTITHREAD
@@ -48,16 +82,13 @@ void MTYield(size_t* n) {
   if (*n < 4) {
     // just spin
   } else if (*n < 32 || (*n & 1)) {
-    sched_yield(); // yield every other attempt, sleep otherwise
+    OSYield(); // yield every other attempt, sleep otherwise
   }
   else {
 #ifdef __EMSCRIPTEN__
     emscripten_wasm_worker_sleep(100);
 #else
-    struct timespec rqtp;
-    rqtp.tv_sec  = 0;
-    rqtp.tv_nsec = 100;
-    nanosleep(&rqtp, 0);
+    OSNanoSleep(100);
 #endif
   }
   ++*n;
@@ -318,6 +349,27 @@ void MTFree(MTJob* j) {
 }
 
 void MTGlobalInit() {
+#ifdef MICROSHAFT_WANGBLOWS
+  // TODO: move all this stuff to some kind of OS layer
+  TIMECAPS tc;
+  UINT wTimerRes;
+
+  if (timeGetDevCaps(&tc, sizeof(TIMECAPS)) == TIMERR_NOERROR) {
+    wTimerRes = Min(Max(tc.wPeriodMin, 1), tc.wPeriodMax);
+    timeBeginPeriod(wTimerRes);
+    mtdbg("timer resolution: %u\n", wTimerRes);
+  } else {
+    fprintf(stderr, "timeGetDevCaps failed: %08lX\n", GetLastError());
+  }
+
+  NtDelayExecution = (fnNtDelayExecution*)GetProcAddress(GetModuleHandle("ntdll.dll"), "NtDelayExecution");
+  ZwSetTimerResolution = (fnZwSetTimerResolution*)GetProcAddress(GetModuleHandle("ntdll.dll"), "ZwSetTimerResolution");
+
+  ULONG actualResolution;
+  ZwSetTimerResolution(1, TRUE, &actualResolution);
+  printf("zwtimer resolution: %lu\n", actualResolution);
+#endif
+
   mtdbg("%zu threads\n", MTNumThreads());
   pthread_mutex_init(&workerMutex, 0);
   pthread_cond_init(&workerCond, 0);

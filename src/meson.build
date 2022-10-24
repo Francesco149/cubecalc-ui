@@ -61,6 +61,8 @@ if target_machine.system() == 'windows'
   # threads with static = true is not actually static on wangblows
   deps += [
     cc.find_library('libwinpthread', static : true),
+    cc.find_library('libwinmm', static : true),
+    cc.find_library('libdwmapi', static : true),
   ]
 endif
 
@@ -70,7 +72,7 @@ executable('cubecalc-ui', ['compilation-units/monolith.c'] + extra_sources,
   link_args : link_args,
   include_directories : incdir,
   install : true,
-  gui_app: true,
+  gui_app: not get_option('debug'),
 )
 
 if target_machine.system() != 'windows' and target_machine.system() != 'darwin'
