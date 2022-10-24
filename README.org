@@ -7,6 +7,8 @@ check out the presets combo box in the bottom/right bar for common setups
 * usage
 ** web version
 - just use the [[https://francesco149.github.io/maple/cube][hosted version here]] .
+** windows
+- download the exe (x86 for 32-bit, x86_64 for 64-bit) from the [[https://github.com/Francesco149/cubecalc-ui/releases][latest releases]]
 ** AppImage: almost every linux distro
 - download the AppImage from the [[https://github.com/Francesco149/cubecalc-ui/releases][latest releases]]
 - on most distros, you can just ~chmod +x cubecalc-ui-*.AppImage~ and run it.
@@ -16,8 +18,6 @@ check out the presets combo box in the bottom/right bar for common setups
 - ~nix run github:Francesco149/cubecalc-ui~
 - you might need to use [[https://github.com/guibou/nixGL][NixGL]] on non-nixos distros to fix library errors
 - this builds the calculator from source code
-** windows
-- download the exe (x86 for 32-bit, x86_64 for 64-bit) from the [[https://github.com/Francesco149/cubecalc-ui/releases][latest releases]]
 ** nightly builds
 to get the very latest pre-release version (automatically built on every change), you can use these links
 
