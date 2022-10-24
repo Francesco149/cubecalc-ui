@@ -47,7 +47,7 @@ else
   ]
 endif
 
-if get_option('debug') == true
+if get_option('debug-output') == true
   extra_args += [
     '-DCUBECALC_DEBUG'
   ]
@@ -72,7 +72,7 @@ executable('cubecalc-ui', ['compilation-units/monolith.c'] + extra_sources,
   link_args : link_args,
   include_directories : incdir,
   install : true,
-  gui_app: not get_option('debug'),
+  gui_app: not get_option('debug-output'),
 )
 
 if target_machine.system() != 'windows' and target_machine.system() != 'darwin'
