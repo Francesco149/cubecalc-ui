@@ -1658,8 +1658,8 @@ int main() {
     // OS timer accuracy is not good enough at > 60fps (windows is 0.5ms for example)
     if (fpsTarget > 60) {
       while (glfwGetTime() < nextFrameTime) {
-	OSYield();
-	OSNanoSleep(0);
+        OSYield();
+        OSNanoSleep(0);
       }
     } else {
       size_t n = 0;
