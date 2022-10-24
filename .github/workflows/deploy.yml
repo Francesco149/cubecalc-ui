@@ -12,6 +12,12 @@ on:
     tags:
       - '!9999.9999.9999-nightly'
 
+
+env:
+  # todo: updgrade to 0.62.2 when more distros have it
+  #       and drop workaround in windows-build.sh
+  MESON_VERSION: '0.61.2'
+
 jobs:
   build-appimage:
     strategy:
@@ -52,10 +58,27 @@ jobs:
       ARCH: ${{ matrix.ARCH }}
     steps:
     - uses: actions/checkout@v3
+    # based on https://github.com/taisei-project/taisei/blob/master/.github/workflows/main.yml
+    - name: Install Tools
+      run: >
+        apt update || true
+
+        apt install -y -qq software-properties-common
+
+        add-apt-repository ppa:git-core/ppa -y
+
+        apt install -y -qq
+        python3-pip
+        git
+
+        pip3 install
+        meson==${{ env.MESON_VERSION }}
+        ninja
+
     - name: Install ubuntu dependencies
       run: |
         apt-get update
-        apt-get install -y meson cmake make libxinerama-dev libxcursor-dev libxi-dev
+        apt-get install -y cmake make libxinerama-dev libxcursor-dev libxi-dev
     - name: Fetch dependencies
       run: |
         git clone --depth 1 --branch 3.3.8 https://github.com/glfw/glfw ~/glfw

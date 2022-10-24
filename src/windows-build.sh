@@ -26,7 +26,7 @@ meson setup builddir --prefix ~/cubecalc-mingw -Dbuildtype=release --cross-file 
 cd builddir
 # workaround for meson bug that is fixed in 0.62.2
 sed -i 's/-Wl,--allow-shlib-undefined//g' build.ninja
-ninja install || exit
+meson install || exit
 cd ..
 rm -rf builddir
 ${DONT_RUN:-false} || ~/cubecalc-mingw/bin/cubecalc-ui.exe
