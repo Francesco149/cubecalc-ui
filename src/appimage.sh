@@ -38,4 +38,4 @@ exename="linuxdeploy-${arch}.AppImage"
 getdep "${baseurl}${exename}" "$sum"
 chmod +x ./"$exename"
 ./"$exename" --appdir AppDir --output appimage
-mv ./CubeCalcUI-*-"${arch}.AppImage" "cubecalc-ui-${arch}.AppImage"
+mv ./CubeCalcUI-*-"${arch}.AppImage" "cubecalc-ui-linux-${arch}.AppImage"
