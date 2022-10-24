@@ -47,6 +47,7 @@ jobs:
 
     name: Windows ${{ matrix.ARCH }}
     runs-on: ubuntu-latest
+    container: mstorsjo/llvm-mingw:20210423
     env:
       ARCH: ${{ matrix.ARCH }}
     steps:
