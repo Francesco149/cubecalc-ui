@@ -931,7 +931,7 @@ terminateNode:
 
     double t = glfwGetTime();
 
-    if (t - autosaveTimer5 > 30 * 60) {
+    if (t - autosaveTimer30 > 30 * 60) {
       presetSaveNoCommit("autosave_30mins");
       autosaveTimer30 = t;
     }
