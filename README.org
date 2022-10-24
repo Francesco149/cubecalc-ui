@@ -25,6 +25,8 @@ to get the very latest pre-release version (automatically built on every change)
 - [[https://nightly.link/Francesco149/cubecalc-ui/workflows/deploy/master/windows-x86_64.zip][windows 64-bit]]
 - [[https://nightly.link/Francesco149/cubecalc-ui/workflows/deploy/master/windows-i686.zip][windows 32-bit]]
 - [[https://nightly.link/Francesco149/cubecalc-ui/workflows/deploy/master/web.zip][web files (to self-host it)]]
+** host your own web version on NixOS
+look at [[https://github.com/Francesco149/flake/commit/b836af7a2a80890f562436ca9e79444dea497019][this commit]] for an example of adding this flake's overlay and exposing cubecalc through nginx. note that I use [[https://github.com/jonascarpay/declarative-cachix][declarative-cachix]] for the binary cache, but it's not required
 
 * navigating the code (for developers)
 this is a quite unusual stack. the UI is written in C using [[https://github.com/Immediate-Mode-UI/Nuklear][nuklear]], the cubing calculator is also written in C, and it's all running in a browser. a lot of the code is generated from the python proof-of-concept of the cubing calc that I initially wrote. I am planning to make a desktop build for this now that I got rid of all python code
