@@ -7,8 +7,6 @@ concurrency:
 on:
   pull_request:
   push:
-    branches:
-      - '**'
 
 env:
   # todo: updgrade to 0.62.2 when more distros have it
