@@ -105,7 +105,7 @@ jobs:
       if: startsWith(github.ref, 'refs/heads/master')
       run: src/cachix-push.sh
     - name: Build with emscripten
-      if: !startsWith(github.ref, 'refs/heads/master')
+      if: "!startsWith(github.ref, 'refs/heads/master')"
       run: nix build '.#cubecalc-ui-web'
     - name: Package emscripten build
       run: |
