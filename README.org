@@ -49,6 +49,8 @@ for quick iterative desktop builds, do ~./build.sh tcc~ (fastest build time)
 
 for optimized desktop build,s do ~./build.sh clang release~
 
+to create a new release, do ~git tag -a vx.x.x -m "some release notes"~ and ~git push --follow-tags~
+
 * cross compiling to windows (arch linux, mingw)
 #+BEGIN_SRC sh
   sudo pacman -Sy git base-devel --needed
