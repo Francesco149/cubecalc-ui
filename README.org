@@ -114,3 +114,13 @@ for optimized desktop build,s do ~./build.sh clang release~
 
   # binary is cubecalc-ui.exe in ~/cubecalc-mingw/bin/
 #+END_SRC
+
+* compiling on macOS (not tested because I don't have gpu accel in the vm)
+#+BEGIN_SRC sh
+brew install meson pkg-config glfw
+git clone https://github.com/Francesco149/cubecalc-ui
+cd cubecalc-ui/src
+meson setup -Dbuildtype=release build
+meson compile -C build
+./build/cubecalc-ui
+#+END_SRC
