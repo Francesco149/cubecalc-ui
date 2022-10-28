@@ -111,7 +111,9 @@ struct nk_vec2 savedMousePos; // in node space, not screen space
 int tool;
 int disclaimerHeight = 290;
 int maxCombos = 300;
+#ifndef __EMSCRIPTEN__
 int fpsTarget = 60;
+#endif
 int* removeNodes;
 
 void dbg(char* fmt, ...) {
@@ -1127,7 +1129,9 @@ terminateNode:
         flags |= DIRTY;
       }
 
+#ifndef __EMSCRIPTEN__
       fpsTarget = nk_propertyi(nk, "Max FPS", 20, fpsTarget, INT_MAX, 5, 0.02);
+#endif
 
     } else {
       flags &= ~SHOW_INFO;
