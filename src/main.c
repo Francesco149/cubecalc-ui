@@ -1640,6 +1640,8 @@ int main() {
   disclaimerHeight += nk->style.edit.padding.y * 2 + nk->style.edit.border * 2;
 
 #ifdef __EMSCRIPTEN__
+  pan.x = pan.y = -40;
+
   if (isTouch()) {
     tool = PAN;
     nk_glfw3_set_left_button(toolToMouseButton[tool]);
