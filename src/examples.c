@@ -742,14 +742,14 @@ void examplesOccultStat() {
     examplesCommonCubeTier(&succ, FACE_EYE_RING_EARRING_PENDANT_IDX, OCCULT_IDX, EPIC_IDX);
   {
     s.y += 150;
-    uiTreeAddComment(s, 0, 0, 410, 310, "example: 9+ %stat", &succ);
+    uiTreeAddComment(s, 0, 0, 410, 310, "example: 11+ %stat", &succ);
     int nstat = uiTreeAddChk(s, NSTAT, 0, 50, &succ);
     int namt = uiTreeAddChk(s, NAMOUNT, 0, 140, &succ);
     int nres = nprevres = uiTreeAddChk(s, NRESULT, 210, 50, &succ);
 
     if (succ) {
       uiTreeDataByNode(nstat)->value = STAT_IDX;
-      uiTreeDataByNode(namt)->value = 9;
+      uiTreeDataByNode(namt)->value = 11;
       uiTreeDataByNode(nres)->bounds.h = 260;
       uiTreeResultByNode(nres)->perPage = 100;
       uiTreeLink(nsplit, nstat);
@@ -766,7 +766,7 @@ void examplesOccultWSE() {
   int nsplit = examplesCommonCubeTier(&succ, WEAPON_IDX, OCCULT_IDX, EPIC_IDX);
   {
     s.y += 150;
-    uiTreeAddComment(s, 0, 0, 410, 310, "example: 6+ %att", &succ);
+    uiTreeAddComment(s, 0, 0, 410, 310, "example: 7+ %att", &succ);
     int nstat = uiTreeAddChk(s, NSTAT, 0, 50, &succ);
     int namt = uiTreeAddChk(s, NAMOUNT, 0, 140, &succ);
     int nres = nprevres = uiTreeAddChk(s, NRESULT, 210, 50, &succ);
