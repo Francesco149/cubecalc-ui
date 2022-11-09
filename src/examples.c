@@ -803,6 +803,102 @@ void examplesOccultWSE() {
   }
 }
 
+void examplesMasterStat() {
+  struct nk_vec2 s = nk_vec2(20, 20);
+  int succ = 1;
+  int nprevres;
+  int nsplit =
+    examplesCommonCubeTier(&succ, FACE_EYE_RING_EARRING_PENDANT_IDX, MASTER_IDX, UNIQUE_IDX);
+  {
+    s.y += 150;
+    uiTreeAddComment(s, 0, 0, 410, 310, "example: 17+ %stat", &succ);
+    int nstat = uiTreeAddChk(s, NSTAT, 0, 50, &succ);
+    int namt = uiTreeAddChk(s, NAMOUNT, 0, 140, &succ);
+    int nres = nprevres = uiTreeAddChk(s, NRESULT, 210, 50, &succ);
+
+    if (succ) {
+      uiTreeDataByNode(nstat)->value = STAT_IDX;
+      uiTreeDataByNode(namt)->value = 17;
+      uiTreeDataByNode(nres)->bounds.h = 260;
+      uiTreeResultByNode(nres)->perPage = 100;
+      uiTreeLink(nsplit, nstat);
+      uiTreeLink(nstat, namt);
+      uiTreeLink(namt, nres);
+    }
+  }
+}
+
+void examplesMasterWSE() {
+  struct nk_vec2 s = nk_vec2(20, 20);
+  int succ = 1;
+  int nprevres;
+  int nsplit = examplesCommonCubeTier(&succ, WEAPON_IDX, MASTER_IDX, UNIQUE_IDX);
+  {
+    s.y += 150;
+    uiTreeAddComment(s, 0, 0, 410, 310, "example: 17+ %att", &succ);
+    int nstat = uiTreeAddChk(s, NSTAT, 0, 50, &succ);
+    int namt = uiTreeAddChk(s, NAMOUNT, 0, 140, &succ);
+    int nres = nprevres = uiTreeAddChk(s, NRESULT, 210, 50, &succ);
+
+    if (succ) {
+      uiTreeDataByNode(namt)->value = 17;
+      uiTreeDataByNode(nres)->bounds.h = 260;
+      uiTreeResultByNode(nres)->perPage = 100;
+      uiTreeLink(nsplit, nstat);
+      uiTreeLink(nstat, namt);
+      uiTreeLink(namt, nres);
+    }
+  }
+  {
+    s.x += 450;
+    uiTreeAddComment(s, 0, 0, 410, 310,
+        "example: any 2l combo of %att or %boss", &succ);
+    int nstat2 = uiTreeAddChk(s, NSTAT, 0, 50, &succ);
+    int namt2 = uiTreeAddChk(s, NAMOUNT, 0, 140, &succ);
+    int nstat3 = uiTreeAddChk(s, NSTAT, 210, 140, &succ);
+    int nstat = uiTreeAddChk(s, NSTAT, 210, 50, &succ);
+    int nres = uiTreeAddChk(s, NRESULT, 210, 230, &succ);
+
+    if (succ) {
+      uiTreeDataByNode(nstat2)->value = BOSS_ONLY_IDX;
+      uiTreeDataByNode(nstat3)->value = LINES_IDX;
+      uiTreeDataByNode(namt2)->value = 2;
+      uiTreeLink(nsplit, nstat);
+      uiTreeLink(nstat, nstat3);
+      uiTreeLink(nstat, nstat2);
+      uiTreeLink(nstat3, namt2);
+      uiTreeLink(namt2, nres);
+    }
+  }
+  {
+    s.x -= 450;
+    s.y += 350;
+    uiTreeAddComment(s, 0, 0, 620, 310,
+        "example: any 2l combo of %att, %ied, %boss", &succ);
+    int nstat2 = uiTreeAddChk(s, NSTAT, 420, 230, &succ);
+    int namt2 = uiTreeAddChk(s, NAMOUNT, 210, 140, &succ);
+    int nstat3 = uiTreeAddChk(s, NSTAT, 420, 140, &succ);
+    int nstat4 = uiTreeAddChk(s, NSTAT, 420, 50, &succ);
+    int nstat = uiTreeAddChk(s, NSTAT, 210, 50, &succ);
+    int nres = uiTreeAddChk(s, NRESULT, 0, 50, &succ);
+
+    if (succ) {
+      uiTreeDataByNode(nstat2)->value = BOSS_ONLY_IDX;
+      uiTreeDataByNode(nstat4)->value = IED_IDX;
+      uiTreeDataByNode(nstat3)->value = LINES_IDX;
+      uiTreeDataByNode(namt2)->value = 2;
+      uiTreeLink(nsplit, nstat);
+      uiTreeLink(nstat3, nstat2);
+      uiTreeLink(nstat4, nstat3);
+      uiTreeLink(nstat4, nstat);
+      uiTreeLink(nstat3, namt2);
+      uiTreeLink(namt2, nres);
+      uiTreeDataByNode(nres)->bounds.h = 260;
+      uiTreeResultByNode(nres)->perPage = 100;
+    }
+  }
+}
+
 #define examplesFile(x) \
   examplesFile_(#x, examples##x)
 
@@ -828,6 +924,8 @@ void examples() {
   examplesFile(HatBonus);
   examplesFile(OccultStat);
   examplesFile(OccultWSE);
+  examplesFile(MasterStat);
+  examplesFile(MasterWSE);
   examplesFile_("zzz_Preset1", examplesWSE);
   examplesFile_("zzz_Preset2", examplesWSE);
   examplesFile_("zzz_Preset3", examplesWSE);
