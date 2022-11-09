@@ -727,6 +727,8 @@ void loop() {
     propNode(NAMOUNT, i);
     propNode(NLEVEL, i);
 
+    char* comboName = 0;
+
     BufEachi(graph.data[NRESULT], i) {
       if (uiBeginNode(NRESULT, i, 10)) {
 #define l(text, x) \
@@ -749,7 +751,9 @@ void loop() {
         nk_spacer(nk);
         nk_layout_row_dynamic(nk, 20, 1);
 
-        int newPerPage = nk_propertyi(nk, "combos per page", 0, r->perPage, 10000, 1, 0.02);
+        BufClear(comboName);
+        BufAllocCharsf(&comboName, "per page R%d", i);
+        int newPerPage = nk_propertyi(nk, comboName, 0, r->perPage, 10000, 1, 0.02);
         if (newPerPage != r->perPage) {
           if (newPerPage && !r->perPage) {
             flags |= DIRTY;
@@ -769,7 +773,9 @@ void loop() {
         nk_layout_row_template_push_static(nk, cs * 4);
         nk_layout_row_template_end(nk);
 
-        r->page = nk_propertyi(nk, "combos page", 1, r->page, totalPages, 1, 0.02);
+        BufClear(comboName);
+        BufAllocCharsf(&comboName, "page R%d", i);
+        r->page = nk_propertyi(nk, comboName, 1, r->page, totalPages, 1, 0.02);
         r->page = NK_MAX(1, NK_MIN(r->page, totalPages));
         nk_labelf(nk, NK_TEXT_LEFT, "/%d", totalPages);
         nk_spacer(nk);
@@ -816,6 +822,8 @@ terminateNode:
         nk_contextual_end(nk);
       }
     }
+
+    BufFree(&comboName);
 
     // draw rounded border around selected node
     if (selectedNode >= 0) {
