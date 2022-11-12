@@ -1263,7 +1263,7 @@ int uiTreeAddComment(struct nk_vec2 start, int x, int y, int w, int h, char* tex
 }
 
 #define GLOBALS_FILE ".globals.bin"
-#define EXTENSION ".maplecalcv2"
+#define EXTENSION ".maplecalcv3"
 #define AUTOSAVE_FILE "autosave"
 
 #ifdef __EMSCRIPTEN__

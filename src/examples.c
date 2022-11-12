@@ -28,7 +28,7 @@ int examplesCommonCubeTier(int* succ, int category, int cube, int tier) {
 }
 
 int examplesCommonCube(int* succ, int category, int cube) {
-  return examplesCommonCubeTier(succ, category, cube, LEGENDARY);
+  return examplesCommonCubeTier(succ, category, cube, LEGENDARY_IDX);
 }
 
 int examplesCommon(int* succ, int category) {
