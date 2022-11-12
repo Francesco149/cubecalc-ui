@@ -1,4 +1,4 @@
-int examplesCommonCubeTier(int* succ, int category, int cube, int tier) {
+int examplesCommonCubeTierLevel(int* succ, int category, int cube, int tier, int level) {
   struct nk_vec2 s = nk_vec2(20, 20);
   int ncategory;
   if (category >= 0) {
@@ -12,7 +12,7 @@ int examplesCommonCubeTier(int* succ, int category, int cube, int tier) {
 
   if (*succ) {
     uiTreeDataByNode(nsplit)->value = ntier;
-    uiTreeDataByNode(nlevel)->value = 200;
+    uiTreeDataByNode(nlevel)->value = level;
     uiTreeDataByNode(ntier)->value = tier;
     uiTreeDataByNode(ncube)->value = cube;
     if (category >= 0) {
@@ -27,8 +27,16 @@ int examplesCommonCubeTier(int* succ, int category, int cube, int tier) {
   return nsplit;
 }
 
+int examplesCommonCubeTier(int* succ, int category, int cube, int tier) {
+  return examplesCommonCubeTierLevel(succ, category, cube, tier, 200);
+}
+
 int examplesCommonCube(int* succ, int category, int cube) {
   return examplesCommonCubeTier(succ, category, cube, LEGENDARY_IDX);
+}
+
+int examplesCommonLevel(int* succ, int category, int level) {
+  return examplesCommonCubeTierLevel(succ, category, RED_IDX, LEGENDARY_IDX, level);
 }
 
 int examplesCommon(int* succ, int category) {
@@ -121,7 +129,7 @@ void examplesAccessory() {
   struct nk_vec2 s = nk_vec2(20, 20);
   int succ = 1;
   int nprevres;
-  int nsplit = examplesCommon(&succ, FACE_EYE_RING_EARRING_PENDANT_IDX);
+  int nsplit = examplesCommonLevel(&succ, FACE_EYE_RING_EARRING_PENDANT_IDX, 160);
   {
     s.y += 150;
     uiTreeAddComment(s, 0, 0, 410, 310, "example: 23+ %stat accessory", &succ);
@@ -308,17 +316,17 @@ void examplesHat() {
   struct nk_vec2 s = nk_vec2(20, 20);
   int succ = 1;
   int nprevres;
-  int nsplit = examplesCommon(&succ, HAT_IDX);
+  int nsplit = examplesCommonLevel(&succ, HAT_IDX, 150);
   {
     s.y += 150;
-    uiTreeAddComment(s, 0, 0, 410, 310, "example: 23+ %stat hat", &succ);
+    uiTreeAddComment(s, 0, 0, 410, 310, "example: 21+ %stat hat", &succ);
     int nstat = uiTreeAddChk(s, NSTAT, 0, 50, &succ);
     int namt = uiTreeAddChk(s, NAMOUNT, 0, 140, &succ);
     int nres = nprevres = uiTreeAddChk(s, NRESULT, 210, 50, &succ);
 
     if (succ) {
       uiTreeDataByNode(nstat)->value = STAT_IDX;
-      uiTreeDataByNode(namt)->value = 23;
+      uiTreeDataByNode(namt)->value = 21;
       uiTreeDataByNode(nres)->bounds.h = 260;
       uiTreeResultByNode(nres)->perPage = 100;
       uiTreeLink(nsplit, nstat);
@@ -329,7 +337,7 @@ void examplesHat() {
   {
     s.x += 450;
     uiTreeAddComment(s, 0, 0, 410, 310,
-        "example: 2+s cooldown and and 10+ %stat hat", &succ);
+        "example: 2+s cooldown and and 9+ %stat hat", &succ);
     int nstat = uiTreeAddChk(s, NSTAT, 0, 50, &succ);
     int namt = uiTreeAddChk(s, NAMOUNT, 0, 140, &succ);
     int ndrop = uiTreeAddChk(s, NSTAT, 0, 230, &succ);
@@ -338,7 +346,7 @@ void examplesHat() {
     if (succ) {
       uiTreeDataByNode(nstat)->value = STAT_IDX;
       uiTreeDataByNode(ndrop)->value = COOLDOWN_IDX;
-      uiTreeDataByNode(namt)->value = 10;
+      uiTreeDataByNode(namt)->value = 9;
       uiTreeDataByNode(nres)->bounds.h = 260;
       uiTreeResultByNode(nres)->perPage = 100;
       uiTreeLink(nsplit, nstat);
@@ -374,17 +382,17 @@ void examplesTopOverall() {
   struct nk_vec2 s = nk_vec2(20, 20);
   int succ = 1;
   int nprevres;
-  int nsplit = examplesCommon(&succ, TOP_OVERALL_IDX);
+  int nsplit = examplesCommonLevel(&succ, TOP_OVERALL_IDX, 150);
   {
     s.y += 150;
-    uiTreeAddComment(s, 0, 0, 410, 310, "example: 23+ %stat top/overall", &succ);
+    uiTreeAddComment(s, 0, 0, 410, 310, "example: 21+ %stat top/overall", &succ);
     int nstat = uiTreeAddChk(s, NSTAT, 0, 50, &succ);
     int namt = uiTreeAddChk(s, NAMOUNT, 0, 140, &succ);
     int nres = nprevres = uiTreeAddChk(s, NRESULT, 210, 50, &succ);
 
     if (succ) {
       uiTreeDataByNode(nstat)->value = STAT_IDX;
-      uiTreeDataByNode(namt)->value = 23;
+      uiTreeDataByNode(namt)->value = 21;
       uiTreeDataByNode(nres)->bounds.h = 260;
       uiTreeResultByNode(nres)->perPage = 100;
       uiTreeLink(nsplit, nstat);
@@ -586,7 +594,7 @@ void examplesBonus() {
   struct nk_vec2 s = nk_vec2(20, 20);
   int succ = 1;
   int nprevres;
-  int nsplit = examplesCommonCube(&succ, FACE_EYE_RING_EARRING_PENDANT_IDX, BONUS_IDX);
+  int nsplit = examplesCommonCube(&succ, CAPE_BELT_SHOULDER_IDX, BONUS_IDX);
   {
     s.y += 150;
     uiTreeAddComment(s, 0, 0, 480, 400,
@@ -639,7 +647,7 @@ void examplesHatBonus() {
   struct nk_vec2 s = nk_vec2(20, 20);
   int succ = 1;
   int nprevres;
-  int nsplit = examplesCommonCube(&succ, HAT_IDX, BONUS_IDX);
+  int nsplit = examplesCommonCubeTierLevel(&succ, HAT_IDX, BONUS_IDX, LEGENDARY_IDX, 150);
   {
     s.y += 150;
     uiTreeAddComment(s, 0, 0, 480, 400,
@@ -667,7 +675,7 @@ void examplesHatBonus() {
   }
   {
     s.x += 530;
-    uiTreeAddComment(s, 0, 0, 410, 310, "example: rare 11 att bpot", &succ);
+    uiTreeAddComment(s, 0, 0, 410, 310, "example: rare 10 att bpot", &succ);
     int nstat = uiTreeAddChk(s, NSTAT, 0, 50, &succ);
     int namt = uiTreeAddChk(s, NAMOUNT, 0, 140, &succ);
     int ntier = uiTreeAddChk(s, NTIER, 0, 230, &succ);
@@ -676,7 +684,7 @@ void examplesHatBonus() {
     if (succ) {
       uiTreeDataByNode(nstat)->value = FLAT_ATT_IDX;
       uiTreeDataByNode(ntier)->value = RARE_IDX;
-      uiTreeDataByNode(namt)->value = 11;
+      uiTreeDataByNode(namt)->value = 10;
       uiTreeDataByNode(nres)->bounds.h = 260;
       uiTreeResultByNode(nres)->perPage = 100;
       uiTreeLink(nsplit, nstat);
@@ -739,17 +747,18 @@ void examplesOccultStat() {
   int succ = 1;
   int nprevres;
   int nsplit =
-    examplesCommonCubeTier(&succ, FACE_EYE_RING_EARRING_PENDANT_IDX, OCCULT_IDX, EPIC_IDX);
+    examplesCommonCubeTierLevel(&succ, FACE_EYE_RING_EARRING_PENDANT_IDX,
+                                OCCULT_IDX, EPIC_IDX, 110);
   {
     s.y += 150;
-    uiTreeAddComment(s, 0, 0, 410, 310, "example: 11+ %stat", &succ);
+    uiTreeAddComment(s, 0, 0, 410, 310, "example: 9+ %stat", &succ);
     int nstat = uiTreeAddChk(s, NSTAT, 0, 50, &succ);
     int namt = uiTreeAddChk(s, NAMOUNT, 0, 140, &succ);
     int nres = nprevres = uiTreeAddChk(s, NRESULT, 210, 50, &succ);
 
     if (succ) {
       uiTreeDataByNode(nstat)->value = STAT_IDX;
-      uiTreeDataByNode(namt)->value = 11;
+      uiTreeDataByNode(namt)->value = 9;
       uiTreeDataByNode(nres)->bounds.h = 260;
       uiTreeResultByNode(nres)->perPage = 100;
       uiTreeLink(nsplit, nstat);
@@ -763,16 +772,16 @@ void examplesOccultWSE() {
   struct nk_vec2 s = nk_vec2(20, 20);
   int succ = 1;
   int nprevres;
-  int nsplit = examplesCommonCubeTier(&succ, WEAPON_IDX, OCCULT_IDX, EPIC_IDX);
+  int nsplit = examplesCommonCubeTierLevel(&succ, WEAPON_IDX, OCCULT_IDX, EPIC_IDX, 100);
   {
     s.y += 150;
-    uiTreeAddComment(s, 0, 0, 410, 310, "example: 7+ %att", &succ);
+    uiTreeAddComment(s, 0, 0, 410, 310, "example: 6+ %att", &succ);
     int nstat = uiTreeAddChk(s, NSTAT, 0, 50, &succ);
     int namt = uiTreeAddChk(s, NAMOUNT, 0, 140, &succ);
     int nres = nprevres = uiTreeAddChk(s, NRESULT, 210, 50, &succ);
 
     if (succ) {
-      uiTreeDataByNode(namt)->value = 7;
+      uiTreeDataByNode(namt)->value = 6;
       uiTreeDataByNode(nres)->bounds.h = 260;
       uiTreeResultByNode(nres)->perPage = 100;
       uiTreeLink(nsplit, nstat);
@@ -808,7 +817,8 @@ void examplesMasterStat() {
   int succ = 1;
   int nprevres;
   int nsplit =
-    examplesCommonCubeTier(&succ, FACE_EYE_RING_EARRING_PENDANT_IDX, MASTER_IDX, UNIQUE_IDX);
+    examplesCommonCubeTierLevel(&succ, FACE_EYE_RING_EARRING_PENDANT_IDX, MASTER_IDX,
+                                UNIQUE_IDX, 160);
   {
     s.y += 150;
     uiTreeAddComment(s, 0, 0, 410, 310, "example: 17+ %stat", &succ);
