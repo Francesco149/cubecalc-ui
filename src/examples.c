@@ -909,6 +909,123 @@ void examplesMasterWSE() {
   }
 }
 
+void examplesUniWSE() {
+  struct nk_vec2 s = nk_vec2(20, 20);
+  int succ = 1;
+  int nprevres;
+  int nsplit = examplesCommonCube(&succ, WEAPON_IDX, UNI_IDX);
+  {
+    s.y += 150;
+    uiTreeAddComment(s, 0, 0, 410, 310, "example: rerolling a specific line to 10+ att", &succ);
+    int nstat = uiTreeAddChk(s, NSTAT, 0, 50, &succ);
+    int namt = uiTreeAddChk(s, NAMOUNT, 0, 140, &succ);
+    int nres = nprevres = uiTreeAddChk(s, NRESULT, 210, 50, &succ);
+
+    if (succ) {
+      uiTreeDataByNode(namt)->value = 10;
+      uiTreeDataByNode(nres)->bounds.h = 260;
+      uiTreeResultByNode(nres)->perPage = 100;
+      uiTreeLink(nsplit, nstat);
+      uiTreeLink(nstat, namt);
+      uiTreeLink(namt, nres);
+    }
+  }
+  {
+    s.x += 450;
+    uiTreeAddComment(s, 0, 0, 410, 490, "example: rerolling a specific line to att or boss", &succ);
+    int nstat = uiTreeAddChk(s, NSTAT, 0, 50, &succ);
+    int nstat2 = uiTreeAddChk(s, NSTAT, 0, 140, &succ);
+    int nstat3 = uiTreeAddChk(s, NSTAT, 210, 50, &succ);
+    int namt = uiTreeAddChk(s, NAMOUNT, 210, 140, &succ);
+    int nres = nprevres = uiTreeAddChk(s, NRESULT, 0, 230, &succ);
+
+    if (succ) {
+      uiTreeDataByNode(nstat2)->value = BOSS_ONLY_IDX;
+      uiTreeDataByNode(nstat3)->value = LINES_IDX;
+      uiTreeDataByNode(namt)->value = 1;
+      uiTreeDataByNode(nres)->bounds.h = 260;
+      uiTreeResultByNode(nres)->perPage = 100;
+      uiTreeLink(nsplit, nstat);
+      uiTreeLink(nstat2, nstat);
+      uiTreeLink(nstat2, nstat3);
+      uiTreeLink(nstat3, namt);
+      uiTreeLink(namt, nres);
+    }
+  }
+}
+
+void examplesUniStat() {
+  struct nk_vec2 s = nk_vec2(20, 20);
+  int succ = 1;
+  int nprevres;
+  int nsplit = examplesCommonCubeTierLevel(&succ, TOP_OVERALL_IDX, UNI_IDX, LEGENDARY_IDX, 150);
+  {
+    s.y += 150;
+    uiTreeAddComment(s, 0, 0, 410, 310, "example: rerolling a specific line to 9+ stat", &succ);
+    int nstat = uiTreeAddChk(s, NSTAT, 0, 50, &succ);
+    int namt = uiTreeAddChk(s, NAMOUNT, 0, 140, &succ);
+    int nres = nprevres = uiTreeAddChk(s, NRESULT, 210, 50, &succ);
+
+    if (succ) {
+      uiTreeDataByNode(namt)->value = 9;
+      uiTreeDataByNode(nstat)->value = STAT_IDX;
+      uiTreeDataByNode(nres)->bounds.h = 260;
+      uiTreeResultByNode(nres)->perPage = 100;
+      uiTreeLink(nsplit, nstat);
+      uiTreeLink(nstat, namt);
+      uiTreeLink(namt, nres);
+    }
+  }
+}
+
+void examplesUniGlove() {
+  struct nk_vec2 s = nk_vec2(20, 20);
+  int succ = 1;
+  int nprevres;
+  int nsplit = examplesCommonCubeTierLevel(&succ, GLOVE_IDX, UNI_IDX, LEGENDARY_IDX, 200);
+  {
+    s.y += 150;
+    uiTreeAddComment(s, 0, 0, 410, 310, "example: rerolling a specific line to crit dmg", &succ);
+    int nstat = uiTreeAddChk(s, NSTAT, 0, 50, &succ);
+    int namt = uiTreeAddChk(s, NAMOUNT, 0, 140, &succ);
+    int nres = nprevres = uiTreeAddChk(s, NRESULT, 210, 50, &succ);
+
+    if (succ) {
+      uiTreeDataByNode(namt)->value = 8;
+      uiTreeDataByNode(nstat)->value = CRITDMG_IDX;
+      uiTreeDataByNode(nres)->bounds.h = 260;
+      uiTreeResultByNode(nres)->perPage = 100;
+      uiTreeLink(nsplit, nstat);
+      uiTreeLink(nstat, namt);
+      uiTreeLink(namt, nres);
+    }
+  }
+}
+
+void examplesUniHat() {
+  struct nk_vec2 s = nk_vec2(20, 20);
+  int succ = 1;
+  int nprevres;
+  int nsplit = examplesCommonCubeTierLevel(&succ, HAT_IDX, UNI_IDX, LEGENDARY_IDX, 150);
+  {
+    s.y += 150;
+    uiTreeAddComment(s, 0, 0, 410, 310, "example: rerolling a specific line to 2+s cd", &succ);
+    int nstat = uiTreeAddChk(s, NSTAT, 0, 50, &succ);
+    int namt = uiTreeAddChk(s, NAMOUNT, 0, 140, &succ);
+    int nres = nprevres = uiTreeAddChk(s, NRESULT, 210, 50, &succ);
+
+    if (succ) {
+      uiTreeDataByNode(namt)->value = 2;
+      uiTreeDataByNode(nstat)->value = COOLDOWN_IDX;
+      uiTreeDataByNode(nres)->bounds.h = 260;
+      uiTreeResultByNode(nres)->perPage = 100;
+      uiTreeLink(nsplit, nstat);
+      uiTreeLink(nstat, namt);
+      uiTreeLink(namt, nres);
+    }
+  }
+}
+
 #define examplesFile(x) \
   examplesFile_(#x, examples##x)
 
@@ -936,6 +1053,10 @@ void examples() {
   examplesFile(OccultWSE);
   examplesFile(MasterStat);
   examplesFile(MasterWSE);
+  examplesFile(UniWSE);
+  examplesFile(UniStat);
+  examplesFile(UniGlove);
+  examplesFile(UniHat);
   examplesFile_("zzz_Preset1", examplesWSE);
   examplesFile_("zzz_Preset2", examplesWSE);
   examplesFile_("zzz_Preset3", examplesWSE);
