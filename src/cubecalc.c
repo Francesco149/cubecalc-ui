@@ -814,6 +814,7 @@ float CubeCalc(
   WantPrint(wantBuf);
 #endif
 
+  Lines combos = {0};
   LineData const* dataPrime = DataFind(category, cube, tier);
   if (!dataPrime) {
     fprintf(stderr, "prime line data not found\n");
@@ -832,7 +833,6 @@ float CubeCalc(
     return 0;
   }
 
-  Lines combos = {0};
   if (!LinesInit(&combos, dataPrime, dataNonPrime, group, tier)) {
     goto cleanup;
   }
