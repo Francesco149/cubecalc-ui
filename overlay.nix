@@ -25,7 +25,7 @@ in {
 
   cubecalc-ui = stdenv.mkDerivation rec {
     pname = "cubecalc-ui";
-    version = "0.2.0-dev";
+    version = "0.3.0-dev";
     src = ./src;
 
     nativeBuildInputs = [
@@ -43,7 +43,7 @@ in {
 
   cubecalc-ui-web = pkgs.buildEmscriptenPackage rec {
     pname = "cubecalc-ui-web";
-    version = "0.2.0-dev";
+    version = "0.3.0-dev";
     src = ./src;
 
     nativeBuildInputs = [

@@ -1,6 +1,6 @@
 project('cubecalc', 'c',
   license : 'unlicense',
-  version: '0.2.0-dev',
+  version: '0.3.0-dev',
   default_options: [
     'b_lto=true',
     'b_asneeded=true',
